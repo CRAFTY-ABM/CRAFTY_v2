@@ -17,7 +17,7 @@ You will:
 Best for most users on Windows. No IDE, no Maven.
 
 **Option B — `.jar` (GUI or headless)**  
-Best if you want portability (Windows/Linux/macOS) and/or want to run on servers/HPC.
+Best if you want portability (Windows/Linux/macOS) and/or want to run on servers/HPC. 
 
 **Option C — IDE (headless)**  
 Best for developers/debugging.
