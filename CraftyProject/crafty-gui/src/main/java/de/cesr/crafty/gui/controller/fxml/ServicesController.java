@@ -9,7 +9,6 @@ import java.util.function.Consumer;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
-import de.cesr.crafty.core.dataLoader.serivces.ServiceDemandLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.gui.utils.analysis.AftAnalyzer;
@@ -67,8 +66,7 @@ public class ServicesController {
 	public void initialize() {
 		System.out.println("initialize " + getClass().getSimpleName());
 
-		new LineChartTools().lineChart((Pane) demandsChart.getParent(), demandsChart,
-				ServiceDemandLoader.serialisationWorldDemand());
+		new LineChartTools().lineChart((Pane) demandsChart.getParent(), demandsChart, serialisationWorldDemand());
 		String ItemName = "Save as CSV";
 		Consumer<String> action = _ -> {
 			SaveAs.exportLineChartDataToCSV(demandsChart);
@@ -83,7 +81,7 @@ public class ServicesController {
 
 		Tools.forceResisingWidth(TopBox, hboxDemandWeight);
 
-		demandsChart.setMinWidth(TopBox.getMinWidth() );
+		demandsChart.setMinWidth(TopBox.getMinWidth());
 //		weightsChart.setMinWidth(TopBox.getMinWidth() / 2);
 
 		Tools.forceResisingWidth(0.1, vboxForSliders);
@@ -129,9 +127,9 @@ public class ServicesController {
 //			boolean isCapitalsumNotNull = false;
 
 			for (Aft a : AFTsLoader.getActivateAFTsHash().values()) {
-				if (a.getSensitivity().get((capitalName + "|" + serviceName)) != null
-						&& a.getSensitivity().get((capitalName + "|" + serviceName)) != 0) {
-					hash.merge(capitalName, a.getSensitivity().get((capitalName + "|" + serviceName)), Double::sum);
+				if (a.getSensByService().get(serviceName) != null
+						&& a.getSensByService().get(serviceName).get(capitalName) != 0) {
+					hash.merge(capitalName, a.getSensByService().get(serviceName).get(capitalName), Double::sum);
 					counter.merge(capitalName, 1., Double::sum);
 				}
 			}
@@ -154,9 +152,9 @@ public class ServicesController {
 			// loop for Services
 			CapitalUpdater.getCapitalsList().forEach(capitalName -> {
 				// aggreagte by service
-				if (a.getSensitivity().get((capitalName + "|" + serviceName)) != null
-						&& a.getSensitivity().get((capitalName + "|" + serviceName)) != 0) {
-					hashS.merge(aftName, a.getSensitivity().get((capitalName + "|" + serviceName)), Double::sum);
+				if (a.getSensByService().get(serviceName) != null
+						&& a.getSensByService().get(serviceName).get(capitalName) != 0) {
+					hashS.merge(aftName, a.getSensByService().get(serviceName).get(capitalName), Double::sum);
 				}
 				if (a.getProductivityLevel().get(serviceName) != null
 						&& a.getProductivityLevel().get(serviceName) != 0) {
@@ -199,4 +197,12 @@ public class ServicesController {
 		return chart;
 	}
 
+	// change the WorldDemand for plot
+	public static Map<String, List<Double>> serialisationWorldDemand() {
+		Map<String, List<Double>> serviceSerialisation = new HashMap<>();
+		ServiceSet.worldService.forEach((serviceName, service) -> {
+			serviceSerialisation.put(serviceName, new ArrayList<>(service.getDemands().values()));
+		});
+		return serviceSerialisation;
+	}
 }

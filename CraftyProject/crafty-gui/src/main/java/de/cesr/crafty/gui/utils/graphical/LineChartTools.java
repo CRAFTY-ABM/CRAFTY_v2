@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.modelRunner.ModelRunner;
-import de.cesr.crafty.core.modelRunner.Timestep;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.gui.utils.analysis.LoessStandalone;
 import de.cesr.crafty.gui.utils.analysis.MixedLineChart;
 import de.cesr.crafty.gui.utils.analysis.MultiShadowLineChart;

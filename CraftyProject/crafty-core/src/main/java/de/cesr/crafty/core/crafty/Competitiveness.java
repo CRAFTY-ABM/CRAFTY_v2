@@ -1,8 +1,8 @@
 package de.cesr.crafty.core.crafty;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
@@ -14,29 +14,65 @@ import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.updaters.LandMaskUpdater;
 import de.cesr.crafty.core.utils.general.CellsSubSets;
 
+/**
+ * Implements the land-use competition mechanism that reallocates cell ownership among AFTs.
+ *
+ * This class evaluates the utility of candidate AFT on a cell and performs ownership change
+ * when a competitor sufficiently outperforms the current owner. It supports both a standard utility
+ * comparison and an optional behaviour/categorisation-aware “give-in” mechanism {@link CellBehaviour}.
+ *
+ * Core concepts:
+ * - Utility calculation ({@link #utility(Cell, Aft, RegionalModelRunner)}):
+ *   Utility is computed as the sum over services of (marginal utility + service tax/subsidy) multiplied
+ *   by the cell’s productivity for the candidate AFT, plus an AFT-specific land tax/subsidy term.
+ *
+ * - Candidate set selection:
+ *   Candidates are either all active AFTs or a neighbourhood-derived subset (extended Moore neighbourhood),
+ *   depending on configuration ({@code use_neighbor_priority}, {@code neighbor_radius}).
+ *
+ * - Competitor choice:
+ *   With probability {@code MostCompetitorAFTProbability}, the best-performing candidate (higher  utility) is chosen;
+ *   otherwise a random AFT is tested. This provides a mix of deterministic pressure and stochastic exploration.
+ *
+ * - Constraints (masks/restrictions):
+ *   {@link LandMaskUpdater#restrictions} can forbid specific transitions based on a cell mask type
+ *   (e.g., “owner -> competitor” pairs), preventing competition where policy or protection rules apply.
+ *
+ * Ownership change rules:
+ * - If a cell is unmanaged/abandoned, a competitor may take over when its utility meets the acceptance
+ *   criterion (mean distribution threshold or positive normalised utility, depending on mode).
+ * - If the cell has an interacting owner, the competitor must exceed the current owner by a threshold:
+ *   either a simple give-in threshold (drawn from owner parameters or category-pair distributions) or,
+ *   when enabled, a behaviour-based give-in value computed by {@link CellBehaviour}.
+ *
+ * Mutation on win:
+ * If {@code mutate_on_competition_win} is enabled, the new owner is cloned via {@link Aft#Aft(Aft)} to
+ * introduce small random parameter variation; otherwise the competitor instance is reused.
+ *
+ * Every successful land-use change increments {@link Listener#landUseChangeCounter}.
+ */
+
+/**
+ * @author Mohamed Byari
+ *
+ */
+
 public class Competitiveness {
-	static boolean utilityUsingPrice = true;
 
 	static double utility(Cell c, Aft a, RegionalModelRunner r) {
 		if (a == null || !a.isInteract()) {
-			c.setUtilityValue(0);
 			return 0;
 		}
-		c.setUtilityValue(ServiceSet.getServicesList().stream()
-				.mapToDouble(sname ->  r.marginal.get(sname) * c.productivity(a, sname)).sum());
-		return c.getUtilityValue();
+		// u= sum_s[ (ms+ts*d0)ps]+ land_ts*abs(u1)
+		return ServiceSet.getServicesList().stream()
+				.mapToDouble(serviceName -> (r.getServiceTax().get(serviceName) + r.getMarginal().get(serviceName))
+						* c.productivity(a, serviceName))
+				.sum() + a.getCachedLandTax();
 	}
 
-//	static double utilityPrice(Cell c, Aft a, RegionalModelRunner r) {
-//		if (a == null || !a.isInteract()) {
-//			return 0;
-//		}
-//		int tick = ProjectLoader.getCurrentYear() - ProjectLoader.getStartYear();
-//		return ServiceSet.getServicesList().stream()
-//				.mapToDouble(sname -> (r.R.getServicesHash().get(sname).getWeights().get(tick)
-//						/ r.R.getServicesHash().get(sname).getCalibration_Factor()) * c.productivity(a, sname))
-//				.sum();
-//	}
+	static void associateUtility(Cell c, RegionalModelRunner r) {
+		c.setcCurrentUtility(utility(c, c.owner, r));
+	}
 
 	static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
 		if (setAfts.size() == 0) {
@@ -70,7 +106,7 @@ public class Competitiveness {
 	private static boolean makeCompetition(Cell c, Aft competitor) {
 		boolean makeCompetition = true;
 		if (c.getMaskType() != null) {
-			HashMap<String, Boolean> mask = LandMaskUpdater.restrictions.get(c.getMaskType());
+			ConcurrentHashMap<String, Boolean> mask = LandMaskUpdater.restrictions.get(c.getMaskType());
 			if (mask != null) {
 				if (c.owner == null) {
 					if (mask.get(competitor.getLabel() + "_" + competitor.getLabel()) != null)
@@ -87,14 +123,14 @@ public class Competitiveness {
 	private static void landUsechange(Cell c, Aft competitor, RegionalModelRunner r) {
 		double uC = utility(c, competitor, r);
 		if (c.owner == null || c.owner.isAbandoned()) {
-			if (uC >= r.distributionMean.get(competitor)) {
+			if (uC >= r.getDistributionMeanY().get(competitor)) {
 				takeOverAcell(c, competitor);
 			}
 			return;
 		}
-		double uO = utility(c, c.owner, r);
-		double nbr = r.distributionMean != null
-				? (r.distributionMean.get(c.owner) * (giveInThreshold(c.owner, competitor)))
+		double uO = c.getCurrentUtility();
+		double nbr = r.getDistributionMeanY() != null
+				? (r.getDistributionMeanY().get(c.owner) * (giveInThreshold(c.owner, competitor)))
 				: 0;
 		if ((uC - uO > nbr) && uC > 0) {
 			takeOverAcell(c, competitor);
@@ -102,10 +138,10 @@ public class Competitiveness {
 	}
 
 	private static void landUsechangeNormalisedUtility(Cell c, Aft competitor, RegionalModelRunner r) {
-		if (r.maxUtility == r.minUtility) {
+		if (r.getMaxUtility() == r.getMinUtility()) {
 			return;
 		}
-		double uC = (utility(c, competitor, r) - r.minUtility) / (r.maxUtility - r.minUtility);
+		double uC = (utility(c, competitor, r) - r.getMinUtility()) / (r.getMaxUtility() - r.getMinUtility());
 		if (c.owner == null || c.owner.isAbandoned()) {
 			if (uC > 0) {
 				takeOverAcell(c, competitor);
@@ -113,14 +149,13 @@ public class Competitiveness {
 			return;
 		}
 
-		double uO = (utility(c, c.owner, r) - r.minUtility) / (r.maxUtility - r.minUtility);
+		double uO = (c.getCurrentUtility() - r.getMinUtility()) / (r.getMaxUtility() - r.getMinUtility());
 
 		double giveIn = 0;
 		boolean sameCategories = c.owner.category.getName().equals(competitor.category.getName());
 		boolean sameIntesity = c.owner.category.getIntensityLevel() == (competitor.category.getIntensityLevel());
 
 		if (!sameCategories || (sameCategories && sameIntesity)) {
-//			return;// temp to cancel competition 
 			giveIn = giveInThreshold(c.owner, competitor);
 		} else {
 			giveIn = CellBehaviourUpdater.cellsBehevoir.get(c).give_In(competitor);

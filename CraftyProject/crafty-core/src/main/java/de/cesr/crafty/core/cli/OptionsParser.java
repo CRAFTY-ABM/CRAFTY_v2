@@ -1,16 +1,27 @@
 package de.cesr.crafty.core.cli;
 
 import org.apache.commons.cli.*;
+/**
+ * Parses CRAFTY command-line arguments using Apache Commons CLI and returns them as a {@link CraftyOptions} object.
+ *
+ * Supported overrides are intentionally minimal and focused on runtime convenience:
+ * - YAML configuration file path (--config-file)
+ * - project directory override (--project-dir)
+ * - scenario name override (--scenario-name)
+ * - output path override (--output-path)
+ *
+ * If parsing fails (invalid option usage), this parser prints a help message and terminates the JVM
+ * with exit code 1.
+ */
 
+/**
+ * @author Mohamed Byari
+ *
+ */
 
 public class OptionsParser {
 
-	/**
-	 * Parse CLI arguments using Apache Commons CLI.
-	 * 
-	 * @param args command-line arguments
-	 * @return a {@link CraftyOptions} object with parsed data
-	 */
+
 	public static CraftyOptions parseArguments(String[] args) {
 		Options options = new Options();
 

@@ -6,7 +6,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+/**
+ * Represents a simulation region (a subset of the full grid) and holds region-specific state.
+ *
+ * A {@code Region} groups cells and services to support regionalised model runs. It stores:
+ * - A name/identifier used for lookup and output folder naming.
+ * - The set of cells belonging to the region ({@link #cells}).
+ * - A thread-safe set of unmanaged (unowned) cells ({@link #unmanageCellsR}), used by abandonment and
+ *   reallocation mechanisms.
+ * - A region-specific service registry ({@link #servicesHash}) containing demand, calibration, and other
+ *   service-level parameters for that region.
+ *
+ * Convenience method:
+ * - {@link #getServiceCalibration_Factor()} returns a concurrent map of service name -> calibration factor,
+ *   extracted from the underlying service objects,  to ensure an initial supply-demand equilibrium.
+ */
 
+/**
+ * @author Mohamed Byari
+ *
+ */
 
 public class Region {
 	private String name;
@@ -41,6 +60,7 @@ public class Region {
 	public ConcurrentHashMap<String, Service> getServicesHash() {
 		return servicesHash;
 	}
+	
 
 	public ConcurrentMap<String, Double> getServiceCalibration_Factor() {
 		return getServicesHash().entrySet().stream().collect(

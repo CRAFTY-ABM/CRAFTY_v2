@@ -1,9 +1,11 @@
 package de.cesr.crafty.gui.utils.analysis;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import de.cesr.crafty.core.utils.file.CsvTools;
+import de.cesr.crafty.core.utils.general.Utils;
 import de.cesr.crafty.gui.utils.graphical.CSVTableView;
 import javafx.scene.Node;
 
@@ -64,8 +66,50 @@ public class CsvToHtml {
 //		WebEngine engine = webView.getEngine();
 //		engine.loadContent(htmlString);
 
-		List<List<String>> data = CsvTools.readCsvFileWithoutZeros(CsvTools.readCsvFile(path));
+		List<List<String>> data = readCsvFileWithoutZeros(CsvTools.readCsvFile(path));
 		return CSVTableView.createTableFromRows(data);
+	}
+
+	private static List<List<String>> readCsvFileWithoutZeros(List<List<String>> data) {
+		List<List<String>> rows = new ArrayList<>();
+		rows.add(data.get(0));
+		// delete list ==0;
+		// delet row=0;
+		data.forEach(list -> {
+			boolean isnull = true;
+			for (String str : list) {
+				if (Utils.sToD(str) != 0) {
+					isnull = false;
+					break;
+				}
+			}
+			if (!isnull) {
+				rows.add(list);
+			}
+		});
+
+		List<List<String>> ret = new ArrayList<>();
+		ret.add(new ArrayList<>());
+		for (int i = 0; i < rows.size(); i++) {
+			ret.get(0).add(rows.get(i).get(0));
+		}
+		for (int i = 1; i < rows.iterator().next().size(); i++) {
+			boolean isnull = true;
+			for (List<String> list : rows) {
+				if (Utils.sToD(list.get(i)) != 0) {
+					isnull = false;
+					break;
+				}
+			}
+			if (!isnull) {
+				ret.add(new ArrayList<>());
+				for (List<String> list : rows) {
+					ret.get(ret.size() - 1).add(list.get(i));
+				}
+			}
+		}
+		ret.get(0).set(0, "Service/Capital");
+		return ret;
 	}
 
 }

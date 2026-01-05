@@ -2,48 +2,69 @@ package de.cesr.crafty.core.utils.general;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
-import de.cesr.crafty.core.dataLoader.ProjectLoader;
-import de.cesr.crafty.core.dataLoader.land.CellsLoader;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
+
+/**
+ * Deterministic subset selector for choosing a percentage of cells from a larger set.
+ *
+ * This utility is used to build a "seed" subset (e.g., candidate cells for abandonment/competition)
+ * in a way that is reproducible across runs and safe to call on concurrent data structures.
+ *
+ * Selection approach:
+ * - Each cell is assigned a stable 64-bit score computed from its (x,y) coordinates and a user-provided seed.
+ * - The method then keeps the N cells with the smallest scores (where N = round(size * percentage)).
+ * - A max-heap is used so the selection runs in O(M log N) time (M = number of cells), without sorting all cells.
+ *
+ * Why hashing coordinates?
+ * - Hashing (x,y,seed) avoids spatial artifacts (e.g., selecting whole rows/columns) and produces an even spread.
+ * - Using a deterministic tie-break (the entry key) guarantees stable output when scores collide.
+ *
+ * Concurrency note:
+ * - The input map is a {@link ConcurrentHashMap}. The method snapshots {@code entrySet()} into a list once to
+ *   avoid weakly-consistent iteration during selection.
+ */
+
+/**
+ * @author Mohamed Byari
+ *
+ */
 
 public class Selector {
 
-//	public static String[][] seedMap;
 
 	private static final CustomLogger LOGGER = new CustomLogger(Selector.class);
 
-	// Fast 64-bit mixer (SplitMix64). Good distribution, deterministic.
+	// 64-bit avalanche (SplitMix64 finalizer)
 	static long mix64(long z) {
-		z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
-		z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
-		return z ^ (z >>> 31);
+		z ^= (z >>> 30);
+		z *= 0xbf58476d1ce4e5b9L;
+		z ^= (z >>> 27);
+		z *= 0x94d049bb133111ebL;
+		z ^= (z >>> 31);
+		return z;
 	}
 
-	// Deterministic score per key using seed + key hash; ties break on key
-	static long score(String key, long seed) {
-		// String.hashCode() is cheap; mix64 fixes its weaknesses well enough
-		return mix64(seed ^ key.hashCode());
+	// Seeded 2-D hash from coords (kills row/column artifacts)
+	static long hash2D(int x, int y, long seed) {
+		long sx = Integer.toUnsignedLong(x) * 0x9E3779B97F4A7C15L; // golden ratio
+		long sy = Integer.toUnsignedLong(y) * 0xC2B2AE3D27D4EB4FL; // xxHash prime
+		return mix64(seed ^ sx ^ Long.rotateLeft(sy, 32));
 	}
 
-	// Holds a key with its score; comparable so tie-breaks are deterministic.
-	static final class KeyScore {
+	static final class EntryScore {
 		final String key;
+		final Cell cell;
 		final long score;
 
-		KeyScore(String key, long score) {
-			this.key = key;
-			this.score = score;
+		EntryScore(String k, Cell c, long s) {
+			key = k;
+			cell = c;
+			score = s;
 		}
 	}
 
-	/**
-	 * Deterministic random subset: pick the N keys with the smallest
-	 * score(seed,key). Complexity: O(M log N), Memory: O(N). Works great when
-	 * percentage << 100%.
-	 */
 	public static ConcurrentHashMap<String, Cell> randomSeed(ConcurrentHashMap<String, Cell> cellsHash,
 			double percentage, long seedID) {
 
@@ -58,39 +79,32 @@ public class Selector {
 		if (n >= size)
 			return new ConcurrentHashMap<>(cellsHash);
 
-		// Max-heap of the current N *smallest* scores so far.
-		// Comparator puts the *largest* (worst) score at the top for easy eviction.
-		PriorityQueue<KeyScore> heap = new PriorityQueue<>(n, (a, b) -> {
-			int c = Long.compare(b.score, a.score); // reverse order: largest first
+		// Snapshot once to avoid weakly-consistent traversal
+		List<Map.Entry<String, Cell>> entries = new ArrayList<>(cellsHash.entrySet());
+		// Keep N smallest scores in a max-heap (largest on top for eviction)
+		PriorityQueue<EntryScore> heap = new PriorityQueue<>(n, (a, b) -> {
+			int c = Long.compare(b.score, a.score); // reverse
 			return (c != 0) ? c : b.key.compareTo(a.key); // deterministic tie-break
 		});
-
-		// Snapshot keys once (avoids iteration races). Order of iteration doesn’t
-		// affect determinism.
-
-		for (String k : cellsHash.keySet()) {
-			long s = score(k, seedID);
+		for (Map.Entry<String, Cell> e : entries) {
+			Cell c = e.getValue();
+			if (c == null)
+				continue;
+			long s = hash2D(c.getX(), c.getY(), seedID);
 			if (heap.size() < n) {
-				heap.offer(new KeyScore(k, s));
-			} else if (s < heap.peek().score || (s == heap.peek().score && k.compareTo(heap.peek().key) < 0)) {
-				heap.poll();
-				heap.offer(new KeyScore(k, s));
+				heap.offer(new EntryScore(e.getKey(), c, s));
+			} else {
+				EntryScore top = heap.peek();
+				if (s < top.score || (s == top.score && e.getKey().compareTo(top.key) < 0)) {
+					heap.poll();
+					heap.offer(new EntryScore(e.getKey(), c, s));
+				}
 			}
 		}
-
-		// Build the result
 		ConcurrentHashMap<String, Cell> subset = new ConcurrentHashMap<>(Math.max(16, n * 2));
-		for (KeyScore ks : heap) {
-			subset.put(ks.key, cellsHash.get(ks.key));
-		}
-//		seedMap = new String[CellsLoader.hashCell.size() + 1][1];
-//		seedMap[0][0] = "ID,X,Y,seed";
-//		AtomicInteger i = new AtomicInteger(1);
-//		CellsLoader.hashCell.values().forEach(c -> {
-//			seedMap[i.getAndIncrement()][0] = c.getID() +","+ c.getX()+"," + c.getY()+"," + (subset.containsValue(c) ? "1" : "0");
-//		});
-		
-		LOGGER.info("seedID =" + seedID + " percentage= " + percentage*100 + "%  seed size " + subset.size());
+		for (EntryScore es : heap)
+			subset.put(es.key, es.cell);
+		LOGGER.info("Random seedID =" + seedID + " percentage= " + percentage * 100 + "%  seed size " + subset.size());
 		return subset;
 	}
 

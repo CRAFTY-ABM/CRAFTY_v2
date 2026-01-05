@@ -1,0 +1,54 @@
+.keyword {
+    -fx-fill: #8959a8;
+    -fx-font-weight: bold;
+}
+
+.method {
+    -fx-fill: #4271ae;
+    -fx-font-weight: bold;
+}
+
+.comment {
+    -fx-fill: #969896;
+    -fx-font-style: italic;
+}
+
+.number {
+    -fx-fill: #f5871f;
+}
+
+.variable {
+    -fx-fill: #4d4d4c;
+}
+
+/* New styles for block names and gap variables */
+.block {
+    -fx-fill: #c82829;
+    -fx-font-weight: bold;
+}
+
+.gap {
+    -fx-fill: #3e999f;
+    -fx-font-weight: bold;
+}
+
+.code-area {
+    -fx-background-color: white;
+}
+
+.code-area .text {
+    -fx-font-family: "Consolas", "Monaco", "Courier New", monospace;
+    -fx-font-size: 14px;
+}
+
+.code-area .paragraph-box:has-caret {
+    -fx-background-color: #f2f2f2;
+}
+
+.lineno {
+    -fx-background-color: #f0f0f0;
+    -fx-text-fill: #666666;
+    -fx-padding: 0 5px;
+    -fx-font-family: monospace;
+    -fx-font-size: 12px;
+}

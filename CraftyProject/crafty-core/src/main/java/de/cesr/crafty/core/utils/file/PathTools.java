@@ -2,7 +2,6 @@ package de.cesr.crafty.core.utils.file;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,29 +10,42 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
 
-/**
- * @author Mohamed Byari
- *
- */
+	/**
+	 * File-system helper utilities used by CRAFTY for discovering input/output resources and writing small text files.
+	 *
+	 * This class centralises common path operations needed during model initialization and coupling workflows, such as:
+	 * - Listing subdirectories (e.g., for PLUM coupling inputs) via {@link #listSubdirectories(Path)}.
+	 * - Recursively collecting all file paths under a root directory via {@link #findAllFilePaths(Path)}.
+	 * - Filtering a pre-built list of project files using simple substring conditions
+	 *   (see {@link #fileFilter(String...)} and overloads). This is primarily used to locate expected input
+	 *   files inside the project data tree provided by {@link ProjectLoader}.
+	 * - Writing plain text to disk with optional append mode via {@link #writeFile(String, String, boolean)}.
+	 * - Detecting direct child folders and walking all nested folders under a root path
+	 *   ({@link #detectFolders(String)} and {@link #getAllFolders(String)}).
+	 * - Ensuring output directories exist via {@link #makeDirectory(String)}.
+	 *
+	 * Notes:
+	 * - The file filtering methods match by substring presence; they do not interpret glob/regex patterns.
+	 * - Some methods return null on failure (instead of throwing) to allow the caller to decide how strict
+	 *   missing/optional files should be.
+	 * - Logging is handled through {@link CustomLogger} and respects runtime logging flags.
+	 */
+	
+	/**
+	 * @author Mohamed Byari
+	 *
+	 */
 
 public class PathTools {
 
 	private static final CustomLogger LOGGER = new CustomLogger(PathTools.class);
-
-	public static String[] aggregateArrays(String[] firstArray, String... secondArray) {
-		String[] result = new String[firstArray.length + secondArray.length];
-		System.arraycopy(firstArray, 0, result, 0, firstArray.length);
-		System.arraycopy(secondArray, 0, result, firstArray.length, secondArray.length);
-		return result;
-	}
 
 	public static Set<Path> listSubdirectories(Path directoryPath) {// used for Plum coupling
 		// Use try-with-resources to ensure the stream is closed properly
@@ -61,7 +73,7 @@ public class PathTools {
 				}
 			}
 		} catch (NullPointerException e) {
-			LOGGER.fatal(" \n Fatal error. Project folder Path not fund " + folder);
+//			LOGGER.fatal(" \n Fatal error. Project folder Path not fund " + folder + ":  " + e.getMessage());
 		}
 	}
 
@@ -116,37 +128,12 @@ public class PathTools {
 		return Listpathe;
 	}
 
-	public static String read(String filePath) {
-		Scanner scanner;
-		String line = "";
-		try {
-			scanner = new Scanner(new File(filePath));
-			while (scanner.hasNextLine()) {
-				line = line + "\n" + scanner.nextLine();
-			}
-		} catch (FileNotFoundException e) {
-		}
-		return line;
-	}
-
 	static public void writeFile(String path, String text, boolean keepTxt) {
 		File file = new File(path);
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, keepTxt))) {
 			writer.write(text);
 		} catch (IOException ex) {
 			LOGGER.error("Error writing to file: " + ex.getMessage());
-		}
-	}
-
-	static public void writePathRecentProject(String path, String text) {
-		String paths = PathTools.read(path);
-		if (!paths.contains(text)) {
-			File file = new File(path);
-			try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
-				writer.write(text);
-			} catch (IOException ex) {
-				LOGGER.error("Error writing to file: " + ex.getMessage());
-			}
 		}
 	}
 

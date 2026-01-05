@@ -1,0 +1,39 @@
+.keyword {
+    -fx-fill: #8015b7;
+    -fx-font-weight: bold;
+}
+
+.method {
+    -fx-fill: #0000ff;
+    -fx-font-weight: bold;
+}
+
+.comment {
+    -fx-fill: #208020;
+    -fx-font-style: italic;
+}
+
+.number {
+    -fx-fill: #0000ff;
+}
+
+.variable {
+    -fx-fill: #000000;
+}
+
+.error {
+    -fx-underline: true;
+    -fx-underline-color: red;
+}
+
+.code-area {
+    -fx-background-color: #f7f7f7;
+    -fx-font-family: "Courier New", monospace;
+    -fx-font-size: 14px;
+}
+
+.lineno {
+    -fx-background-color: #e0e0e0;
+    -fx-text-fill: #505050;
+    -fx-padding: 0 5px 0 5px;
+}

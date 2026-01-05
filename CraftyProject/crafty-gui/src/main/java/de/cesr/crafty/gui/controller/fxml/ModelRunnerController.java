@@ -17,16 +17,14 @@ import java.util.stream.Collectors;
 
 import de.cesr.crafty.core.cli.Config;
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.CsvKind;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.main.MainHeadless;
-import de.cesr.crafty.core.modelRunner.ModelRunner;
-import de.cesr.crafty.core.modelRunner.Timestep;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
 import de.cesr.crafty.gui.utils.graphical.ColorsTools;
 import de.cesr.crafty.gui.utils.graphical.LineChartTools;
 import de.cesr.crafty.gui.utils.graphical.MousePressed;
@@ -34,6 +32,7 @@ import de.cesr.crafty.gui.utils.graphical.NewWindow;
 import de.cesr.crafty.gui.utils.graphical.Tools;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.updaters.SupplyUpdater;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.gui.utils.graphical.SaveAs;
 import javafx.application.Platform;
@@ -112,6 +111,7 @@ public class ModelRunnerController {
 	}
 
 	private void scheduleNextStep(long delayMs) {
+		System.out.println("scheduleNextStep: " + delayMs);
 		worker.schedule(this::runOneStep, delayMs, TimeUnit.MILLISECONDS);
 	}
 
@@ -126,12 +126,12 @@ public class ModelRunnerController {
 			worker.shutdownNow();
 			return;
 		}
-		System.out.println("------------------------------   Step:  " + Timestep.getCurrentYear()
-				+ "   ------------------------------");
 
 		/* 2) SIMULATION – core --------------------- */
 		long start = System.nanoTime();
+		System.out.println("step stat... " + Timestep.getCurrentYear());
 		MainHeadless.runner.step();
+
 		long simTime = (System.nanoTime() - start) / 1_000_000; // ms
 
 		/* 3) RENDER – gui ---------------------- */
@@ -152,7 +152,6 @@ public class ModelRunnerController {
 		long wait = TARGET_PERIOD_MS - simTime;
 		if (wait < 0)
 			wait = 0; // step was slow → start immediately
-		Timestep.setCurrentYear(Timestep.getCurrentYear() + 1);
 		scheduleNextStep(wait);
 	}
 
@@ -203,7 +202,6 @@ public class ModelRunnerController {
 		Platform.runLater(() -> {
 			renderStep();
 		});
-		Timestep.setCurrentYear(Timestep.getCurrentYear() + 1);
 	}
 
 	private void renderStep() {
@@ -214,16 +212,14 @@ public class ModelRunnerController {
 
 	private void mapSynchronisation() {
 		if (Config.mapSynchronisation
-				&& ((Timestep.getCurrentYear() - Timestep.getStartYear()) % Config.mapSynchronisationGap == 0
-						|| Timestep.getCurrentYear() == Timestep.getEndtYear())) {
+				&& (Timestep.getTick() % Config.mapSynchronisationGap == 0 || Timestep.getTick() == 0)) {
 			CellsCanvas.colorMap(colorDisplay);
 		}
 	}
 
 	private void updateSupplyDemandLineChart() {
-		if (Config.chartSynchronisation
-				&& ((Timestep.getCurrentYear() - Timestep.getStartYear()) % Config.chartSynchronisationGap == 0
-						|| Timestep.getCurrentYear() == Timestep.getEndtYear())) {
+		if (Config.chartSynchronisation && (Timestep.getTick() % Config.chartSynchronisationGap == 0
+				|| Timestep.getCurrentYear() == Timestep.getEndtYear())) {
 			AtomicInteger m = new AtomicInteger();
 			ServiceSet.getServicesList().forEach(service -> {
 				lineChart.get(m.get()).getData().get(0).getData().add(new XYChart.Data<>(Timestep.getCurrentYear(),
@@ -260,7 +256,7 @@ public class ModelRunnerController {
 					.configureLogger(Paths.get(ConfigLoader.config.output_folder_name + File.separator + "LOGGER.txt"));
 		}
 		if (startRunin || !ConfigLoader.config.generate_output_files) {
-			ModelRunner.demandEquilibrium();
+			MainHeadless.runner.initialzeRun();
 			worker = Executors.newSingleThreadScheduledExecutor(r -> {
 				Thread t = new Thread(r, "simulation-worker");
 				t.setDaemon(true);
@@ -274,21 +270,21 @@ public class ModelRunnerController {
 	public void stop() {
 		System.out.println("0. worker.shutdown();");
 		worker.shutdown();
-		 try {
-		        // 2 - block the *calling* thread until the worker finishes, max 5 s
-		        if (!worker.awaitTermination(3, TimeUnit.SECONDS)) {
-		            // (optional) give up and interrupt whatever is still running
-		        	
-		            worker.shutdownNow();
-		        }
-		    } catch (InterruptedException ie) {
-		        worker.shutdownNow();
-		        Thread.currentThread().interrupt();
-		    }
-		
+		try {
+			// 2 - block the *calling* thread until the worker finishes, max 5 s
+			if (!worker.awaitTermination(3, TimeUnit.SECONDS)) {
+				// (optional) give up and interrupt whatever is still running
+
+				worker.shutdownNow();
+			}
+		} catch (InterruptedException ie) {
+			worker.shutdownNow();
+			Thread.currentThread().interrupt();
+		}
+
 		Platform.runLater(() -> {
 			Timestep.setCurrentYear(Timestep.getStartYear());
-			//reloadBaseline
+			// reloadBaseline
 			Path baselinePath = PathTools.fileFilter(PathTools.asFolder("worlds"), "Baseline_map").iterator().next();
 			CsvProcessors.processCSV(baselinePath, CsvKind.BASELINE);
 			run.setDisable(false);
@@ -303,7 +299,6 @@ public class ModelRunnerController {
 					j = 0;
 				}
 			}
-			System.out.println("2. worker.shutdown();");
 		});
 	}
 

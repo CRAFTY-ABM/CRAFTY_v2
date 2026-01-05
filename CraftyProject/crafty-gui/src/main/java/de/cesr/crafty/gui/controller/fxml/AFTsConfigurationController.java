@@ -155,8 +155,9 @@ public class AFTsConfigurationController {
 	static void updateSensitivty(Aft newAFT, GridPane grid, TableView<ObservableList<String>> tabV) {
 		String[][] tab = CSVTableView.tableViewToArray(tabV);
 		for (int i = 1; i < tab.length; i++) {
+			newAFT.getSensByService().put(tab[i][0], new ConcurrentHashMap<>());
 			for (int j = 1; j < tab[0].length; j++) {
-				newAFT.getSensitivity().put(tab[0][j] + "|" + tab[i][0], Utils.sToD(tab[i][j]));
+				newAFT.getSensByService().get(tab[i][0]).put(tab[0][j], Utils.sToD(tab[i][j]));
 			}
 		}
 		ubdateRadarchart(newAFT, grid);
@@ -216,7 +217,8 @@ public class AFTsConfigurationController {
 		List<ValueChartItem> listvalues = new ArrayList<>();
 		List<Category> categories = new ArrayList<>();
 		CapitalUpdater.getCapitalsList().forEach(capitalName -> {
-			double y = Math.min(100, agent.getSensitivity().get(capitalName + "|" + servicesName) * 100);
+
+			double y = Math.min(100, agent.getSensByService().get(servicesName).get(capitalName) * 100);
 			if (y != 0) {
 				listvalues.add(new ValueChartItem(y, capitalName + "|" + servicesName));
 				categories.add(new Category(capitalName));
@@ -246,8 +248,8 @@ public class AFTsConfigurationController {
 			sensetivtyTable[i + 1][0] = ServiceSet.getServicesList().get(i);
 			for (int j = 0; j < CapitalUpdater.getCapitalsList().size(); j++) {
 				sensetivtyTable[0][j + 1] = CapitalUpdater.getCapitalsList().get(j);
-				sensetivtyTable[i + 1][j + 1] = a.getSensitivity()
-						.get(CapitalUpdater.getCapitalsList().get(j) + "|" + ServiceSet.getServicesList().get(i)) + "";
+				sensetivtyTable[i + 1][j + 1] = String.valueOf(a.getSensByService()
+						.get(ServiceSet.getServicesList().get(i)).get(CapitalUpdater.getCapitalsList().get(j)));
 			}
 
 		}
@@ -273,8 +275,9 @@ public class AFTsConfigurationController {
 
 			for (int j = 0; j < ServiceSet.getServicesList().size(); j++) {
 				tab[j + 1][0] = ServiceSet.getServicesList().get(j);
-				tab[j + 1][i + 1] = a.getSensitivity()
-						.get(CapitalUpdater.getCapitalsList().get(i) + "|" + ServiceSet.getServicesList().get(j)) + "";
+				tab[j + 1][i + 1] = String.valueOf(a.getSensByService().get(ServiceSet.getServicesList().get(j))
+						.get(CapitalUpdater.getCapitalsList().get(i)));
+
 				tab[j + 1][CapitalUpdater.getCapitalsList().size() + 1] = a.getProductivityLevel()
 						.get(ServiceSet.getServicesList().get(j)) + "";
 			}
@@ -298,9 +301,8 @@ public class AFTsConfigurationController {
 				.get(0).toFile().getParent();
 		CsvTools.writeCSVfile(tab2, Paths.get(folder2 + File.separator + "AftParams_" + a.getLabel() + ".csv"));
 		// add also in csv folder
-		Path pathCSV = PathTools.fileFilter(File.separator + "csv" + File.separator, "AFTsMetaData").get(0);
-		String[][] tmp = CsvTools
-				.csvReader(PathTools.fileFilter(File.separator + "csv" + File.separator, "AFTsMetaData").get(0));
+		Path pathCSV = ProjectLoader.getAftMetaData();
+		String[][] tmp = CsvTools.csvReader(ProjectLoader.getAftMetaData());
 		boolean isExiste = false;
 		for (int i = 0; i < tmp.length; i++) {
 			if (a.getLabel().equalsIgnoreCase(tmp[i][Utils.indexof("Label", tmp[0])])) {

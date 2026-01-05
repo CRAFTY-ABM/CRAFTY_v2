@@ -186,11 +186,11 @@ public class RegionController {
 		ConcurrentHashMap<String, Double> services = new ConcurrentHashMap<>();
 		for (Aft manager : AFTsLoader.getActivateAFTsHash().values()) {
 
-			if (manager.getType() != ManagerTypes.Abandoned && manager.getSensitivity() != null) {
+			if (manager.getType() != ManagerTypes.Abandoned && manager.getSensByService() != null) {
 				ServiceSet.getServicesList().forEach(s -> {
 					double product = c.getCapitals().entrySet().stream()
-							.mapToDouble(e -> (manager.getSensitivity().get(e.getKey() + "|" + s) != null
-									? Math.pow(e.getValue(), manager.getSensitivity().get(e.getKey() + "|" + s))
+							.mapToDouble(e -> (manager.getSensByService().get(s).get(e.getKey()) != null
+									? Math.pow(e.getValue(), manager.getSensByService().get(s).get(e.getKey()))
 									: 0))
 							.reduce(1.0, (x, y) -> x * y);
 					services.put(s, product * manager.getProductivityLevel().get(s));

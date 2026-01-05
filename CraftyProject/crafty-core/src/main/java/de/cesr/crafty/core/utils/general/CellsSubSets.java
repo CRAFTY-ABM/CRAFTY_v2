@@ -9,6 +9,28 @@ import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 
+/**
+ * Helper methods for building spatial subsets of cells and owners (AFTs) around a focal cell.
+ *
+ * This class provides utilities to retrieve Moore neighbourhoods (8-neighbour grid) and extended
+ * Moore neighbourhoods (square window with radius r), and to extract the set of interacting AFTs
+ * present in those neighbourhoods.
+ *
+ * Typical use cases:
+ * - Neighbourhood / contagion effects in land-use transitions (e.g., prioritising changes near similar owners).
+ * - Detecting local competition or influence zones around a cell.
+ *
+ * Notes:
+ * - Neighbourhood lookup relies on {@link CellsLoader#getCell(int, int)} and therefore depends on the
+ *   global cell grid being initialized.
+ * - Only owners with {@code isInteract() == true} are returned by the AFT-detection methods.
+ * - Sets are created as synchronized sets; this helps because neighbourhoods are computed from parallel
+ *   contexts, but callers should still avoid modifying returned collections concurrently.
+ */
+/**
+ * @author Mohamed Byari
+ *
+ */
 public class CellsSubSets {
 
 	static Collection<Aft> detectNeighboringAFTs(Cell c) {
@@ -61,19 +83,4 @@ public class CellsSubSets {
 		return neighborhood;
 	}
 
-//	public static ConcurrentHashMap<String, Cell> randomSeed(ConcurrentHashMap<String, Cell> cellsHash,
-//			double percentage) {
-//
-//		int numberOfElementsToSelect = (int) (cellsHash.size() * (percentage));
-//
-//		// Use parallel stream for better performance on large maps
-//		List<String> keys = new ArrayList<>(cellsHash.keySet());
-//		ConcurrentHashMap<String, Cell> randomSubset = new ConcurrentHashMap<>();
-//
-//		Collections.shuffle(keys, new Random()); // Shuffling the keys for randomness
-//		keys.stream()/* .parallelStream() */.unordered() // This improve performance by eliminating the need for
-//															// maintaining order
-//				.limit(numberOfElementsToSelect).forEach(key -> randomSubset.put(key, cellsHash.get(key)));
-//		return randomSubset;
-//	}
 }

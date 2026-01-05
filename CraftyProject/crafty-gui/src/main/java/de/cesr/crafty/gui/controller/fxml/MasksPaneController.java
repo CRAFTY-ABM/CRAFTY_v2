@@ -1,18 +1,23 @@
 package de.cesr.crafty.gui.controller.fxml;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
 import de.cesr.crafty.gui.utils.graphical.MousePressed;
 import de.cesr.crafty.gui.utils.graphical.Tools;
+import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
-import de.cesr.crafty.core.modelRunner.Timestep;
 import de.cesr.crafty.core.updaters.LandMaskUpdater;
+import de.cesr.crafty.core.updaters.Timestep;
+import de.cesr.crafty.core.utils.file.CsvTools;
+import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
 import eu.hansolo.fx.charts.CircularPlot;
 import eu.hansolo.fx.charts.CircularPlotBuilder;
@@ -70,7 +75,7 @@ public class MasksPaneController {
 					ArrayList<PlotItem> itemsList = initPlotItem();
 
 					MaskLoader.restrictionsByScenario(r.getText());
-					HashMap<String, Boolean> restrictionsRul = LandMaskUpdater.restrictions.get(r.getText());
+					ConcurrentHashMap<String, Boolean> restrictionsRul = LandMaskUpdater.restrictions.get(r.getText());
 					// default circular plot
 					List<PlotItem> items = circularPlot(itemsList, restrictionsRul, radioListOfAFTs.get(0).getText(),
 							true);
@@ -148,11 +153,11 @@ public class MasksPaneController {
 		return boxOfAftRadios;
 	}
 
-	private void yearAction(CheckBox r, ChoiceBox<String> boxYears, HashMap<String, Boolean> restrictionsRul,
+	private void yearAction(CheckBox r, ChoiceBox<String> boxYears, Map<String, Boolean> restrictionsRul,
 			ArrayList<CheckBox> radioListOfAFTs) {
 		LandMaskUpdater.cellOneMaskUpdater(r.getText(), (int) Utils.sToD(boxYears.getValue()));
 		CellsCanvas.colorMap("Mask");
-		LandMaskUpdater.updateRestrections(r.getText(), boxYears.getValue(), restrictionsRul);
+		updateRestrections(r.getText(), boxYears.getValue(), restrictionsRul);
 		radioListOfAFTs.get(0).setSelected(true);
 	}
 
@@ -160,7 +165,7 @@ public class MasksPaneController {
 		List<String> years = new ArrayList<>();
 		MaskLoader.mask_paths.get(maskType).values().forEach(path -> {
 			for (int i = Timestep.getStartYear(); i < Timestep.getEndtYear(); i++) {
-				if (path.toString().contains(i + "")) {
+				if (path.toString().contains(String.valueOf(i))) {
 					years.add(i + "");
 					break;
 				}
@@ -196,7 +201,7 @@ public class MasksPaneController {
 		return itemsList;
 	}
 
-	private List<PlotItem> circularPlot(ArrayList<PlotItem> itemsList, HashMap<String, Boolean> restrictions, String ow,
+	private List<PlotItem> circularPlot(ArrayList<PlotItem> itemsList, Map<String, Boolean> restrictions, String ow,
 			boolean toAdd) {
 
 		// itemsList.forEach(owner -> {});
@@ -230,6 +235,25 @@ public class MasksPaneController {
 		List<PlotItem> items = List.of(its);
 
 		return items;
+	}
+
+	public static void updateRestrections(String maskType, String currentyear, Map<String, Boolean> restriction) {
+		ArrayList<Path> restrictionsFile = PathTools.fileFilter(currentyear, ProjectLoader.getScenario(),
+				"LandUseControl", "Restrictions", maskType, ".csv");
+		if (restrictionsFile == null || restrictionsFile.isEmpty()) {
+			System.out.println(maskType + " Restrections updated ");
+			return;
+		}
+		restriction.clear();
+		String[][] matrix = CsvTools.csvReader(restrictionsFile.get(0));
+		if (matrix != null) {
+			for (int i = 1; i < matrix.length; i++) {
+				for (int j = 1; j < matrix[0].length; j++) {
+					restriction.put(matrix[i][0] + "_" + matrix[0][j], matrix[i][j].contains("1"));
+				}
+			}
+		}
+		System.out.println(maskType + " Restrections updated ");
 	}
 
 }

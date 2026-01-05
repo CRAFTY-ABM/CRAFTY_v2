@@ -1,6 +1,5 @@
 package de.cesr.crafty.core.utils.file;
 
-
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.Duration;
@@ -11,19 +10,24 @@ import java.util.concurrent.TimeoutException;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
+/**
+ * Waits until a directory named {@code prefix + "_" + year} appears under
+ * {@code parentDir}, or throws a TimeoutException if not found before
+ * {@code timeout}.
+ *
+ * @param timeout how long to wait in total
+ * @return Path to the created directory
+ * @throws IOException          if I/O fails
+ * @throws TimeoutException     if the folder wasn't created in time
+ * @throws InterruptedException if the thread is interrupted while waiting
+ */
+/**
+ * @author Mohamed Byari
+ *
+ */
 public class DirectoryWatcher {
 
-	/**
-	 * Waits until a directory named {@code prefix + "_" + year} appears under
-	 * {@code parentDir}, or throws a TimeoutException if not found before
-	 * {@code timeout}.
-	 *
-	 * @param timeout how long to wait in total
-	 * @return Path to the created directory
-	 * @throws IOException          if I/O fails
-	 * @throws TimeoutException     if the folder wasn't created in time
-	 * @throws InterruptedException if the thread is interrupted while waiting
-	 */
+
 	public static void waitForYearFolder(Path path) {
 		final Instant deadline = Instant.now().plus(Duration.ofMinutes(30));
 		try {
@@ -72,17 +76,5 @@ public class DirectoryWatcher {
 
 	private static boolean existsAsFileOrDir(Path p) {
 		return (Files.isRegularFile(p) || Files.isDirectory(p));
-	}
-
-	// --- Example usage ---
-	public static void main(String[] args) {
-		try {
-			Path parent = Paths.get("C:\\Users\\byari-m\\Documents\\Data\\PLUM\\PLUM_output\\run2\\crafty\\x\\y");
-
-			waitForYearFolder(parent);
-			System.out.println("----");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 }

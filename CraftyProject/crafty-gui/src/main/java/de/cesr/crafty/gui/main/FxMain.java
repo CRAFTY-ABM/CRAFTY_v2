@@ -1,5 +1,6 @@
 package de.cesr.crafty.gui.main;
 
+
 import java.io.InputStream;
 import java.net.URL;
 
@@ -31,7 +32,6 @@ public class FxMain extends Application {
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
-
 		System.out.println("--Starting CRAFTY execution--");
 		FxMain.primaryStage = primaryStage;
 		URL fxml = FxMain.class.getResource("/fxmlControllers/MenuBar.fxml");
@@ -51,13 +51,8 @@ public class FxMain extends Application {
 	private void addLogo() {
 		InputStream imageStream = getClass().getResourceAsStream("/graphic/CRAFTY_logo_modern3.png");
 		logo = Tools.logo(imageStream, 1);
-		// TreeView<Path> tree =
-		// FileTreeView.build(Paths.get("C:\\Users\\byari-m\\Desktop\\CRAFTY_DATA\\CRAFTY-EU-5km-data\\output\\RCP2_6-SSP1\\runrun"),".csv","-Cell-",1);
-        
 		anchor.setCenter(logo);
 	}
-	
-	
 
 	public static void main(String[] args) {
 		launch(args);

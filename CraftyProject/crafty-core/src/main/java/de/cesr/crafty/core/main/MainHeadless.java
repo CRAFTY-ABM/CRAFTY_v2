@@ -7,8 +7,22 @@ import de.cesr.crafty.core.cli.CraftyOptions;
 import de.cesr.crafty.core.cli.OptionsParser;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.modelRunner.ModelRunner;
+import de.cesr.crafty.core.updaters.SeedUpdater;
 
-/*
+/**
+ * Headless entry point for running CRAFTY from the command line (no GUI).
+ *
+ * This main class wires together the minimal startup sequence:
+ * 1) Parse CLI arguments (e.g., config path and optional overrides).
+ * 2) Load and initialize the YAML configuration via {@link ConfigLoader}.
+ * 3) Apply CLI overrides for project directory, scenario name, and output path (if provided).
+ * 4) Initialize project paths via {@link ProjectLoader}.
+ * 5) Create a {@link ModelRunner} and execute the simulation lifecycle.
+ *
+ * This class is intended for batch/HPC execution and reproducible scripted runs.
+ */
+
+/**
  * @author Mohamed Byari
  *
  */
@@ -21,23 +35,16 @@ public class MainHeadless {
 		ProjectLoader.pathInitialisation(Paths.get(ConfigLoader.config.project_path));
 		runner = new ModelRunner();
 		runner.start();
+		runner.initialzeRun();
 		runner.run();
-
-	}
-
-	// Fast 64-bit mixer (SplitMix64). Good distribution, deterministic.
-	static long mix64(long z) {
-		z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
-		z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
-		return z ^ (z >>> 31);
 	}
 
 	public static void initializeConfig(String[] args) {
-		System.setProperty("java.awt.headless", "true");
 		// Load config using the path from CraftyOptions
 		CraftyOptions options = OptionsParser.parseArguments(args);
 		ConfigLoader.configPath = options.getConfigFilePath();
 		ConfigLoader.init();
+		SeedUpdater.inialize();
 		// If the user specified a project directory and scenario name, override the
 		// ones in the YAML
 		String projectDirectoryPath = options.getProjectDirectoryPath();

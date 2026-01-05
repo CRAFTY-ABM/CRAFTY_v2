@@ -41,11 +41,11 @@ Build:
 mvn clean package
 Afterwards target\ must contain :
 
-crafty-gui-0.0.1-SNAPSHOT.jar     (← keep this one)
+crafty-gui-0.0.1-SNAPSHOT.jar     
 fxjars\
    ├─ lib\  (javafx-*.jar, jdk.jsobject.jar, …)
    └─ bin\  (prism_*.dll, glass.dll, …)
-<no “original-crafty-gui-*.jar”! Delete it.>
+
 ────────────────────────────────────────────────────────────────────────────────
 3 . Manual JAR test (always do this before packaging)
 ────────────────────────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ jpackage ^
   --win-console ^
   --win-shortcut ^
   --icon "C:\Users\byari-m\Desktop\TheFolder\Inkscap-Projects\icon.ico" ^
-  --resource-dir ..\src\installer\resources ^
+  --resource-dir src\installer\resources ^
   --verbose
   
  // Remark to be add in scr/...:

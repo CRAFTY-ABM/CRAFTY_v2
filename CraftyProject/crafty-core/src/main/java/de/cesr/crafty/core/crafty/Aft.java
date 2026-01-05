@@ -1,10 +1,27 @@
 package de.cesr.crafty.core.crafty;
 
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
-import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.updaters.CapitalUpdater;
+
+/**
+ * Concrete Agent Functional Type (AFT) implementation used as the land manager/owner for cells.
+ *
+ * This class mainly provides:
+ * - A label-based constructor for creating standard AFT instances (including a built-in "Abandoned" type).
+ * - A copy constructor that performs a simple "mutation" of behavioural/production parameters.
+ *
+ * Mutation behaviour:
+ * The copy constructor creates a new AFT by copying parameters from an existing one and perturbing
+ * selected values (sensitivity, productivity levels, and key behavioural parameters) by a
+ * random factor controlled by {@link ConfigLoader#config} {@code mutation_interval}.
+ * This supports evolutionary-style variation when {@code mutate_on_competition_win} are enabled.
+ *
+ * Special case:
+ * If the label is "Abandoned", the instance is configured as a non-interacting abandoned manager with
+ * a default grey color and an "Uncategorized" category.
+ */
 
 /**
  * @author Mohamed Byari
@@ -13,27 +30,16 @@ import de.cesr.crafty.core.updaters.CapitalUpdater;
 
 public class Aft extends AbstractAft {
 
-	public Aft() {
-		label = "";
-		completeName = "";
-		CapitalUpdater.getCapitalsList().forEach((Cn) -> {
-			ServiceSet.getServicesList().forEach((Sn) -> {
-				sensitivity.put((Cn + "|" + Sn), 0.);
-			});
-		});
-		ServiceSet.getServicesList().forEach(servicename -> {
-			productivityLevel.put(servicename, 0.0);
-		});
-	}
-
 	public Aft(Aft other) {
 		if (other != null) {
-			this.label = other.label;
+			setLabel(other.getLabel());
 			this.color = other.color;
-			other.sensitivity.forEach((n, v) -> {
-				this.sensitivity.put(n,
-						v * (1 + ConfigLoader.config.mutation_interval * (2 * new Random().nextDouble() - 1)));
-
+			other.sensitivity.forEach((sn, hash) -> {
+				sensitivity.put(sn, new ConcurrentHashMap<String, Double>());
+				hash.forEach((cn, v) -> {
+					sensitivity.get(sn).put(cn,
+							v * (1 + ConfigLoader.config.mutation_interval * (2 * new Random().nextDouble() - 1)));
+				});
 			});
 			other.productivityLevel.forEach((n, v) -> {
 				this.productivityLevel.put(n,
@@ -49,37 +55,19 @@ public class Aft extends AbstractAft {
 
 	}
 
-	public Aft(String label, double LevelIntervale) {
-		this.label = label;
-		this.color = "#848484";
-		CapitalUpdater.getCapitalsList().forEach((Cn) -> {
-			ServiceSet.getServicesList().forEach((Sn) -> {
-				this.sensitivity.put((Cn + "|" + Sn), Math.random() > 0.5 ? Math.random() : 0);
-			});
-		});
-		ServiceSet.getServicesList().forEach((Sn) -> {
-			this.productivityLevel.put(Sn, LevelIntervale * Math.random());
-		});
-		this.giveInMean = Math.random();
-		this.giveUpMean = Math.random();
-		this.giveUpProbabilty = Math.random();
-	}
-
 	public Aft(String label) {
-		this.label = label;
+		setLabel(label);
+		if (label.equals("Abandoned")) {
+			setLabel("Abandoned");
+			setType(ManagerTypes.Abandoned);
+			setColor("#cccccc");
+			setCategory(new AftCategory("Uncategorized"));
+		}
 	}
 
 	@Override
 	public String toString() {
-		return "Aft [label=" + label + ", type=" + type + ", category=" + category + "]";
+		return "Aft [label=" + getLabel() + ", type=" + type + ", category=" + category + "]";
 	}
-
-//	@Override
-//	public String toString() {
-//		return "AFT [label=" + label + " ,\n sensitivty=" + sensitivity + ",\n productivityLevel=" + productivityLevel
-//				+ ",\n giveIn=" + giveInMean + ", giveUp=" + giveUpMean + ", giveUpProbabilty=" + giveUpProbabilty
-//				+ "]";
-//	}
-//	
 
 }

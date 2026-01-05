@@ -16,8 +16,8 @@ import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.modelRunner.Timestep;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
 import de.cesr.crafty.gui.utils.analysis.CapitalsAnalyzer;
@@ -158,9 +158,9 @@ public class CapitalsController {
 			// loop for AFTs
 			AFTsLoader.getActivateAFTsHash().values().forEach(a -> {
 				// aggreagte by service
-				if (a.getSensitivity().get((capitalName + "|" + serviceName)) != null
-						&& a.getSensitivity().get((capitalName + "|" + serviceName)) != 0) {
-					hash.merge(serviceName, a.getSensitivity().get((capitalName + "|" + serviceName)), Double::sum);
+				if (a.getSensByService().get(serviceName) != null
+						&& a.getSensByService().get(serviceName).get(capitalName) != 0) {
+					hash.merge(serviceName, a.getSensByService().get(serviceName).get(capitalName), Double::sum);
 				}
 
 			});
@@ -182,10 +182,10 @@ public class CapitalsController {
 			// loop for Services
 			ServiceSet.getServicesList().forEach(serviceName -> {
 				// aggreagte by service
-				if (a.getSensitivity().get((capitalName + "|" + serviceName)) != null
-						&& a.getSensitivity().get((capitalName + "|" + serviceName)) != null
-						&& a.getSensitivity().get((capitalName + "|" + serviceName)) != 0) {
-					sumServices.merge(aftName, a.getSensitivity().get((capitalName + "|" + serviceName)), Double::sum);
+
+				if (a.getSensByService().get(serviceName) != null
+						&& a.getSensByService().get(serviceName).get(capitalName) != 0) {
+					sumServices.merge(aftName, a.getSensByService().get(serviceName).get(capitalName), Double::sum);
 				}
 			});
 			if (sumServices.size() > 0) {

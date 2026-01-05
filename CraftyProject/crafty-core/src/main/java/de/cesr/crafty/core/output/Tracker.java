@@ -9,11 +9,39 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
-import de.cesr.crafty.core.modelRunner.Timestep;
+import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.AbstractUpdater;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
+import de.cesr.crafty.core.updaters.Timestep;
+
+/**
+ * Optional diagnostics updater that tracks and exports detailed supply composition by AFT.
+ *
+ * When enabled (see {@link ConfigLoader#config} flags {@code track_changes} and {@code generate_output_files}),
+ * this updater aggregates per-service production across cells and writes a CSV snapshot each year.
+ * The output is primarily intended for debugging, calibration, and consistency checks (e.g., verifying
+ * that total supply equals the sum of AFT contributions, or inspecting how supply shifts across AFTs over time).
+ *
+ * Two export modes are supported:
+ * - Global tracking in {@link #step()} (aggregates over all regions and writes to the root output folder).
+ * - Region-specific tracking via {@link #trackSupply(int, String)} (aggregates over one region and writes
+ *   into the region subfolder).
+ *
+ * Implementation notes:
+ * - Aggregation is performed with {@link ConcurrentHashMap#merge(Object, Object, java.util.function.BiFunction)}
+ *   and uses parallel streams over region cells for performance.
+ * - The resulting structure is a nested map: AFT label -> (service name -> summed production),
+ *   with an extra "AggregateAFT" column storing the number of cells/agents for that AFT.
+ * - {@link #writeCSV(ConcurrentHashMap, String)} writes a rectangular CSV table, using the union of all
+ *   nested keys as column headers and filling missing values with 0.
+ */
+
+/**
+ * @author Mohamed Byari
+ *
+ */
 
 public class Tracker extends AbstractUpdater {
 	private static final CustomLogger LOGGER = new CustomLogger(Tracker.class);
@@ -33,11 +61,12 @@ public class Tracker extends AbstractUpdater {
 				container.put(a.getLabel(), tmp);
 			});
 			CellsLoader.regions.values().forEach(region -> {
-				region.getCells().values().parallelStream().forEach(c -> {
-					c.getCurrentProductivity().forEach((s, v) -> {
+				region.getCells().values()/**/ .parallelStream().forEach(c -> {
+					for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
 						if (c.getOwner() != null)
-							container.get(c.getOwner().getLabel()).merge(s, v, Double::sum);
-					});
+							container.get(c.getOwner().getLabel()).merge(ServiceSet.getServicesList().get(i),
+									c.getCurrentProd()[i], Double::sum);
+					}
 				});
 			});
 			AFTsLoader.hashAgentNbr.forEach((label, a) -> {
@@ -56,24 +85,25 @@ public class Tracker extends AbstractUpdater {
 
 	}
 
-	public static void trackSupply(int year, String regionName) {
+	public static void trackSupply(String regionName) {
 		if (ConfigLoader.config.output_folder_name != null && ConfigLoader.config.track_changes) {
 			ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> container = new ConcurrentHashMap<>();
 			AFTsLoader.getAftHash().values().forEach(a -> {
 				ConcurrentHashMap<String, Double> tmp = new ConcurrentHashMap<>();
 				container.put(a.getLabel(), tmp);
 			});
-			CellsLoader.regions.get(regionName).getCells().values().parallelStream().forEach(c -> {
-				c.getCurrentProductivity().forEach((s, v) -> {
+			CellsLoader.regions.get(regionName).getCells().values()/**/ .parallelStream().forEach(c -> {
+				for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
 					if (c.getOwner() != null)
-						container.get(c.getOwner().getLabel()).merge(s, v, Double::sum);
-				});
+						container.get(c.getOwner().getLabel()).merge(ServiceSet.getServicesList().get(i),
+								c.getCurrentProd()[i], Double::sum);
+				}
 			});
 			AFTsLoader.hashAgentNbrRegions.get(regionName).forEach((label, a) -> {
 				container.get(label).put("AggregateAFT", (double) a);
 			});
 			writeCSV(container, ConfigLoader.config.output_folder_name + File.separator + "region_" + regionName
-					+ File.separator + "SupplyTracker_" + year + ".csv");
+					+ File.separator + "SupplyTracker_" + Timestep.getCurrentYear() + ".csv");
 		}
 	}
 

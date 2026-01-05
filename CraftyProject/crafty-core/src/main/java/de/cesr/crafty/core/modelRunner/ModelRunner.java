@@ -4,12 +4,13 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Service;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
+import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceDemandLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
@@ -17,14 +18,69 @@ import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.updaters.AftsUpdater;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
+import de.cesr.crafty.core.updaters.Capital_Degradation_Updater;
+import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.updaters.FlagUpdater;
 import de.cesr.crafty.core.updaters.LandMaskUpdater;
 import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
 import de.cesr.crafty.core.updaters.ServicesUpdater;
 import de.cesr.crafty.core.updaters.SupplyUpdater;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
-
+import de.cesr.crafty.core.utils.general.ChartExporter;
+/**
+ * Main CRAFTY model runner.
+ *
+ * This class assembles and executes the full simulation workflow by:
+ * - Initializing scenario context and core datasets (services, capitals, AFTs, cells).
+ * - Building the ordered schedule of {@link de.cesr.crafty.core.modelRunner.ModelState} components
+ *   that run at every simulation step/year.
+ * - Running the step loop from {@link Timestep#getStartYear()} to {@link Timestep#getEndtYear()}.
+ * - Optionally performing an initial demand–supply equilibrium calibration and exporting outputs.
+ *
+ * High-level lifecycle:
+ * 1) {@link #start()}:
+ *    - Sets scenario and loads service metadata.
+ *    - Instantiates the main updaters/loaders (capitals, AFTs, cells) and performs a first capital update.
+ *    - Builds the schedule in a fixed order that defines the model execution pipeline per year.
+ *
+ * 2) {@link #initialzeRun()}:
+ *    - Creates/derives the output directory structure.
+ *    - Optionally redirects logs to a file in the output folder.
+ *    - Exports the resolved configuration snapshot to disk.
+ *    - Optionally performs initial demand–supply equilibrium calibration.
+ *
+ 3) {@link #run()}:
+ *   - Executes {@link AbstractModelRunner#step()} once per year.
+ *   - Exports post-run charts/plots (PNG/PDF depending on configuration).
+ *
+ * Scheduling / execution order:
+ * The order in {@link #start()} is intentional. Each component may depend on outputs of earlier components,
+ * e.g.:
+ * - {@link ServicesUpdater} updates demands/weights/taxes (inputs to utility and competitiveness).
+ * - {@link CapitalUpdater} and {@link Capital_Degradation_Updater} affect capitals used in productivity and competitiveness.
+ * - {@link AftsUpdater} updates AFT production/behaviour and land taxes/subsidies.
+ * - {@link SupplyUpdater} and {@link Listener} compute and persist outputs derived from current state.
+ * - {@link RegionsModelRunnerUpdater} executes regional model logic for the current year.
+ * - {@link Timestep} advances the simulation year counter.
+ *
+ * Initial demand–supply equilibrium calibration:
+ * If enabled, {@link #demandEquilibrium()} computes a calibration factor per service (and per region),
+ * based on baseline supply and initial demands, and then rescales demands by dividing by that factor.
+ * Services with zero initial supply are tracked, and their calibration factors are replaced with the
+ * across-region average for that service.
+ *
+ * Outputs:
+ * - The model writes CSV outputs through {@link Listener} / {@link ListenerByRegion}
+ *   and optionally supply tracking via {@link Tracker}.
+ * - At the end of the run, charts may be exported to a "plots" folder using {@link ChartExporter}.
+ *
+ * Notes / assumptions:
+ * - This runner keeps references to core components as static fields to allow access from other parts
+ *   of the code base. This design assumes a single active run at a time.
+ * - {@link #start()} clears and rebuilds the schedule explicitly via {@link #getScheduled()} to enforce
+ *   deterministic execution order.
+ */
 /**
  * @author Mohamed Byari
  *
@@ -32,10 +88,10 @@ import de.cesr.crafty.core.utils.file.PathTools;
 
 public class ModelRunner extends AbstractModelRunner {
 
-	private static final CustomLogger LOGGER = new CustomLogger(ModelRunner.class);
 	public static CellsLoader cellsSet;
 	public static CapitalUpdater capitalUpdater;
 	public static AftsUpdater aftsUpdater;
+	private static Capital_Degradation_Updater capital_Degradation_Updater;
 
 	public void start() {
 		ProjectLoader.setScenario(ConfigLoader.config.scenario);
@@ -45,23 +101,24 @@ public class ModelRunner extends AbstractModelRunner {
 		aftsUpdater = new AftsUpdater();
 		cellsSet = new CellsLoader();
 		capitalUpdater.step();
+		capital_Degradation_Updater = new Capital_Degradation_Updater();
+
 		getScheduled().clear();
 		getScheduled().add(new FlagUpdater());
 		getScheduled().add(new ServicesUpdater());
 		getScheduled().add(capitalUpdater);
 		getScheduled().add(aftsUpdater);
-//		getScheduled().add(new CellBehaviourUpdater());
+		getScheduled().add(new CellBehaviourUpdater());
 		getScheduled().add(new LandMaskUpdater());
-//		getScheduled().add(new RegionalShocksUpdater());
-//		getScheduled().add(new CellsShocksUpdater());
+		getScheduled().add(capital_Degradation_Updater);
 		getScheduled().add(new SupplyUpdater());
 		getScheduled().add(new Listener());
 		getScheduled().add(new Tracker());
 		getScheduled().add(new RegionsModelRunnerUpdater());
+		getScheduled().add(new Timestep());
 	}
 
-	public void run() {
-		AtomicInteger tick = new AtomicInteger(Timestep.getStartYear());
+	public void initialzeRun() {
 		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.Output_path);
 		Listener.outputfolderPath(generatedPath, ConfigLoader.config.output_folder_name);
 		if (ConfigLoader.config.export_LOGGER) {
@@ -71,17 +128,13 @@ public class ModelRunner extends AbstractModelRunner {
 		PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
 				Listener.exportConfigurationFile(), false);
 		demandEquilibrium();
-		for (int i = 0; i <= Timestep.getEndtYear() - Timestep.getStartYear(); i++) {
-			Timestep.setCurrentYear(tick.get());
-			LOGGER.info("-------------   " + Timestep.getCurrentYear() + "   --------------");
-			System.out.println("-------------   " + Timestep.getCurrentYear() + "   --------------");
+	}
+	
+	public void run() {
+		for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
 			step();
-//			GeoTiffExample.geoTiffWriter();// -----
-			tick.getAndIncrement();
-			System.out.println("==> " + ConfigLoader.config.seedID);
-			ConfigLoader.config.seedID++;
 		}
-//		exportChartsPlots();
+		exportChartsPlots();
 	}
 
 	public static void demandEquilibrium() {
@@ -101,10 +154,11 @@ public class ModelRunner extends AbstractModelRunner {
 
 	private static void RegionalDemandEquilibrium_calculation() {
 		ModelRunner.capitalUpdater.step();
-
+		// Initial capital degradation
+		capital_Degradation_Updater.step();
 		// Calculate EQ
-		// remumber the service has 0 supply hashMap<regionName, List<servicesNames>>
-		// calculate the average EQ
+		// Remumber the service has 0 supply hashMap<regionName, List<servicesNames>>
+		// Calculate the average EQ
 		// go to 0 supply services and repleas them with the average
 
 		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(RegionalRunner -> {
@@ -146,21 +200,21 @@ public class ModelRunner extends AbstractModelRunner {
 		});
 	}
 
-//	private static void exportChartsPlots() {
-//	if (ConfigLoader.config.generate_charts_plots_PNG || ConfigLoader.config.generate_charts_plots_PDF) {
-//		String path = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "plots");
-//		Listener.servicedemandHash.forEach((serviceName, serviceHash) -> {
-//			ChartExporter.createAndSaveChartAsPNG(serviceHash, ProjectLoader.getStartYear(), serviceName,
-//					path + File.separator + serviceName);
-//		});
-//		Map<String, Color> hashColors = new HashMap<>();
-//		AFTsLoader.getAftHash().forEach((name, aft) -> {
-//			hashColors.put(name, Color.decode(aft.getColor()));
-//		});
-//
-//		ChartExporter.createAndSaveChartAsPNG(Listener.compositionAftHash, hashColors, ProjectLoader.getStartYear(),
-//				"LandUseTrends", path + File.separator + "Land_use_trends");
-//	}
-//}
+	private static void exportChartsPlots() {
+		if (ConfigLoader.config.generate_charts_plots_PNG || ConfigLoader.config.generate_charts_plots_PDF) {
+			String path = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "plots");
+			Listener.servicedemandHash.forEach((serviceName, serviceHash) -> {
+				ChartExporter.createAndSaveChartAsPNG(serviceHash, Timestep.getStartYear(), serviceName,
+						path + File.separator + serviceName);
+			});
+			Map<String, String> hashColors = new HashMap<>();
+			AFTsLoader.getAftHash().forEach((name, aft) -> {
+				hashColors.put(name, aft.getColor());
+			});
+
+			ChartExporter.createAndSaveChartAsPNG(Listener.compositionAftHash, hashColors, Timestep.getStartYear(),
+					"LandUseTrends", path + File.separator + "Land_use_trends");
+		}
+	}
 
 }

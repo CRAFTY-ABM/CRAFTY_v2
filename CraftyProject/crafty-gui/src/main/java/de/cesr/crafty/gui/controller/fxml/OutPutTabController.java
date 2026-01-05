@@ -19,10 +19,10 @@ import java.nio.file.Paths;
 
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.utils.general.Utils;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
 import de.cesr.crafty.gui.main.FxMain;
 import de.cesr.crafty.gui.main.GuiScaler;
+import de.cesr.crafty.gui.utils.analysis.NonGraphic;
 import de.cesr.crafty.gui.utils.graphical.FileTreeView;
 import de.cesr.crafty.gui.utils.graphical.NewWindow;
 import de.cesr.crafty.gui.utils.graphical.WarningWindowes;
@@ -104,7 +104,7 @@ public class OutPutTabController {
 					WarningWindowes.showWaitingDialog(_ -> {
 						Path path = selected.getValue();
 						OutPuterController.outputpath = path.toAbsolutePath();
-						if (Utils.checkDirectFiles(path, "Total-AggregateServiceDemand.csv")) {
+						if (NonGraphic.checkDirectFiles(path, "Total-AggregateServiceDemand.csv")) {
 							createNewTab(path.getFileName().toString());
 						}
 					});

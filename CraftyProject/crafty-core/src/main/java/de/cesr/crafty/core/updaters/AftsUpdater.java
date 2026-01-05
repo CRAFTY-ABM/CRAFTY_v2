@@ -3,21 +3,56 @@ package de.cesr.crafty.core.updaters;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
+import de.cesr.crafty.core.crafty.Region;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
+import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.modelRunner.Timestep;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
 import de.cesr.crafty.core.utils.file.CsvTools;
+import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.csv.CsvReadOptions;
 
+/**
+ * Scheduled updater responsible for time-varying AFT parameters (production, behaviour, and land policy inputs).
+ *
+ * This updater is executed once per model step (typically per simulated year) and applies any parameter
+ * changes defined in the input directories. It supports:
+ * - Updating AFT production parameters (productivity levels and sensitivity matrix).
+ * - Updating AFT behavioural parameters (give-in/give-up distributions, probabilities).
+ * - Loading land taxes/subsidies per AFT and region at the start of the simulation.
+ *
+ * Update logic:
+ * - Parameter file paths are pre-resolved by {@link AFTsLoader} into maps keyed by AFT label and
+ *   scenario/year selectors (e.g., "{scenario}|{year}" or "default_production|{year}").
+ * - At each step, {@link #updateProduction(String)} checks whether a year-specific file exists for the
+ *   current year and applies it to the active AFTs only.
+ *
+ * Input formats:
+ * - Production files are read as a simple table; rows are services, and the "Production" column defines
+ *   the productivity level for each service. The sensitivity matrix is loaded from the same file and
+ *   populates {@code service -> (capital -> exponent)} in {@link Aft#getSensByService()}.
+ * - Behaviour files are read as a key/value style CSV and populate giving-in/up distribution parameters
+ *   and noise ranges.
+ * - Land taxes/subsidies are loaded per region and stored as a time series (year -> value) in each AFT.
+ *   If no file is found, a default value of 0 is applied for all years.
+ *
+ * Notes:
+ * - Production and sensitivity updates use the global service and capital lists ({@link ServiceSet} and
+ *   {@link CapitalUpdater}).
+ * - This updater expects model time to be configured via {@link Timestep} and scenario via {@link ProjectLoader}.
+ */
 /**
  * @author Mohamed Byari
  *
@@ -39,6 +74,11 @@ public class AftsUpdater extends AbstractUpdater {
 	public void step() {
 		updateProduction("production");
 		updateProduction("agents");
+		if (Timestep.getTick() == 0) {
+			CellsLoader.regions.values().forEach(R -> {
+				load_land_taxes_subsidies(R);
+			});
+		}
 	}
 
 	private void updateProduction(String pORb) {
@@ -70,11 +110,10 @@ public class AftsUpdater extends AbstractUpdater {
 				if (ServiceSet.getServicesList().contains(m[i][0])) {
 					a.getProductivityLevel().put(m[i][0], Utils.sToD(m[i][Utils.indexof("Production", m[0])]));
 				} else {
-					LOGGER.warn(m[i][0] + "  is not existe in Services List, will be ignored");
+					LOGGER.warn("(" + m[i][0] + ")  is not existe in Services List, will be ignored");
 				}
 			}
 		}
-
 		updateSensitivty(a, file);
 	}
 
@@ -82,18 +121,31 @@ public class AftsUpdater extends AbstractUpdater {
 		try {
 			CsvReadOptions options = CsvReadOptions.builder(file).separator(',').build();
 			Table T = Table.read().usingOptions(options);
-			CapitalUpdater.getCapitalsList().forEach((Cn) -> {
-				ServiceSet.getServicesList().forEach((Sn) -> {
-					Object s = T.column(Cn).get(T.column(0).indexOf(Sn));
-					if (s instanceof Double) {
-						a.getSensitivity().put((Cn + "|" + Sn), (double) s);
-					} else if (s instanceof Integer) {
-						a.getSensitivity().put((Cn + "|" + Sn), ((Integer) s).doubleValue());
+			// Optional: assume first column contains service names
+			var serviceCol = T.stringColumn(0);
+
+			ServiceSet.getServicesList().forEach(Sn -> {
+				int row = serviceCol.indexOf(Sn);
+				if (row < 0) {
+					System.out.println("Service not found in CSV: " + Sn);
+					return;
+				}
+
+				a.getSensByService().putIfAbsent(Sn, new ConcurrentHashMap<>());
+
+				CapitalUpdater.getCapitalsList().forEach(Cn -> {
+					Object s = T.column(Cn).get(row);
+
+					if (s instanceof Number n) {
+						a.getSensByService().get(Sn).put(Cn, n.doubleValue());
+					} else {
+						System.out.println("ERROR reading Sensitivity value for service=" + Sn + " capital=" + Cn
+								+ " (value=" + s + ", type=" + (s == null ? "null" : s.getClass().getName()) + ")");
 					}
 				});
 			});
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -107,6 +159,66 @@ public class AftsUpdater extends AbstractUpdater {
 		a.setServiceLevelNoiseMin(Utils.sToD(reder.get("serviceLevelNoiseMin").get(0)));
 		a.setServiceLevelNoiseMax(Utils.sToD(reder.get("serviceLevelNoiseMax").get(0)));
 		a.setGiveUpProbabilty(Utils.sToD(reder.get("givingUpProb").get(0)));
+	}
+
+	private void load_land_taxes_subsidies(Region R) {
+		Path path = landTSPath(R);
+		if (path == null) {
+			LOGGER.info("AFT lan_taxes_subsidies file not fund for |" + R.getName()
+					+ "| default value will use: land_taxes_subsidies = 0 for all AFts");
+			useDefaultTS(R);
+			return;
+		}
+		Map<String, List<String>> hashTS = CsvProcessors.ReadAsaHash(path);
+		LOGGER.info("Update land_taxes_subsidies for [" + R.getName() + "]: " + path);
+		hashTS.forEach((AFTName, vect) -> {
+			if (AFTsLoader.getActivateAFTsHash().keySet().contains(AFTName)) {
+				ConcurrentHashMap<Integer, Double> dv = new ConcurrentHashMap<>();
+				for (int i = 0; i < Timestep.getSize(); i++) {
+					if (i < vect.size()) {
+						dv.put(Timestep.getStartYear() + i, Utils.sToD(vect.get(i)));
+					}
+				}
+				AFTsLoader.getActivateAFTsHash().get(AFTName).getLand_taxes_subsidies().clear();
+				AFTsLoader.getActivateAFTsHash().get(AFTName).setLand_taxes_subsidies(dv);
+
+				LOGGER.trace("land_taxes_subsidies for [" + AFTName + "]: "
+						+ AFTsLoader.getActivateAFTsHash().get(AFTName).getLand_taxes_subsidies());
+			}
+		});
+
+	}
+
+	private static void useDefaultTS(Region R) {
+		AFTsLoader.getActivateAFTsHash().values().forEach((a) -> {
+			ConcurrentHashMap<Integer, Double> dv = new ConcurrentHashMap<>();
+			for (int i = 0; i < Timestep.getSize(); i++) {
+				dv.put(i + Timestep.getStartYear(), 0.);
+			}
+			a.setLand_taxes_subsidies(dv);
+		});
+	}
+
+	private static Path landTSPath(Region R) {
+		Path path;
+		String ts = ConfigLoader.config.land_taxes_subsidies_path;
+		if (ts != null && !ts.isEmpty()) {
+			if (Paths.get(ts).toFile().isFile()) {
+				path = Paths.get(ts);
+			} else {// if is folder
+				ArrayList<Path> directory = PathTools.findAllFilePaths(Paths.get(ts));
+				path = PathTools.fileFilter(directory, "_" + R.getName()).get(0);
+			}
+		} else {
+			try {
+				path = PathTools.fileFilter(ProjectLoader.getScenario(), PathTools.asFolder("land_taxes_subsidies"),
+						"_" + R.getName()).get(0);
+			} catch (NullPointerException e) {
+				LOGGER.warn("No Land_taxes_subsidies file fund for region: |" + R.getName() + "|");
+				return null;
+			}
+		}
+		return path;
 	}
 
 }

@@ -10,5 +10,7 @@
 	<modules>
 		<module>crafty-core</module>
 		<module>crafty-gui</module>
+		<module>crafty-institution</module>
+		
 	</modules>
 </project>

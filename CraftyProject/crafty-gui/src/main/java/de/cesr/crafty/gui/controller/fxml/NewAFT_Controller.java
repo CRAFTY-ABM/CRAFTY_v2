@@ -50,8 +50,7 @@ public class NewAFT_Controller extends AFTsConfigurationController {
 		TextArea textArea = new TextArea();
 
 		windowAddAFT.creatwindows("Add New Agent Functional Type", 0.7, 0.9, rootPane);
-		Aft newAFT = new Aft();
-		newAFT.setLabel("newAFT");
+		Aft newAFT = new Aft("newAFT");
 
 		colorPicker.setOnAction(_ -> {
 			newAFT.setColor(ColorsTools.toHex(colorPicker.getValue()));

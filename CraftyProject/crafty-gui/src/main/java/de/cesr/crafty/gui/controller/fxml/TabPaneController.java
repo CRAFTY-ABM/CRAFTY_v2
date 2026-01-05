@@ -6,15 +6,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
-import de.cesr.crafty.core.dataLoader.serivces.ServiceDemandLoader;
 import de.cesr.crafty.core.main.MainHeadless;
 import de.cesr.crafty.core.modelRunner.ModelRunner;
-import de.cesr.crafty.core.modelRunner.Timestep;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
+import de.cesr.crafty.gui.utils.analysis.RecentProjects;
 import de.cesr.crafty.gui.utils.graphical.ColorsTools;
 import de.cesr.crafty.gui.utils.graphical.LineChartTools;
-import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -68,7 +67,7 @@ public class TabPaneController {
 		System.out.println("initialize " + getClass().getSimpleName());
 		mapBox.getChildren().add(CellsCanvas.subScene);
 
-		PathTools.writePathRecentProject("RecentProject.txt", "\n" + ProjectLoader.getProjectPath());
+		RecentProjects.writePathRecentProject("RecentProject.txt", "\n" + ProjectLoader.getProjectPath());
 		scenarioschoice.getItems().addAll(ProjectLoader.getScenariosList());
 		scenarioschoice.setValue(ProjectLoader.getScenario());
 		ArrayList<String> listYears = new ArrayList<>();
@@ -82,7 +81,7 @@ public class TabPaneController {
 		regionalBox.setSelected(CellsLoader.regionalization);
 		// regionalBox.setDisable(ServiceSet.isRegionalServicesExisted());
 		MenuBarController.getInstance().getDataAnalysis().setDisable(false);
-		
+
 //		regionalBox.setDisable(true);
 	}
 
@@ -99,7 +98,7 @@ public class TabPaneController {
 				CellsCanvas.ColorP(c, color);
 			});
 		});
-	//	CellsCanvas.gc.drawImage(CellsCanvas.writableImage, 0, 0);
+		// CellsCanvas.gc.drawImage(CellsCanvas.writableImage, 0, 0);
 		// regionalBox.setSelected(CellsLoader.regionsNamesSet.size() > 1);
 	}
 
@@ -111,7 +110,7 @@ public class TabPaneController {
 
 			LineChart<Number, Number> chart = ServicesController.getInstance().getDemandsChart();
 			new LineChartTools().lineChart((Pane) chart.getParent(), chart,
-					ServiceDemandLoader.serialisationWorldDemand());
+					ServicesController.serialisationWorldDemand());
 			MasksPaneController.getInstance().clear(new ActionEvent());
 			MasksPaneController.initialiseMask();
 			yearchoice();
@@ -126,18 +125,18 @@ public class TabPaneController {
 				ModelRunner.capitalUpdater.step();
 				ModelRunner.aftsUpdater.step();
 				if (dataPane.isSelected()) {
-				for (int i = 0; i < CapitalUpdater.getCapitalsList().size(); i++) {
-					if (CapitalsController.radioColor[i].isSelected()) {
-						if (i < CapitalUpdater.getCapitalsList().size()) {
-							CellsCanvas.colorMap(CapitalUpdater.getCapitalsList().get(i));
-							CapitalsController.getInstance().updateHistogrameCapitals(Timestep.getCurrentYear(),
-									CapitalUpdater.getCapitalsList().get(i));
+					for (int i = 0; i < CapitalUpdater.getCapitalsList().size(); i++) {
+						if (CapitalsController.radioColor[i].isSelected()) {
+							if (i < CapitalUpdater.getCapitalsList().size()) {
+								CellsCanvas.colorMap(CapitalUpdater.getCapitalsList().get(i));
+								CapitalsController.getInstance().updateHistogrameCapitals(Timestep.getCurrentYear(),
+										CapitalUpdater.getCapitalsList().get(i));
+							}
 						}
 					}
-				}
 //				CellsCanvas.colorMap("Mock");
 				}
-				
+
 			}
 		}
 	}

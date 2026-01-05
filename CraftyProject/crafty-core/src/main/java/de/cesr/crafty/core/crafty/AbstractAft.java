@@ -1,23 +1,72 @@
 package de.cesr.crafty.core.crafty;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
-
+/**
+ * Base definition for an Agent Functional Type (AFT) used in CRAFTY.
+ *
+ * This abstract class stores the core parameters that describe how a manager behaves and competes for
+ * land, independent of any specific decision model implementation. Concrete AFT classes typically extend
+ * this type (directly or indirectly) and use these fields during utility calculation and land-use change.
+ *
+ * Main parameter groups:
+ * - Identity and categorisation: label, completeName, {@link ManagerTypes}, {@link AftCategory}, and display color.
+ * - Production behaviour:
+ *   - {@link #productivityLevel}: per-service productivity modifiers.
+ *   - {@link #sensitivity}: service -> (capital -> exponent) sensitivity matrix used in production/utility functions.
+ * - Behavioural thresholds and stochasticity: give-in / give-up means and standard deviations, noise bounds, and
+ *   give-up probability.
+ * - Policy instruments: {@link #land_taxes_subsidies} stores a time series (year -> tax/subsidy) and
+ *   {@link #cachedLandTax} provides a cached value for fast repeated access during a step.
+ *
+ * Convenience methods:
+ * - {@link #isActive()}, {@link #isInteract()}, {@link #isAbandoned()} provide quick checks based on {@link #type}.
+ *
+ * Concurrency note:
+ * Several collections are {@link ConcurrentHashMap}s because they may be accessed frequently during the run and,
+ * in some configurations, from parallel code paths. Callers should still treat configuration maps as read-mostly
+ * after initialization.
+ */
 /**
  * @author Mohamed Byari
  *
  */
 public abstract class AbstractAft {
-	String label;
-	String completeName;
+	private String label;
+	private String completeName;
 	ManagerTypes type;
-	ConcurrentHashMap<String, Double> sensitivity = new ConcurrentHashMap<>();
+//	ConcurrentHashMap<String, Double> sensitivity = new ConcurrentHashMap<>();
 	ConcurrentHashMap<String, Double> productivityLevel = new ConcurrentHashMap<>();
 	double giveInMean = 0, giveInSD = 0, giveUpMean = 0, giveUpSD = 0, serviceLevelNoiseMin = 0,
 			serviceLevelNoiseMax = 0, giveUpProbabilty = 0;
 	AftCategory category;
 	String color;
+	private ConcurrentHashMap<Integer, Double> land_taxes_subsidies = new ConcurrentHashMap<>();// <year,TS>
+
+	private double cachedLandTax;
+
+	protected Map<String, Map<String, Double>> sensitivity= new ConcurrentHashMap<>(); // service -> (capital -> exponent)
+
+	public Map<String, Map<String, Double>> getSensByService() {
+		return sensitivity;
+	}
+
+//	public Map<String, Double> getSensitivity(String service) { 
+//		return sensitivity.get(service);
+//	}
+
+	public void setSensByService(Map<String, Map<String, Double>> sensByService) {
+		this.sensitivity = sensByService;
+	}
+
+	public double getCachedLandTax() {
+		return cachedLandTax;
+	}
+
+	public void setCachedLandTax(double v) {
+		cachedLandTax = v;
+	}
 
 	public AftCategory getCategory() {
 		return category;
@@ -47,9 +96,6 @@ public abstract class AbstractAft {
 		return type == ManagerTypes.Abandoned;
 	}
 
-	public ConcurrentHashMap<String, Double> getSensitivity() {
-		return sensitivity;
-	}
 
 	public double getServiceLevelNoiseMin() {
 		return serviceLevelNoiseMin;
@@ -133,6 +179,14 @@ public abstract class AbstractAft {
 
 	public void setCompleteName(String name) {
 		this.completeName = name;
+	}
+
+	public ConcurrentHashMap<Integer, Double> getLand_taxes_subsidies() {
+		return land_taxes_subsidies;
+	}
+
+	public void setLand_taxes_subsidies(ConcurrentHashMap<Integer, Double> land_taxes_subsidies) {
+		this.land_taxes_subsidies = land_taxes_subsidies;
 	}
 
 }

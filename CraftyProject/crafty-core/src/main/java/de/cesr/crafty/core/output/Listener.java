@@ -20,13 +20,51 @@ import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.modelRunner.Timestep;
 import de.cesr.crafty.core.updaters.AbstractUpdater;
 import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
 import de.cesr.crafty.core.updaters.SupplyUpdater;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.CsvTools;
 import de.cesr.crafty.core.utils.file.PathTools;
+import de.cesr.crafty.core.utils.general.MapPngExporter;
 import de.cesr.crafty.core.utils.general.Utils;
+
+/**
+ * Central output listener for headless CRAFTY runs.
+ *
+ * This updater is scheduled to run once per model step and
+ * collects key aggregated indicators into in-memory tables, then writes them to CSV and
+ * exports spatial maps.
+ *
+ * What it records:
+ * - AFT composition over time (number of cells/agents per AFT).
+ * - Global supply vs. demand time series for each service.
+ * - Demand–supply equilibrium snapshot per region/service (aggregated across regions).
+ * - Mean utilities per AFT (when running a single-region configuration).
+ * - A simple land-use change event counter per year ({@link #landUseChangeCounter}), which is expected
+ *   to be incremented by other parts of the model whenever a land-use transition occurs.
+ *
+ * What it writes:
+ * - Total-AggregateAFTComposition.csv
+ * - Total-AggregateServiceDemand.csv
+ * - Total-AggregateDemandServicesEquilibrium.csv
+ * - AverageUtilities.csv (single-region runs)
+ * - landEventCounter.csv
+ * - Cell-level map snapshots as CSV and PNG (controlled by map output settings)
+ *
+ * Output execution is controlled by {@link ConfigLoader#config} flags, especially:
+ * {@code generate_output_files}, {@code generate_map_output_files}, {@code map_output_frequency},
+ * and {@code map_output_years}. Map export years are precomputed in {@link #initializeListExportingYearsMap()}
+ * so map writing can be triggered efficiently during the run.
+ *
+ * Note: this class uses several static arrays (String[][]) as lightweight “tables” to store time series
+ * before writing them to disk at each step.
+ */
+
+/**
+ * @author Mohamed Byari
+ *
+ */
 
 public class Listener extends AbstractUpdater {
 	public static String[][] compositionAftListener;
@@ -48,11 +86,12 @@ public class Listener extends AbstractUpdater {
 	@Override
 	public void step() {
 		if (ConfigLoader.config.generate_output_files) {
-			compositionAFT(Timestep.getCurrentYear());
-			outPutserviceDemandToCsv(Timestep.getCurrentYear(), SupplyUpdater.totalSupply);
-			writOutPutMap(Timestep.getCurrentYear());
+			compositionAFT();
+			outPutserviceDemandToCsv(SupplyUpdater.totalSupply);
+			writOutPutMap();
 			updateCSVFilesWolrd();
 			updateLandUseEventCounter();
+
 		}
 	}
 
@@ -62,16 +101,14 @@ public class Listener extends AbstractUpdater {
 
 	public void initializeListeners() {
 		initializeListExportingYearsMap();
-		servicedemandListener = new String[Timestep.getEndtYear() - Timestep.getStartYear()
-				+ 2][ServiceSet.getServicesList().size() * 2 + 1];
+		servicedemandListener = new String[Timestep.getSize() + 1][ServiceSet.getServicesList().size() * 2 + 1];
 		servicedemandListener[0][0] = "Year";
 		for (int i = 1; i < ServiceSet.getServicesList().size() + 1; i++) {
 			servicedemandListener[0][i] = "Supply:" + ServiceSet.getServicesList().get(i - 1);
 			servicedemandListener[0][i + ServiceSet.getServicesList().size()] = "Demand:"
 					+ ServiceSet.getServicesList().get(i - 1);
 		}
-		compositionAftListener = new String[Timestep.getEndtYear() - Timestep.getStartYear()
-				+ 2][AFTsLoader.getAftHash().size() + 1];
+		compositionAftListener = new String[Timestep.getSize() + 1][AFTsLoader.getAftHash().size() + 1];
 		compositionAftListener[0][0] = "Year";
 		averageUtilities = new String[compositionAftListener.length][compositionAftListener[0].length];
 		averageUtilities[0][0] = "Year";
@@ -95,44 +132,48 @@ public class Listener extends AbstractUpdater {
 			servicedemandHash.put(ServiceSet.getServicesList().get(i), h);
 		}
 
-		landEventCounter = new String[Timestep.getEndtYear() - Timestep.getStartYear() + 1][2];
+		landEventCounter = new String[Timestep.getSize()][2];
 		landEventCounter[0][0] = "year";
 		landEventCounter[0][1] = "LU changed";
-		for (int i = 0; i < Timestep.getEndtYear() - Timestep.getStartYear(); i++) {
+		for (int i = 0; i < Timestep.getSize() - 1; i++) {
 			landEventCounter[i + 1][0] = String.valueOf(i + Timestep.getStartYear());
 		}
 	}
 
-	public void outPutserviceDemandToCsv(int year, ConcurrentHashMap<String, Double> totalSupply) {
+	public void outPutserviceDemandToCsv(ConcurrentHashMap<String, Double> totalSupply) {
 		AtomicInteger m = new AtomicInteger(1);
-		int y = year - Timestep.getStartYear() + 1;
-		servicedemandListener[y][0] = String.valueOf(year);
+		int y = Timestep.getTick() + 1;
+		servicedemandListener[y][0] = String.valueOf(Timestep.getCurrentYear());
 		ServiceSet.getServicesList().forEach(serviceName -> {
 			servicedemandListener[y][m.get()] = String.valueOf(totalSupply.get(serviceName));
 			Service ds = ServiceSet.worldService.get(serviceName);
 			servicedemandListener[y][m.get() + ServiceSet.getServicesList().size()] = String
-					.valueOf(ds.getDemands().get(year));
+					.valueOf(ds.getDemands().get(Timestep.getCurrentYear()));
 			m.getAndIncrement();
 			servicedemandHash.get(serviceName).get("Supply").add(totalSupply.get(serviceName));
-			servicedemandHash.get(serviceName).get("Demand").add(ds.getDemands().get(year));
+			servicedemandHash.get(serviceName).get("Demand").add(ds.getDemands().get(Timestep.getCurrentYear()));
 		});
 	}
 
-	public void compositionAFT(int year) {
-		int y = year - Timestep.getStartYear() + 1;
-		compositionAftListener[y][0] = String.valueOf(year);
-		averageUtilities[y][0] = String.valueOf(year);
+	public void compositionAFT() {
+		int y = Timestep.getTick() + 1;
+		compositionAftListener[y][0] = String.valueOf(Timestep.getCurrentYear());
+		averageUtilities[y][0] = String.valueOf(Timestep.getCurrentYear());
 		AFTsLoader.hashAgentNbr.forEach((name, value) -> {
-			compositionAftListener[y][Utils.indexof(name, compositionAftListener[0])] = String.valueOf(value);
-			compositionAftHash.get(name).add((double) value);
+			int index = Utils.indexof(name, compositionAftListener[0]);
+			if (index > 0) {
+				compositionAftListener[y][Utils.indexof(name, compositionAftListener[0])] = String.valueOf(value);
+				compositionAftHash.get(name).add((double) value);
+			}
 		});
 		Region R = RegionsModelRunnerUpdater.regionsModelRunner.values().iterator().next().R;
 		if (y > 1) {
 			AFTsLoader.getAftHash().forEach((name, aft) -> {
-				if (RegionsModelRunnerUpdater.regionsModelRunner.get(R.getName()).getDistributionMean() != null) {
+				if (RegionsModelRunnerUpdater.regionsModelRunner.get(R.getName()).getDistributionMean()
+						.get(Timestep.getCurrentYear() - 1) != null) {
 					averageUtilities[y - 1][Utils.indexof(name, averageUtilities[0])] = String
 							.valueOf(RegionsModelRunnerUpdater.regionsModelRunner.get(R.getName()).getDistributionMean()
-									.get(aft));
+									.get(Timestep.getCurrentYear() - 1).get(aft));
 				} else {
 					averageUtilities[y - 1][Utils.indexof(name, averageUtilities[0])] = "null";
 				}
@@ -169,8 +210,8 @@ public class Listener extends AbstractUpdater {
 	}
 
 	private void updateLandUseEventCounter() {
-		if (Timestep.getCurrentYear() - Timestep.getStartYear() != 0) {
-			landEventCounter[Timestep.getCurrentYear() - Timestep.getStartYear()][1] = landUseChangeCounter.toString();
+		if (Timestep.getTick() != 0) {
+			landEventCounter[Timestep.getTick()][1] = landUseChangeCounter.toString();
 			Path landChengePath = Paths.get(ConfigLoader.config.output_folder_name + File.separator
 					+ ProjectLoader.getScenario() + "-landEventCounter.csv");
 			CsvTools.writeCSVfile(landEventCounter, landChengePath);
@@ -178,22 +219,21 @@ public class Listener extends AbstractUpdater {
 		}
 	}
 
-	public void writOutPutMap(int year) {
-		if (yearsMapExporting.contains(year)) {
-			writeMap(year);
-
+	public void writOutPutMap() {
+		if (yearsMapExporting.contains(Timestep.getCurrentYear())) {
+			writeMap();
+			MapPngExporter.exportOwnerMapAsPng();
 		}
 	}
 
 	public static void initializeListExportingYearsMap() {
-		for (int year = Timestep.getStartYear(); year <= Timestep.getEndtYear(); year++) {
+		for (int year = Timestep.getStartYear(); year < Timestep.getEndtYear() + 1; year++) {
 			if (ConfigLoader.config.generate_map_output_files) {
 				if (ConfigLoader.config.map_output_years instanceof Integer) {
 					ConfigLoader.config.map_output_frequency = (int) ConfigLoader.config.map_output_years;
 					if (ConfigLoader.config.map_output_frequency != 0) {
-						if ((Timestep.getCurrentYear() - Timestep.getStartYear())
-								% ConfigLoader.config.map_output_frequency == 0
-								|| Timestep.getCurrentYear() == Timestep.getEndtYear()) {
+						if ((Timestep.getTick()) % ConfigLoader.config.map_output_frequency == 0
+								|| Timestep.getTick() == 0) {
 							yearsMapExporting.add(year);
 						}
 					}
@@ -204,9 +244,7 @@ public class Listener extends AbstractUpdater {
 						yearsMapExporting.add(year);
 					}
 				} else if (ConfigLoader.config.map_output_frequency != 0) {
-					if ((Timestep.getCurrentYear() - Timestep.getStartYear())
-							% ConfigLoader.config.map_output_frequency == 0
-							|| Timestep.getCurrentYear() == Timestep.getEndtYear()) {
+					if (Timestep.getTick() % ConfigLoader.config.map_output_frequency == 0 || Timestep.getTick() == 0) {
 						yearsMapExporting.add(year);
 					}
 				}
@@ -214,9 +252,9 @@ public class Listener extends AbstractUpdater {
 		}
 	}
 
-	private void writeMap(int year) {
+	private void writeMap() {
 		CsvTools.exportToCSV(ConfigLoader.config.output_folder_name + File.separator + ProjectLoader.getScenario()
-				+ "-Cell-" + year + ".csv");
+				+ "-Cell-" + Timestep.getCurrentYear() + ".csv");
 //		if (year != Timestep.getStartYear())
 //			CsvTools.writeCSVfile(Selector.seedMap,
 //					Paths.get(ConfigLoader.config.output_folder_name + File.separator + "-SEED-" + year + ".csv"));

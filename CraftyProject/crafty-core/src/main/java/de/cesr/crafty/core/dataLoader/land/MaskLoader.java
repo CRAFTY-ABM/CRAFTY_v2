@@ -10,10 +10,44 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
-import de.cesr.crafty.core.modelRunner.Timestep;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
+
+/**
+ * Discovers and indexes land-use control masks and their associated transition restriction tables.
+ *
+ * {@code MaskLoader} builds a time-indexed lookup for:
+ * - Mask CSV files that assign a {@code maskType} (e.g., protected area, zoning layer) to cells.
+ * - Restriction CSV files that define allowed / forbidden transitions between current owner and competitor
+ *   for a given mask type (used by {@code LandMaskUpdater} / competition logic).
+ *
+ * The loader supports two input modes:
+ * 1) Configuration-driven mode ({@link #byConfigItializer()}):
+ *    Uses {@code config.landControle_directories} to point to one or more mask folders and then searches
+ *    for per-year files between {@link Timestep#getStartYear()} and {@link Timestep#getEndtYear()}.
+ *    A default restriction table can also be provided as {@code default_<maskName>_Restrictions.csv}.
+ *
+ * 2) Scenario-driven fallback ({@link #byScenarioinitializer()}):
+ *    If configuration does not provide usable paths, the loader scans the project structure under
+ *    {@code worlds/LandUseControl/<scenario>/<maskType>/...} and discovers per-year mask files and restrictions.
+ *
+ * Outputs:
+ * - {@link #mask_paths}: {@code maskType -> (year -> mask CSV path)}
+ * - {@link #restriction_paths}: {@code maskType -> (year -> restriction CSV path)} where year {@code 0}
+ *   is reserved for a default restriction file.
+ *
+ * Notes:
+ * - Both maps are stored as {@link TreeMap}s to preserve temporal ordering and support efficient
+ *   “latest available year” lookups by updaters.
+ * - If no masks/restrictions are found, the model proceeds without land-use controls.
+ */
+
+/**
+ * @author Mohamed Byari
+ *
+ */
 
 public class MaskLoader {
 
@@ -112,7 +146,6 @@ public class MaskLoader {
 	public static void restrictionsByScenario(String maskType) {
 		String[] def = { "LandUseControl", "Restrictions", maskType, ".csv" };
 		ArrayList<Path> restrictionsFile = PathTools.fileFilter(def);
-		System.out.println(maskType + " -->    " + (restrictionsFile != null && !restrictionsFile.isEmpty()));
 		if (restrictionsFile != null && !restrictionsFile.isEmpty()) {
 			restrictionsFile = PathTools.fileFilter(def);
 			TreeMap<Integer, Path> restrectionFinder = new TreeMap<>();

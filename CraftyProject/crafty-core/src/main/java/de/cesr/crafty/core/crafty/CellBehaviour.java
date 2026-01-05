@@ -8,6 +8,32 @@ import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.utils.general.CellsSubSets;
 
 /**
+ * Behavioural “give-in” model for land-use change at the cell level.
+ *
+ * This class computes the probability/propensity that a cell’s current owner will give in to a competing
+ * {@link Aft}, based on a logistic decision rule combining:
+ * - Attitude influence (a directional preference towards intensification or extensification).
+ * - Social influence (pressure from neighbouring cells / peer effects).
+ * - Inertia (resistance to change, increasing with the intensity gap between the current owner and competitor).
+ *
+ * The main entry point is {@link #give_In(Aft)}, which returns a value bounded by {@link #maxGive_in}
+ * using a logistic function (steepness controlled by {@link #steepness_logistic_eq}).
+ *
+ * Social influence is only active when categorisation-based give-in is enabled
+ * ({@link AftCategorised#useCategorisationGivIn}) and the behaviour module is switched on
+ * ({@link CellBehaviourUpdater#behaviourUsed}). Neighbour influence is derived from the extended Moore
+ * neighbourhood around the focal cell via {@link CellsSubSets#detectExtendedNeighboringAFTs(Cell, int)}.
+ *
+ * Parameters:
+ * - {@link #Attitude_intensification}: strength of attitude towards intensity change direction.
+ * - {@link #weight_social}: weight of social vs. attitude components in the combined signal.
+ * - {@link #Critical_mass}: threshold fraction of neighbours required to produce net social pressure.
+ * - {@link #neighborhood_size}: radius used to define the neighbourhood.
+ * - {@link #Weight_inertia}: penalty applied to large intensity gaps (reduces give-in).
+ * - {@link #maxGive_in}: upper bound for the give-in outcome.
+ */
+
+/**
  * @author Mohamed Byari
  *
  */

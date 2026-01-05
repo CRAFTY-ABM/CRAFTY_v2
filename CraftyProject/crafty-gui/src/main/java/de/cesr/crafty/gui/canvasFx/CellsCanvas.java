@@ -20,7 +20,7 @@ import de.cesr.crafty.gui.utils.graphical.Tools;
 import de.cesr.crafty.gui.controller.fxml.RegionController;
 import de.cesr.crafty.gui.main.FxMain;
 import de.cesr.crafty.gui.main.GuiScaler;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
@@ -30,7 +30,7 @@ import de.cesr.crafty.core.dataLoader.land.GisLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
-import de.cesr.crafty.core.updaters.CellsShocksUpdater;
+import de.cesr.crafty.core.updaters.Capital_Degradation_Updater;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.SubScene;
@@ -153,18 +153,13 @@ public class CellsCanvas {
 
 		} else if (ServiceSet.getServicesList().contains(colortype)) {
 			CellsLoader.hashCell.values().parallelStream().forEach(c -> {
-				if (c.getCurrentProductivity().get(colortype) != null)
-					values.add(c.getCurrentProductivity().get(colortype));
+				values.add(c.getCurrentProd()[ServiceSet.getServicesList().indexOf(colortype)]);
 			});
 			double max = values.size() > 0 ? Collections.max(values) : 0;
 
 			CellsLoader.hashCell.values().parallelStream().forEach(c -> {
-
-				if (c.getCurrentProductivity().get(colortype) != null) {
-					ColorP(c, ColorsTools.getColorForValue(max, c.getCurrentProductivity().get(colortype)));
-				} else {
-					ColorP(c, ColorsTools.getColorForValue(max, 0));
-				}
+				ColorP(c, ColorsTools.getColorForValue(max,
+						c.getCurrentProd()[ServiceSet.getServicesList().indexOf(colortype)]));
 			});
 		} else if (colortype.equalsIgnoreCase("Mask")) {
 			ArrayList<String> listOfMasks = new ArrayList<>(MaskLoader.mask_paths.keySet());
@@ -183,10 +178,11 @@ public class CellsCanvas {
 				});
 			}
 		} else if (colortype.equalsIgnoreCase("Shocks")) {
-			System.out.println(CellsShocksUpdater.cellsShocks.size());
+			System.out.println(Capital_Degradation_Updater.cellsShocks.size());
 			CellsLoader.hashCell.values().forEach(c -> {
 				if (c != null) {
-					ColorP(c, ColorsTools.getColorForValue(CellsShocksUpdater.cellsShocks.get(c).get("ExtConifer")));
+					ColorP(c, ColorsTools
+							.getColorForValue(Capital_Degradation_Updater.cellsShocks.get(c).get("ExtConifer")));
 				}
 
 			});
@@ -313,10 +309,10 @@ public class CellsCanvas {
 		CellsLoader.hashCell.values()./* parallelStream(). */forEach(cs -> {
 			if (c.getCurrentRegion().equals(cs.getCurrentRegion())) {
 				gc.setFill(Color.GRAY);
-				gc.fillRect(cs.getX(), cs.getY(), Cell.getSize(), Cell.getSize());
+				gc.fillRect(cs.getX(), cs.getY(), 1, 1);
 				// initial cells
-				Cell newCEll = new Cell(cs.getX(), cs.getY());
-				cs.copyCell(newCEll);
+				Cell newCEll = copyCell(cs);
+				
 				if (cs.getOwner() != null)
 					newCEll.setColor(cs.getOwner().getColor());
 				else
@@ -336,6 +332,17 @@ public class CellsCanvas {
 
 	public static void setCanvas(Canvas canvas) {
 		CellsCanvas.canvas = canvas;
+	}
+	
+	// --------------------------
+	private static Cell  copyCell(Cell cell) {
+		Cell c= new Cell(cell.getX(), cell.getY());
+		c.setColor(cell.getColor());
+		c.setCurrentRegion(cell.getCurrentRegion());
+		c.setCapitals(cell.getCapitals());
+		c.setId(cell.getId());
+		c.setOwner(cell.getOwner());
+		return c;
 	}
 
 }

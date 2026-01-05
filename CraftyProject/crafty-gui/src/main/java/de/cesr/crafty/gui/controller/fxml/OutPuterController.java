@@ -17,18 +17,18 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.AftCategory;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
+import de.cesr.crafty.core.dataLoader.CsvKind;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.modelRunner.ModelRunner;
-import de.cesr.crafty.core.modelRunner.Timestep;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
 import de.cesr.crafty.gui.utils.analysis.AftAnalyzer;
 import de.cesr.crafty.gui.utils.graphical.ColorsTools;
 import de.cesr.crafty.gui.utils.graphical.FileTreeView;
@@ -331,7 +331,7 @@ public class OutPuterController {
 				String newfolder = PathTools
 						.makeDirectory(outputpath + File.separator + OutPutTabController.radioColor[ii].getText());
 				yearChoice.getItems().forEach(filepath -> {
-					ModelRunner.cellsSet.servicesAndOwneroutPut(filepath, outputpath.toString());
+					servicesAndOwneroutPut(filepath, outputpath.toString());
 					CellsCanvas.colorMap(OutPutTabController.radioColor[ii].getText());
 					String fileyear = new File(filepath).getName().replace(".csv", "").replace("-Cell-", "");
 					for (String scenario : ProjectLoader.getScenariosList()) {
@@ -575,9 +575,15 @@ public class OutPuterController {
 		return sankeyCategories;
 
 	}
+	
+	private void servicesAndOwneroutPut(String year, String outputpath) {
+		ProjectLoader.setAllfilesPathInData(PathTools.findAllFilePaths(ProjectLoader.getProjectPath()));
+		Path path = PathTools.fileFilter(year, ".csv").get(0);
+		CsvProcessors.processCSV(path, CsvKind.SERVICES);
+	}
 
 	void newOutPut(String year) {
-		ModelRunner.cellsSet.servicesAndOwneroutPut(year, outputpath.toString());
+		servicesAndOwneroutPut(year, outputpath.toString());
 		for (int i = 0; i < OutPutTabController.radioColor.length; i++) {
 			if (OutPutTabController.radioColor[i].isSelected()) {
 

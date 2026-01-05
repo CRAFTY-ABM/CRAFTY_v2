@@ -52,8 +52,8 @@ public class AftAnalyzer {
 				Aft manager = a[i];
 				ServiceSet.getServicesList().forEach(s -> {
 					double product = c.getCapitals().entrySet().stream()
-							.mapToDouble(e -> (manager.getSensitivity().get(e.getKey() + "|" + s) != null
-									? Math.pow(e.getValue(), manager.getSensitivity().get(e.getKey() + "|" + s))
+							.mapToDouble(e -> (manager.getSensByService().get(s).get(e.getKey()) != null
+									? Math.pow(e.getValue(), manager.getSensByService().get(s).get(e.getKey()))
 									: 0))
 							.reduce(1.0, (x, y) -> x * y);
 					services.put(manager.getLabel() + "_" + s, product * manager.getProductivityLevel().get(s));
@@ -72,7 +72,7 @@ public class AftAnalyzer {
 		AFTsLoader.getActivateAFTsHash().values().forEach(manager -> {
 			if (manager.getType() != ManagerTypes.Abandoned) {
 				double product = c.getCapitals().entrySet().stream().mapToDouble(
-						e -> Math.pow(e.getValue(), manager.getSensitivity().get(e.getKey() + "|" + serviceName)))
+						e -> Math.pow(e.getValue(), manager.getSensByService().get(serviceName).get(e.getKey())))
 						.reduce(1.0, (x, y) -> x * y);
 				aftsP.put(manager.getLabel() + "_" + serviceName,
 						product * manager.getProductivityLevel().get(serviceName));
@@ -163,34 +163,33 @@ public class AftAnalyzer {
 		return chart;
 	}
 
-	
 	public static void areachart(AreaChart<Number, Number> lineChart, Map<String, List<Double>> data, String titel) {
-	    List<XYChart.Series<Number, Number>> seriesList = new ArrayList<>();
-	    AtomicInteger i = new AtomicInteger();
-	    List<String> sortedKeys = new ArrayList<>(data.keySet());
-	    Collections.sort(sortedKeys);
-	    for (String key : sortedKeys) {
-	        ArrayList<Double> value = (ArrayList<Double>) data.get(key);
-	        if (value != null) {
-	            XYChart.Series<Number, Number> series = new XYChart.Series<>();
-	            series.setName(key);
-	            lineChart.getData().add(series);
-	            seriesList.add(series);
-	            i.getAndIncrement();
-	        }
-	    }
+		List<XYChart.Series<Number, Number>> seriesList = new ArrayList<>();
+		AtomicInteger i = new AtomicInteger();
+		List<String> sortedKeys = new ArrayList<>(data.keySet());
+		Collections.sort(sortedKeys);
+		for (String key : sortedKeys) {
+			ArrayList<Double> value = (ArrayList<Double>) data.get(key);
+			if (value != null) {
+				XYChart.Series<Number, Number> series = new XYChart.Series<>();
+				series.setName(key);
+				lineChart.getData().add(series);
+				seriesList.add(series);
+				i.getAndIncrement();
+			}
+		}
 
-	    AtomicInteger k = new AtomicInteger();
-	    sortedKeys.forEach((key) -> {
-	        ArrayList<Double> value = (ArrayList<Double>) data.get(key);
-	        for (int j = 0; j < value.size(); j++) {
-	            seriesList.get(k.get()).getData().add(new XYChart.Data<>(j, value.get(j)));
-	        }
-	        k.getAndIncrement();
-	    });
+		AtomicInteger k = new AtomicInteger();
+		sortedKeys.forEach((key) -> {
+			ArrayList<Double> value = (ArrayList<Double>) data.get(key);
+			for (int j = 0; j < value.size(); j++) {
+				seriesList.get(k.get()).getData().add(new XYChart.Data<>(j, value.get(j)));
+			}
+			k.getAndIncrement();
+		});
 
-	    MousePressed.mouseControle((Pane) lineChart.getParent(), lineChart, titel);
-	    LineChartTools.addSeriesTooltips(lineChart);
+		MousePressed.mouseControle((Pane) lineChart.getParent(), lineChart, titel);
+		LineChartTools.addSeriesTooltips(lineChart);
 	}
 
 }

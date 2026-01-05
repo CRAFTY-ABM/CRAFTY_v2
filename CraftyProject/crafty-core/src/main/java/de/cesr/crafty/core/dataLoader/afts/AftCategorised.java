@@ -10,14 +10,43 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.AftCategory;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
 
+/**
+ * Optional AFT categorisation layer used to parameterise “give-in” behaviour between agent groups.
+ *
+ * This helper class enriches {@link Aft} instances with a {@link AftCategory} (category name + intensity level)
+ * read from the AFT metadata file, and maintains fast lookup structures for:
+ * 
+ *   which AFTs belong to each category ({@link #aftCategories}),
+ *   which intensity labels exist per category ({@link #CategoriesIntestisy}),
+ *   display colours per category ({@link #categoriesColor}).
+ * 
+ *
+ * If enabled via {@code config.use_AFTs_categories_GiveIn} and the metadata contains a {@code Category} column,
+ * {@link #CategoriesLoader()} assigns each AFT a category and intensity (name + numeric level). This supports
+ * behaviour rules that depend on whether a competitor is in the same category and/or at a higher/lower intensity.
+ *
+ * Category-specific give-in thresholds can also be loaded via {@link #initializeBehevoirByCategories()}.
+ * This searches for two matrix CSV files (mean and standard deviation) describing give-in distributions between
+ * category pairs. The matrices are stored as flattened maps (keyed by {@code rowLabel|colLabel}) in {@link #mean}
+ * and {@link #SD}. When both matrices are available, {@link #useCategorisationGivIn} is set to {@code true} and
+ * the competition logic may use these thresholds instead of per-AFT defaults.
+ *
+ * Notes:
+ * 
+ *   This module is intentionally optional: if configuration is off, metadata columns are missing, or files are
+ *   not found, the model falls back to default give-in parameters defined per AFT.
+ *   Most fields are static because categories are global, scenario-dependent state shared across the run.
+ *
+ */
 /**
  * @author Mohamed Byari
  *
@@ -28,18 +57,24 @@ public class AftCategorised {
 
 	public static ConcurrentHashMap<String, Set<Aft>> aftCategories = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<String, Set<String>> CategoriesIntestisy = new ConcurrentHashMap<>();
-	public static HashMap<String, String> categoriesColor = new HashMap<>();
+	public static ConcurrentHashMap<String, String> categoriesColor = new ConcurrentHashMap<>();
 
 	private static HashMap<String, Double> mean = new HashMap<>();
 	private static HashMap<String, Double> SD = new HashMap<>();
 	public static boolean useCategorisationGivIn = false;
 
+	private static boolean useCategories() {
+		if (ConfigLoader.config.use_AFTs_categories_GiveIn) {
+			Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
+			return csv.keySet().contains("Category");
+		}
+		return false;
+	}
+
 	public static void CategoriesLoader() {
 
-		Path aftsmetadataPath = PathTools.fileFilter(PathTools.asFolder("csv"), "AFTsMetaData").iterator().next();
-		Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(aftsmetadataPath);
-
-		if (csv.get("Category") != null) {
+		if (useCategories()) {
+			Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
 			for (int i = 0; i < csv.get("Category").size(); i++) {
 				aftCategories.put(csv.get("Category").get(i), new HashSet<>());
 				CategoriesIntestisy.put(csv.get("Category").get(i), new HashSet<>());

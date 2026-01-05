@@ -1,6 +1,12 @@
 package de.cesr.crafty.gui.utils.analysis;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class NonGraphic {
 
@@ -26,5 +32,15 @@ public class NonGraphic {
 		}
 
 		return pdfValues;
+	}
+	
+	public static boolean checkDirectFiles(Path dir, String condition) {
+		try (Stream<Path> stream = Files.list(dir)) {
+			List<Path> list = stream.filter(Files::isRegularFile).collect(Collectors.toList());
+			return list.stream().filter(p -> p.getFileName().toString().contains(condition)).findAny().isPresent();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
 	}
 }

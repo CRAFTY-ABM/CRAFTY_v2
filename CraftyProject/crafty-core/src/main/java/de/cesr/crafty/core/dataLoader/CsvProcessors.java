@@ -17,17 +17,51 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
-import de.cesr.crafty.core.updaters.CellsShocksUpdater;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
+import de.cesr.crafty.core.updaters.Capital_Degradation_Updater;
 import de.cesr.crafty.core.utils.general.Utils;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.AddCellToColumnException;
 import tech.tablesaw.io.csv.CsvReadOptions;
+
+/**
+ * CSV parsing and processing utilities used during model initialization and updates.
+ *
+ * This class provides two complementary approaches:
+ * 1) Table-style loading via Tablesaw ({@link #ReadAsaHash(Path)} / {@link #ReadAsaHashDouble(Path)}),
+ *    which reads a CSV into a column-oriented map (header -> list of values).
+ * 2) Streaming line-by-line processing via {@link #processCSV(Path, CsvKind)}, which is optimized for
+ *    large files: it reads the header once, builds a column index, then processes remaining rows in parallel
+ *    and delegates row handling to a {@link CsvKind} implementation.
+ *
+ * The streaming pathway is used for performance-critical imports (e.g., baseline cells, capitals, outputs),
+ * where each row is parsed and immediately applied to the model state without building a full in-memory table.
+ *
+ * Core model bindings (package-private helpers):
+ * - {@link #createCells(Map, String)}: instantiate cells from baseline-like CSV rows and assign initial owners.
+ * - {@link #associateCapitalsToCells(Map, String)}: attach capital values to existing cells.
+ * - {@link #associateCapitalsDegradationToCells(Map, String)}: apply degradation factors and update cell capitals
+ *   while storing per-cell shocks in {@link Capital_Degradation_Updater}.
+ * - {@link #associateOutPutServicesToCells(Map, String)}: restore cell owners and service production from output CSV.
+ *
+ * Implementation notes:
+ * - Column indexing is case-insensitive and strips quotes; indices are stored in an unmodifiable map
+ *   (built once per file) to make the read-only intent explicit.
+ * - Streaming parsing uses a precompiled comma splitter; it is fast but assumes simple comma-separated input
+ *   (it does not fully implement RFC-style quoted CSV in the streaming path).
+ * - The parallel stream in {@link #processCSV(Path, CsvKind)} assumes that the target {@link CsvKind#apply}
+ *   implementation writes to thread-safe structures (e.g., ConcurrentHashMap) or otherwise handles concurrency.
+ */
+
+/**
+ * @author Mohamed Byari
+ *
+ */
 
 public class CsvProcessors {
 	private static final CustomLogger LOGGER = new CustomLogger(CsvProcessors.class);
@@ -60,9 +94,9 @@ public class CsvProcessors {
 			T = Table.read().usingOptions(options);
 			LOGGER.trace(T.print());
 		} catch (AddCellToColumnException s) {
-
 			LOGGER.error(s.getMessage());
-			/* correctAddCellToColumnException(T, filePath, s); */} catch (Exception e) {
+			return null;
+		} catch (Exception e) {
 			if (ignoreIfFileNotExists) {
 				LOGGER.error(e.getMessage() + " \n     return null");
 				return null;
@@ -73,6 +107,10 @@ public class CsvProcessors {
 				// found:", filePath);
 				// T = Table.read().csv(filePath);
 			}
+		}
+		if (T == null) {
+			LOGGER.error("Error in reading file:" + filePath);
+			return null;
 		}
 		List<String> columnNames = T.columnNames();
 
@@ -97,8 +135,6 @@ public class CsvProcessors {
 		try (Stream<String> lines = Files.lines(file)) {
 			Iterator<String> it = lines.iterator();
 			Map<String, Integer> index = buildIndex(it.next());
-//			System.out.println(index);
-
 			/* the remaining lines are processed in parallel */
 			StreamSupport.stream(Spliterators.spliteratorUnknownSize(it, Spliterator.ORDERED), true) // true = parallel
 					.forEach(line -> kind.apply(line, index));
@@ -106,6 +142,14 @@ public class CsvProcessors {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+//		if (kind == CsvKind.CAPITALS) {
+//			System.out.println("WARN @@ number of Cells in the degradation capital file are not in the Baseline Map: "
+//					+ tmp.size());
+//
+//			tmp.forEach((k, v) -> {
+//				System.out.println(k + "-> " + v);
+//			});
+//		}
 	}
 
 	private static Map<String, Integer> buildIndex(String headerLine) {
@@ -114,7 +158,7 @@ public class CsvProcessors {
 
 		for (int i = 0; i < cols.length; i++) {
 			// trim in case the file has “X, Y ,Z” with spaces
-			idx.put(cols[i].trim().toUpperCase(), i);
+			idx.put(cols[i].trim().toUpperCase().replace("\"", ""), i);
 		}
 		/*
 		 * The parsing thread is the only writer; thereafter the map is read-only, so we
@@ -122,6 +166,8 @@ public class CsvProcessors {
 		 */
 		return Collections.unmodifiableMap(idx);
 	}
+
+//	private static ConcurrentHashMap<String, String> tmp = new ConcurrentHashMap<>();
 
 	static void associateCapitalsToCells(Map<String, Integer> indexof, String data) {
 
@@ -137,30 +183,39 @@ public class CsvProcessors {
 					double capital_value = Utils.sToD(immutableList.get(indexof.get(capital_name.toUpperCase())));
 					c.getCapitals().put(capital_name, capital_value);
 				}
+//				else {
+//					tmp.put("Name " + capital_name + " Index= " + indexof.get(capital_name.toUpperCase())
+//							+ "immutableList.size= " + immutableList.size() + "|=>", data);
+//				}
 			});
 		}
+//		else {
+//			tmp.put(x + "," + y, data);
+//		}
 	}
 
-	static void associateShockesToCells(Map<String, Integer> indexof, String data) {
+	static void associateCapitalsDegradationToCells(Map<String, Integer> indexof, String data) {
 
 		List<String> immutableList = Collections.unmodifiableList(Arrays.asList(COMMA.split(data, -1)));
 		int x = (int) Utils.sToD(immutableList.get(indexof.get("X")));
 		int y = (int) Utils.sToD(immutableList.get(indexof.get("Y")));
 		Cell c = CellsLoader.getCell(x, y);
-		CellsShocksUpdater.cellsShocks.put(c, new ConcurrentHashMap<>());
-		CapitalUpdater.getCapitalsList().forEach(capital_name -> {
-			if (indexof.get(capital_name.toUpperCase()) != null) {
-				double shock_value = Utils.sToD(immutableList.get(indexof.get(capital_name.toUpperCase())));
+		if (c != null) {
+			Capital_Degradation_Updater.cellsShocks.put(c, new ConcurrentHashMap<>());
+			CapitalUpdater.getCapitalsList().forEach(capital_name -> {
+				if (indexof.get(capital_name.toUpperCase()) != null) {
+					double degradation_value = Utils.sToD(immutableList.get(indexof.get(capital_name.toUpperCase())));
 //				shock_value = shock_value > 0 ? 1. : 0.;
-				CellsShocksUpdater.cellsShocks.get(c).put(capital_name, shock_value);
-				try {
-					c.getCapitals().put(capital_name,
-							c.getCapitals().get(capital_name) - c.getCapitals().get(capital_name) * shock_value);
-				} catch (NullPointerException e) {
-					LOGGER.warn("Problem in Capitals for cell ("+c.getX()+" , "+c.getY()+"): capitals values = "+c.getCapitals());
+					Capital_Degradation_Updater.cellsShocks.get(c).put(capital_name, degradation_value);
+					try {
+						c.getCapitals().put(capital_name, c.getCapitals().get(capital_name) * (1 - degradation_value));
+					} catch (NullPointerException e) {
+						LOGGER.warn("Problem in Capitals for cell (" + c.getX() + " , " + c.getY()
+								+ "): capitals values = " + c.getCapitals());
+					}
 				}
-			}
-		});
+			});
+		}
 	}
 
 	static void createCells(Map<String, Integer> indexof, String data) {
@@ -188,15 +243,15 @@ public class CsvProcessors {
 		int x = (int) Utils.sToD(immutableList.get(indexof.get("X")));
 		int y = (int) Utils.sToD(immutableList.get(indexof.get("Y")));
 		String aft_name = immutableList.get(indexof.get("AGENT"));
-
-		Cell c = CellsLoader.hashCell.get(x + "," + y);
-
-		c.setOwner(AFTsLoader.getAftHash().get(aft_name));
-		c.getCurrentProductivity().clear();
-		ServiceSet.getServicesList().forEach(service_name -> {
-			double service_value = Utils.sToD(immutableList.get(indexof.get(service_name.toUpperCase())));
-			c.getCurrentProductivity().put(service_name, service_value);
-		});
+		Cell c = CellsLoader.getCell(x, y);
+		if (c != null) {
+			c.setOwner(AFTsLoader.getAftHash().get(aft_name));
+			for (int j = 0; j < ServiceSet.getServicesList().size(); j++) {
+				double service_value = Utils
+						.sToD(immutableList.get(indexof.get(ServiceSet.getServicesList().get(j).toUpperCase())));
+				c.getCurrentProd()[j] = service_value;
+			}
+		}
 	}
 
 	public static HashMap<String, Double> readCsvToMatrixMap(Path csvFilePath) {

@@ -16,19 +16,39 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.utils.analysis.CustomLogger;
-import de.cesr.crafty.core.utils.general.Utils;
 
+
+/**
+ * Utility methods for reading, writing, and exporting CSV files used throughout CRAFTY.
+ *
+ * This class provides lightweight CSV helpers without relying on external dataframe libraries.
+ * It includes:
+ * - Simple table-style CSV reading into a 2D String array ({@link #csvReader(Path)}).
+ * - CSV writing from a 2D String table or from column-oriented data structures
+ *   ({@link #writeCSVfile(String[][], Path)} and {@link #writeCSVfile(Map, Path)}).
+ * - Basic directory scanning to list files in an input folder ({@link #detectFiles(Path)}).
+ * - Export of the current model state (cells, ownership, utility, and per-service production) into
+ *   a flat CSV file ({@link #exportToCSV(String)}).
+ * - A minimal CSV line parser that supports quoted fields and escaped quotes
+ *   ({@link #parseCsvLine(String)}), intended for more robust parsing than simple split(",").
+ *
+ * Notes:
+ * - Several methods use a simple comma split and therefore do not fully support quoted fields.
+ *   For inputs that may contain commas inside quotes, use {@link #parseCsvLine(String)}.
+ * - Export utilities depend on the loaded model state ({@link CellsLoader} and {@link ServiceSet}).
+ * - Logging is routed through {@link CustomLogger} and respects the configured logging flags.
+ */
+
+/**
+ * @author Mohamed Byari
+ *
+ */
 public class CsvTools {
 	private static final CustomLogger LOGGER = new CustomLogger(CsvTools.class);
-
-	/**
-	 * @author Mohamed Byari
-	 *
-	 */
 
 	public static String[][] csvReader(Path filePath) {
 		LOGGER.info("Read as a table file: " + filePath);
@@ -68,6 +88,8 @@ public class CsvTools {
 			}
 			bw.close();
 		} catch (IOException e) {
+			// System.out.println("Faild to ceate csv file: " + e.getMessage() + ":" +
+			// filePath + "->");
 		}
 	}
 
@@ -97,7 +119,7 @@ public class CsvTools {
 			String servicesFlattened = flattenHashMap(c, serviceImmutableList);
 
 			return String.join(",", String.valueOf(c.getID()), String.valueOf(c.getX()), String.valueOf(c.getY()),
-					c.getOwner() != null ? c.getOwner().getLabel() : "null", String.valueOf(c.getUtilityValue()),
+					c.getOwner() != null ? c.getOwner().getLabel() : "null", String.valueOf(c.getCurrentUtility()),
 					servicesFlattened);
 		}).collect(Collectors.toSet());
 
@@ -117,11 +139,7 @@ public class CsvTools {
 	private static String flattenHashMap(Cell c, List<String> serviceImmutableList) {
 		List<String> service = Collections.synchronizedList(new ArrayList<>());
 		serviceImmutableList.forEach(ServiceName -> {
-			if (c.getCurrentProductivity().get(ServiceName) != null) {
-				service.add(String.valueOf(c.getCurrentProductivity().get(ServiceName)));
-			} else {
-				service.add("0");
-			}
+			service.add(String.valueOf(c.getCurrentProd()[ServiceSet.getServicesList().indexOf(ServiceName)]));
 		});
 
 		return String.join(",", service);
@@ -140,48 +158,6 @@ public class CsvTools {
 			e.printStackTrace();
 		}
 		return rows;
-	}
-
-	public static List<List<String>> readCsvFileWithoutZeros(List<List<String>> data) {
-		List<List<String>> rows = new ArrayList<>();
-		rows.add(data.get(0));
-		// delete list ==0;
-		// delet row=0;
-		data.forEach(list -> {
-			boolean isnull = true;
-			for (String str : list) {
-				if (Utils.sToD(str) != 0) {
-					isnull = false;
-					break;
-				}
-			}
-			if (!isnull) {
-				rows.add(list);
-			}
-		});
-
-		List<List<String>> ret = new ArrayList<>();
-		ret.add(new ArrayList<>());
-		for (int i = 0; i < rows.size(); i++) {
-			ret.get(0).add(rows.get(i).get(0));
-		}
-		for (int i = 1; i < rows.iterator().next().size(); i++) {
-			boolean isnull = true;
-			for (List<String> list : rows) {
-				if (Utils.sToD(list.get(i)) != 0) {
-					isnull = false;
-					break;
-				}
-			}
-			if (!isnull) {
-				ret.add(new ArrayList<>());
-				for (List<String> list : rows) {
-					ret.get(ret.size() - 1).add(list.get(i));
-				}
-			}
-		}
-		ret.get(0).set(0, "Service/Capital");
-		return ret;
 	}
 
 	public static void writeCSVfile(Map<String, ArrayList<Double>> dataInput, Path filePathOutput) {
@@ -222,6 +198,37 @@ public class CsvTools {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Minimal CSV parser for comma-separated values with quotes. Handles commas in
+	 * quotes and escaped quotes ("").
+	 */
+	public static String[] parseCsvLine(String line) {
+		List<String> tokens = new ArrayList<>();
+		StringBuilder sb = new StringBuilder();
+		boolean inQuotes = false;
+
+		for (int i = 0; i < line.length(); i++) {
+			char c = line.charAt(i);
+
+			if (c == '"') {
+				if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+					sb.append('"');
+					i++;
+				} else {
+					inQuotes = !inQuotes;
+				}
+			} else if (c == ',' && !inQuotes) {
+				tokens.add(sb.toString());
+				sb.setLength(0);
+			} else {
+				sb.append(c);
+			}
+		}
+
+		tokens.add(sb.toString());
+		return tokens.toArray(new String[0]);
 	}
 
 }

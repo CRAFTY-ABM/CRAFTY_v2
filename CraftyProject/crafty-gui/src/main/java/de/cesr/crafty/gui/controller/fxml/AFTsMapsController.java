@@ -38,6 +38,8 @@ public class AFTsMapsController {
 	private VBox toplevel;
 	@FXML
 	private VBox TopBox;
+	@FXML
+	private VBox box1;
 
 	ArrayList<PieChart> pieCharts;
 
@@ -126,7 +128,11 @@ public class AFTsMapsController {
 				.stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().doubleValue())));
 		HashMap<String, Color> color = new HashMap<>();
 		AFTsLoader.getAftHash().forEach((name, a) -> {
-			color.put(name, Color.web(a.getColor()));
+			try {
+				color.put(name, Color.web(a.getColor()));
+			} catch (NullPointerException e) {
+				color.put(name, Color.web("#000000"));
+			}
 		});
 
 		new PieChartTools().updateChart(convertedMap, color, chart, false);
@@ -152,6 +158,27 @@ public class AFTsMapsController {
 			hashm.put(name, action);
 		});
 		MousePressed.mouseControle((Pane) chart.getParent(), chart, hashm);
+		createVoronoiCircleChart();
+	}
+
+	private void createVoronoiCircleChart() {
+		Map<String, Map<String, Double>> data = new HashMap<>();
+		Map<String, Map<String, Color>> colors = new HashMap<>();
+		AftCategorised.aftCategories.keySet().forEach(categoryName -> {
+			System.out.println(categoryName);
+			data.put(categoryName, new HashMap<>());
+			colors.put(categoryName, new HashMap<>());
+		});
+
+		AFTsLoader.hashAgentNbr();
+		AFTsLoader.hashAgentNbr.forEach((aftName, nbr) -> {
+			data.get(AFTsLoader.getAftHash().get(aftName).getCategory().getName()).put(aftName, (double) nbr);
+			colors.get(AFTsLoader.getAftHash().get(aftName).getCategory().getName()).put(aftName,
+					Color.web(AFTsLoader.getAftHash().get(aftName).getColor()));
+		});
+
+//		NewWindow.createWin("Voronoi", VoronoiDiskChart.voronoiChart(data, colors));
+//		box1.getChildren().add(VoronoiDiskChart.voronoiChart(data, colors));
 	}
 
 	private void updateCategoryPie(PieChart chart) {

@@ -7,6 +7,7 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 
 
 <VBox xmlns="http://javafx.com/javafx/21"
@@ -14,6 +15,12 @@
 	fx:controller="de.cesr.crafty.gui.controller.fxml.AFTsMapsController"
 	fx:id="TopBox">
 	<children>
+	<TitledPane animated="true" text="AFTs Distribution">
+			<content>
+				<VBox fx:id="box1">
+				</VBox>
+			</content>
+		</TitledPane>
 
 		<TitledPane animated="true" text="AFTs Distribution">
 			<content>

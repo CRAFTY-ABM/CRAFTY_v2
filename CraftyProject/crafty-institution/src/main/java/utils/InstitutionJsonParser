@@ -1,0 +1,59 @@
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.logging.Logger;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+/*
+ * @author yongchao Zeng
+ *
+ */
+/**
+ * Utility class for parsing institution JSON data.
+ * Provides static methods to convert JSON files to institution data structures.
+ */
+public class InstitutionJsonParser {
+    private static final Logger LOGGER = Logger.getLogger(InstitutionJsonParser.class.getName());
+    
+    /**
+     * Parses a JSON file containing institution data into a HashMap structure.
+     * 
+     * @param inputJsonPath Path to the JSON file to parse
+     * @return HashMap containing institution data with policies and their values
+     * @throws IOException If there is an error reading or parsing the JSON file
+     */
+    public static HashMap<String, HashMap<String, Double>> parseInstitutionJson(String inputJsonPath) throws IOException {
+        // Create ObjectMapper instance
+        ObjectMapper mapper = new ObjectMapper();
+       
+        // Read JSON file and parse to JsonNode
+        JsonNode rootNode = mapper.readTree(new java.io.File(inputJsonPath));
+        
+        // Create a HashMap to store the parsed data
+        HashMap<String, HashMap<String, Double>> institutionsData = new HashMap<>();
+        
+        // Iterate through each institution in the JSON
+        rootNode.fields().forEachRemaining(entry -> {
+            String institutionName = entry.getKey();
+            JsonNode institutionNode = entry.getValue();
+            
+            // Create a HashMap for each institution's policies
+            HashMap<String, Double> policyValues = new HashMap<>();
+            
+            // Iterate through each policy in the institution
+            institutionNode.fields().forEachRemaining(policyEntry -> {
+                String policyName = policyEntry.getKey();
+                double policyValue = policyEntry.getValue().asDouble();
+                policyValues.put(policyName, policyValue);
+            });
+            
+            // Add the institution's policy map to the main HashMap
+            institutionsData.put(institutionName, policyValues);
+        });
+        
+        // Log the parsed data
+        LOGGER.info("Parsed JSON data: " + institutionsData);
+
+        return institutionsData;
+    }
+}

@@ -118,9 +118,9 @@
 							</content>
 						</Tab>
 						 <Tab text="AFTs Behaviour">
-							<graphic>
+							<!-- <graphic>
 								<FontIcon iconLiteral="fas-head-side-virus" iconSize="15" />
-							</graphic>
+							</graphic> -->
 							<tooltip>
 								<Tooltip text="AFTs Behaviour" />
 							</tooltip>

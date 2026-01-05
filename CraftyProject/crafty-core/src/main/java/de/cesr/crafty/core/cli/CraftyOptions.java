@@ -1,5 +1,21 @@
 package de.cesr.crafty.core.cli;
 
+	/**
+	 * Simple container for command-line overrides and runtime options.
+	 *
+	 * This class is populated by the CLI parser and used to pass user-provided arguments
+	 * (such as the YAML config path, project directory, scenario name, and output path) into the
+	 * initialization workflow before the full {@link Config} is loaded.
+	 *
+	 * It intentionally contains only basic getters/setters and no validation; validation and fallback
+	 * logic handled by the CLI layer and/or {@link ConfigLoader}.
+	 */
+	
+	/*
+	 * @author Mohamed Byari
+	 *
+	 */
+
 public class CraftyOptions {
 	private String yamlConfigFilePath;
 	private String project_path;

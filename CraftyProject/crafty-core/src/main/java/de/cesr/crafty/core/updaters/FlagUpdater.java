@@ -5,8 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
-import de.cesr.crafty.core.modelRunner.Timestep;
 import de.cesr.crafty.core.utils.file.DirectoryWatcher;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
@@ -14,23 +15,64 @@ import de.cesr.crafty.core.utils.general.Utils;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Implements an optional “waiting flag” mechanism to pause the simulation at specific years until an external
+ * file/folder flag becomes available.
+ *
+ * This updater reads a {@code waitingFlags.csv} configuration (either from
+ * {@code ConfigLoader.config.waitingFlag_directories_path} if it points to a file, or from the default
+ * {@code config/waitingFlags.csv} found in the project structure).
+ * The CSV is expected to contain:
+ * - {@code Year}: the simulation year when the model should pause
+ * - {@code Waiting_Flag}: a filesystem path used as a synchronization flag (e.g., a folder/file created by a
+ *   coupled model or external workflow)
+ *
+ * At each tick, if a flag is configured for {@link Timestep#getCurrentYear()}, the updater calls
+ * {@link DirectoryWatcher#waitForYearFolder(Path)} to block progress until the
+ * required flag is detected, enabling loose coupling / co-simulation with external processes.
+ */
+/**
+ * @author Mohamed Byari
+ *
+ */
 public class FlagUpdater extends AbstractUpdater {
+	private static final CustomLogger LOGGER = new CustomLogger(FlagUpdater.class);
 
 	HashMap<Integer, Path> flags = new HashMap<>();
 
 	public FlagUpdater() {
-		// Update year -> flag file
-
-		// Checke if there is config-waitingflagfile
-		// check
-		ArrayList<Path> p = PathTools.fileFilter(PathTools.asFolder("config"), "waitingFlags.csv");
-		Path csv = p != null ? p.iterator().next() : null;
-		if (csv != null) {
-			Map<String, List<String>> hash = CsvProcessors.ReadAsaHash(csv);
-			for (int i = 0; i < hash.values().iterator().next().size(); i++) {
-				flags.put(Utils.sToI(hash.get("Year").get(i)), Paths.get(hash.get("Waiting_Flag").get(i)));
-			}
+		Path csv;
+		if (Paths.get(ConfigLoader.config.waitingFlag_directories_path).toFile().isFile()) {
+			csv = Paths.get(ConfigLoader.config.waitingFlag_directories_path);
+		} else {
+			ArrayList<Path> matches = PathTools.fileFilter(PathTools.asFolder("config"), "waitingFlags.csv");
+			csv = (matches != null && !matches.isEmpty()) ? matches.get(0) : null;
 		}
+		if (csv == null) {
+			return;
+		}
+
+		Map<String, List<String>> hash = CsvProcessors.ReadAsaHash(csv);
+		if (hash == null || hash.isEmpty()) {
+			return;
+		}
+
+		List<String> years = hash.get("Year");
+		List<String> paths = hash.get("Waiting_Flag");
+		if (years == null || paths == null) {
+			return;
+		}
+
+		int n = Math.min(years.size(), paths.size());
+		for (int i = 0; i < n; i++) {
+			Integer y = Utils.sToI(years.get(i));
+			String p = paths.get(i);
+			if (p == null || p.isBlank())
+				continue;
+			flags.put(y, Paths.get(p));
+		}
+		System.out.println("flags+:"+flags);
+		LOGGER.info("CRAFTY will wait for these flag files  before starting a new iteration for the corresponding years."+flags);
 	}
 
 	@Override
@@ -41,11 +83,11 @@ public class FlagUpdater extends AbstractUpdater {
 	@Override
 	public void step() {
 //		wait For a flag
-		if (flags != null && flags.size() > 0) {
-			Path p = flags.get(Timestep.getCurrentYear());
-			if (p != null) {
-				DirectoryWatcher.waitForYearFolder(p);
-			}
+		if (flags == null || flags.isEmpty())
+			return;
+		Path p = flags.get(Timestep.getCurrentYear());
+		if (p != null) {
+			DirectoryWatcher.waitForYearFolder(p);
 		}
 
 	}
