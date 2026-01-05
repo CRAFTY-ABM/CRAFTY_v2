@@ -1,90 +1,109 @@
-````md
-# Quickstart (01)
+# Quickstart
 
-This page gets you from **“I have CRAFTY + data” → “I can run a scenario and find outputs”** with the minimum number of steps.
+This page gets you from **zero → first successful run** as fast as possible.
 
----
-
-## 1) What you need
-
-Pick one of these run modes:
-
-### A) Windows `.exe` (GUI)
-- You only need: the installer + a dataset + a config YAML (or GUI project/scenario picker, depending on your build).
-- Best for most users on Windows.
-
-### B) `.jar` (GUI or headless)
-- You need: **JDK 17+** installed.
-- Best for Linux/macOS/Windows, and for HPC/headless runs.
-
-### C/D) From source (IDE or Maven)
-- You need: **JDK 17+** + **Maven 3.9+**.
-- Best for developers and debugging.
+You will:
+1) choose how to run CRAFTY  
+2) download/install it  
+3) point CRAFTY to a dataset + scenario  
+4) run  
+5) find outputs
 
 ---
 
-## 2) Get the data (project directory)
+## 0) Choose how you want to run CRAFTY
 
-Download/unzip a CRAFTY dataset to a folder, e.g.:
+**Option A — Windows `.exe` (GUI)**  
+Best for most users on Windows. No IDE, no Maven.
 
+**Option B — `.jar` (GUI or headless)**  
+Best if you want portability (Windows/Linux/macOS) and/or want to run on servers/HPC.
+
+**Option C — IDE (headless)**  
+Best for developers/debugging.
+
+**Option D — IDE (GUI/JavaFX)**  
+Best for GUI development/debugging.
+
+> If you’re new: start with **Option A** or **Option B**.
+
+---
+
+## 1) Get CRAFTY
+
+### Option A: Install the Windows GUI (`.exe`)
+1. Download the installer: **<ADD_WINDOWS_INSTALLER_DOWNLOAD_PAGE>** (e.g., GitHub Releases)
+2. Install and launch **CRAFTY** from the Start Menu.
+
+### Option B: Download the `.jar`
+1. Download:
+   - **GUI jar** (interactive), and/or
+   - **Headless jar** (batch/server/HPC)  
+   from: **<ADD_JAR_DOWNLOAD_PAGE>** (e.g., GitHub Releases)
+2. Ensure you have **JDK 17+** installed:
+   ```bash
+   java -version
+   ```
+
+---
+
+## 2) Get example data (or use your own)
+
+If you don’t have a dataset yet, download the example dataset:
+- Example data (OSF): https://osf.io/v67jy/files/osfstorage
+
+Unzip it somewhere on your disk, for example:
 - Windows: `C:\CRAFTY_DATA\CRAFTY-EU-1km_upscaled\`
-- Linux: `/data/crafty/CRAFTY-EU-1km_upscaled/`
+- Linux: `/data/CRAFTY/CRAFTY-EU-1km_upscaled/`
 
-This folder is your **`project_path`**.
+You will reference this folder in the config as `project_path`.
 
-> If your dataset is organised by scenarios, you’ll select one scenario name such as `ssp126`.
+> If you already have a project dataset, just use that path.
 
 ---
 
-## 3) Create a minimal config YAML
+## 3) Create a minimal config (`config.yaml`)
 
-Create a file like `config.yaml`:
+Create a file called `config.yaml` anywhere you like.
 
+### Minimal config (recommended starting point)
 ```yaml
-# Minimal CRAFTY config
-project_path: "/path/to/CRAFTY_DATA/CRAFTY-EU-1km_upscaled"
+# Required
+project_path: "C:/CRAFTY_DATA/CRAFTY-EU-1km_upscaled"
 scenario: "ssp126"
 
-# Optional but recommended (keeps outputs away from input folders)
-output_path: "/path/to/output/my_run"
-````
-
-Windows example:
-
-```yaml
-project_path: "C:\\CRAFTY_DATA\\CRAFTY-EU-1km_upscaled"
-scenario: "ssp126"
-output_path: "C:\\CRAFTY_OUTPUT\\my_run"
+# Recommended (outputs)
+generate_output_files: true
+output_folder_name: "quickstart-run"   # empty = timestamped folder
 ```
 
+Notes:
+- Use quotes around paths.
+- Forward slashes work well on Windows too (`C:/...`).
+- The scenario must exist in your dataset (see the scenario layout appendix).
+
 ---
 
-## 4) Run it
+## 4) Run CRAFTY
 
-### Option A — Windows `.exe` (GUI)
+### Option A: Run via the Windows `.exe` (GUI)
+1. Start the CRAFTY application.
+2. Open/select your `config.yaml` (depending on your GUI workflow).
+3. Run the model.
+4. Check the output folder (next section).
 
-1. Install CRAFTY using the Windows installer.
-2. Launch CRAFTY.
-3. Open/select your `config.yaml` (or set `project_path` + `scenario` in the GUI, depending on the build).
-4. Run and monitor results in the interface.
-
-### Option B1 — Run the GUI `.jar`
-
+### Option B1: Run the GUI `.jar`
 ```bash
 java -jar crafty-gui-<version>.jar
 ```
 
-Then open/select your `config.yaml` inside the GUI.
-
-### Option B2 — Run headless `.jar` (recommended for batch/HPC)
-
+### Option B2: Run headless `.jar`
 ```bash
 java -Djava.awt.headless=true -jar crafty-core-headless-<version>.jar \
   --config-file path/to/config.yaml
 ```
 
-Common overrides (handy for scripts):
-
+Optional CLI overrides (useful in scripts/HPC):
 ```bash
 java -jar crafty-core-headless-<version>.jar \
   --config-file path/to/config.yaml \
@@ -93,68 +112,32 @@ java -jar crafty-core-headless-<version>.jar \
   --output-path /path/to/output
 ```
 
-### Option C — Run headless from an IDE (dev/debug)
-
-* Import the Maven project.
-* Create a Run Configuration pointing to the headless main class (in `crafty-core`).
-* Program args:
-
-  ```
-  --config-file "/path/to/config.yaml"
-  ```
-
-### Option D — Run the GUI from an IDE (dev/debug)
-
-* Import the Maven project.
-* Create a Run Configuration for the GUI main class (in `crafty-gui`).
-* If required by your IDE setup, provide JavaFX VM args, e.g.:
-
-  ```
-  --module-path "<path-to-javafx-sdk>/lib" --add-modules javafx.controls,javafx.fxml
-  ```
-
 ---
 
-## 5) Where outputs go
+## 5) Check outputs (how to know it worked)
 
-If `output_path` is set, outputs should appear there.
-If not set, CRAFTY may write into a default output folder under the project/scenario (depends on your configuration defaults).
+Typical output location is inside the project folder, e.g.:
 
-Typical things you should see:
-
-* aggregated CSV time series (global totals)
-* optional region-level outputs (if regionalisation is enabled)
-* optional maps (CSV + PNG) for configured years/frequency
-
-Next: see **`04-outputs.md`** for the output structure and how to enable/limit map export.
-
----
-
-## 6) Quick troubleshooting
-
-### “Scenario not found”
-
-* Check `scenario: "..."` matches a scenario folder/name that exists in the dataset.
-
-### “File not found / metadata missing”
-
-* Confirm `project_path` points to the dataset root, not one level above/below.
-* Check the dataset is fully unzipped and not missing metadata tables.
-
-### “No regional outputs”
-
-* Regionalisation may be disabled or missing required region inputs.
-* Start with a non-regional run first, then enable regionalisation once the base run works.
-
----
-
-## Next steps
-
-* Run scenarios and overrides: **`02-running-scenarios.md`**
-* Outputs & maps: **`04-outputs.md`**
-* File formats and scenario layout: `docs/appendices/file-formats.md`, `docs/appendices/default-scenario-layout.md`
-
+```text
+<project_path>/
+  output/
+    <scenario>/
+      <output_folder_name or timestamp>/
+        ... CSV outputs, logs, optional maps/plots ...
 ```
 
-If you want, the next good page to write is **`02-running-scenarios.md`** (scenario discovery vs YAML path overrides, regionalisation on/off, and “batch/HPC patterns”).
-```
+If you don’t see outputs:
+- Ensure `generate_output_files: true`
+- Ensure your `project_path` and `scenario` are valid
+- Look at the console/log output for “file not found” messages
+
+---
+
+## 6) Next steps
+
+- Run other scenarios + overrides: [`02-running-scenarios.md`](02-running-scenarios.md)
+- Understand outputs and map export: [`04-outputs.md`](04-outputs.md)
+- Common recipes (batch runs, reproducibility, coupling flags): [`03-common-workflows.md`](03-common-workflows.md)
+- Data layout and CSV schemas:
+  - `docs/appendices/default-scenario-layout.md`
+  - `docs/appendices/file-formats.md`
