@@ -12,8 +12,10 @@ import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
 import de.cesr.crafty.gui.utils.graphical.MousePressed;
+import de.cesr.crafty.gui.utils.graphical.NewWindow;
 import de.cesr.crafty.gui.utils.graphical.PieChartTools;
 import de.cesr.crafty.gui.utils.graphical.Tools;
+import de.cesr.crafty.gui.utils.graphical.VoronoiDiskChart;
 import javafx.fxml.FXML;
 import javafx.geometry.Side;
 import javafx.scene.chart.PieChart;
@@ -177,7 +179,7 @@ public class AFTsMapsController {
 					Color.web(AFTsLoader.getAftHash().get(aftName).getColor()));
 		});
 
-//		NewWindow.createWin("Voronoi", VoronoiDiskChart.voronoiChart(data, colors));
+		NewWindow.createWin("Voronoi", VoronoiDiskChart.voronoiChart(data, colors));
 //		box1.getChildren().add(VoronoiDiskChart.voronoiChart(data, colors));
 	}
 
