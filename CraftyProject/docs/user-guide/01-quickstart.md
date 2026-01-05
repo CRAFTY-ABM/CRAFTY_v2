@@ -11,7 +11,7 @@ You will:
 
 ---
 
-## 0) Choose how you want to run CRAFTY
+## 0) Choose how you want to run CRAFTY 
 
 **Option A — Windows `.exe` (GUI)**  
 Best for most users on Windows. No IDE, no Maven.
@@ -25,7 +25,7 @@ Best for developers/debugging.
 **Option D — IDE (GUI/JavaFX)**  
 Best for GUI development/debugging.
 
-> If you’re new: start with **Option A** or **Option B**.
+> If you’re new: start with **Option A** or **Option B**. 
 
 ---
 
