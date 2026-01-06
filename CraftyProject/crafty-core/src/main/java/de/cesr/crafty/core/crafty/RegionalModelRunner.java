@@ -272,7 +272,7 @@ public class RegionalModelRunner {
 		try (var t = profiler.section("exportFiles")) {
 			listner.exportFiles(getRegionalSupply());
 		}
-		try (var t = profiler.section("calculeMarginal")) {
+		try (var t = profiler.section("computeMarginal")) {
 			computeMarginal();
 		}
 		try (var t = profiler.section("servicesTax")) {
