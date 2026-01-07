@@ -134,7 +134,12 @@ public class CsvProcessors {
 		LOGGER.info("Importing data for " + kind + " from : " + file + "...");
 		try (Stream<String> lines = Files.lines(file)) {
 			Iterator<String> it = lines.iterator();
-			Map<String, Integer> index = buildIndex(it.next());
+			String row0 = it.next();
+			if (kind.equals(CsvKind.BASELINE)) {
+				row0 = row0.replace("AFT", "FR").replace("Agent", "FR").replace("Owner", "FR").replace("Agents", "FR");
+			}
+			Map<String, Integer> index = buildIndex(row0);
+
 			/* the remaining lines are processed in parallel */
 			StreamSupport.stream(Spliterators.spliteratorUnknownSize(it, Spliterator.ORDERED), true) // true = parallel
 					.forEach(line -> kind.apply(line, index));
@@ -155,7 +160,6 @@ public class CsvProcessors {
 	private static Map<String, Integer> buildIndex(String headerLine) {
 		String[] cols = COMMA.split(headerLine, -1);
 		Map<String, Integer> idx = new HashMap<>(cols.length);
-
 		for (int i = 0; i < cols.length; i++) {
 			// trim in case the file has “X, Y ,Z” with spaces
 			idx.put(cols[i].trim().toUpperCase().replace("\"", ""), i);
@@ -226,7 +230,6 @@ public class CsvProcessors {
 		Cell c = new Cell(x, y);
 
 		if (c != null) {
-			// if(AFTsLoader.getAftHash().contains(immutableList.get(indexof.get("FR")))){}
 			c.setOwner(AFTsLoader.getAftHash().get(immutableList.get(indexof.get("FR"))));
 
 			CellsLoader.hashCell.put(x + "," + y, c);

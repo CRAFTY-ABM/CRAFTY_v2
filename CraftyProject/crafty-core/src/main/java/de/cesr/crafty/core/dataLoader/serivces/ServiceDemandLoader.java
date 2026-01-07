@@ -120,7 +120,6 @@ public class ServiceDemandLoader {
 //					System.out.println("ns= " + ns + " year= " + year + " getWeights= " + s.getWeights().get(year) 
 //							+ " regions.size" + CellsLoader.regions.size());
 					
-					
 					ServiceSet.worldService.get(ns).getWeights().merge(year,
 							s.getWeights().get(year) / CellsLoader.regions.size(), Double::sum);
 					ServiceSet.worldService.get(ns).getTaxes_subsidies().merge(year,
