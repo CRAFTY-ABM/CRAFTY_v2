@@ -1,7 +1,6 @@
 package de.cesr.crafty.core.main;
 
 import java.nio.file.Paths;
-import java.util.Iterator;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CraftyOptions;
@@ -38,22 +37,6 @@ public class MainHeadless {
 		runner.start();
 		runner.initialzeRun();
 		runner.run();
-//		int k = 0;
-//		for (int i = 0; i < 10; i++) {
-//			for (int j = 0; j < 10; j++) {
-////				float r = (float) (Math.random()*2 + i + j);
-////				String str= r>0.75? "Crop":r>0.40? "Pasture":"Forest"; 
-////				System.out.println((k++) + "," + i + "," + j + "," + (float)Math.abs(Math.sin(r)) + "," + (float)Math.abs(Math.cos(r))
-////						+ "," + (float)Math.abs(1/(Math.sqrt(r)+1)) + "," + (float)Math.abs(1 / Math.exp(1 / r)) + ","
-////						+ (float)Math.abs((Math.sin(r) + Math.cos(r))/2));
-//				if (i < 3 && (j> 7)) {
-//					System.out.println((k++) + "," + i + "," + j + "," + (Math.random() > 0.3 ? 1 : 0));
-//				} else {
-//					System.out.println((k++) + "," + i + "," + j + "," + (Math.random() > 0.2 ? 0 : 1));
-//				}
-//			}
-//
-//		}
 	}
 
 	public static void initializeConfig(String[] args) {
