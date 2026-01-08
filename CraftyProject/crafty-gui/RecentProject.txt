@@ -41,3 +41,4 @@ C:\Users\byari-m\Desktop\LandSyMM\CRAFTY-EU-Plum-Coupling
 C:\Users\byari-m\Desktop\shocks\CRAFTY-EU-1km_upscaled_16_upscaled_2.5
 C:\Users\byari-m\Downloads\CRAFTY-EU-Upscaled-EU-Summer-School
 C:\Users\byari-m\Desktop\CRAFTY_DATA\data0.8\CRAFTY-EU-Upscaled-Eastern-Region
+C:\Users\byari-m\Desktop\CRAFTY_DATA\minimal-scenario

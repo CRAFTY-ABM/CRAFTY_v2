@@ -160,7 +160,7 @@ public class AFTsMapsController {
 			hashm.put(name, action);
 		});
 		MousePressed.mouseControle((Pane) chart.getParent(), chart, hashm);
-		createVoronoiCircleChart();
+//		createVoronoiCircleChart();
 	}
 
 	private void createVoronoiCircleChart() {
@@ -174,6 +174,7 @@ public class AFTsMapsController {
 
 		AFTsLoader.hashAgentNbr();
 		AFTsLoader.hashAgentNbr.forEach((aftName, nbr) -> {
+			System.out.println("$$$ "+aftName+"->"+nbr);
 			data.get(AFTsLoader.getAftHash().get(aftName).getCategory().getName()).put(aftName, (double) nbr);
 			colors.get(AFTsLoader.getAftHash().get(aftName).getCategory().getName()).put(aftName,
 					Color.web(AFTsLoader.getAftHash().get(aftName).getColor()));

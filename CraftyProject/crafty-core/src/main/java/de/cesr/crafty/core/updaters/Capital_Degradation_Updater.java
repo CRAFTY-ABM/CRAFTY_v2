@@ -77,16 +77,16 @@ public class Capital_Degradation_Updater extends AbstractUpdater {
 
 			}
 		} else {
-			ArrayList<Path> paths = PathTools.fileFilter(PathTools.asFolder("shocksMap"), PathTools.asFolder("worlds"),
+			ArrayList<Path> paths = PathTools.fileFilter(PathTools.asFolder("capitals_degradation"), PathTools.asFolder("worlds"),
 					".csv");
 			if (paths != null) {
 				for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
 					int ii = i;
 					Path shockPath = paths.stream()
-							.filter(pp -> (pp.toString().contains("cellsShocks_" + ProjectLoader.getScenario()))
+							.filter(pp -> (pp.toString().contains("capitals_degradation_" + ProjectLoader.getScenario()))
 									&& (pp.toString().contains(ii + ".csv")))
 							.findFirst()
-							.orElse(paths.stream().filter(pp -> (pp.toString().contains("default_cellsShocks"))
+							.orElse(paths.stream().filter(pp -> (pp.toString().contains("default_capitals_degradation"))
 									&& (pp.toString().contains(ii + ".csv"))).findFirst().orElse(null));
 					degradation_paths.put(i, shockPath);
 				}

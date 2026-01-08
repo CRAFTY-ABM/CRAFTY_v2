@@ -1,0 +1,56 @@
+
+ # Configuration for CRAFTY Model 
+
+CRAFTY running from: classes/IDE Not a JAR file
+
+Config [
+|-> project_path=C:\Users\byari-m\Documents\GitRepo\CraftyProject\docs\4-examples\minimal-scenario_data_example
+|-> scenario=minHigh
+|-> start_End_Year=null
+|-> metaData_directory=
+|-> BASELINE_path=C:\Users\byari-m\Documents\GitRepo\CraftyProject\docs\4-examples\minimal-scenario_data_example\worlds\Baseline_map.csv
+|-> CAPITALS_directory=
+|-> landControle_directories=null
+|-> Behevoir_Cells_directory=
+|-> aft_production_directory=
+|-> aft_behevoir_directory=
+|-> service_demands_path=
+|-> service_utility_weight_path=
+|-> services_taxes_subsidies_path=
+|-> land_taxes_subsidies_path=
+|-> capital_degradation_directory=
+|-> institutions_directory=
+|-> regionalization=true
+|-> initial_demand_supply_equilibrium=true
+|-> remove_negative_marginal_utility=false
+|-> use_abandonment_threshold=true
+|-> mutate_on_competition_win=false
+|-> mutation_interval=0.01
+|-> MostCompetitorAFTProbability=0.8
+|-> averaged_residual_demand_per_cell=false
+|-> use_AFTs_categories_GiveIn=false
+|-> use_neighbor_priority=true
+|-> neighbor_priority_probability=0.95
+|-> neighbor_radius=2
+|-> seedID=rank
+|-> participating_cells_percentage=0.05
+|-> marginal_utility_calculations_per_tick=5
+|-> land_abandonment_percentage=0.03
+|-> takeOverUnmanageCells_percentage=0.8
+|-> output_folder_name=C:\Users\byari-m\Documents\GitRepo\CraftyProject\docs\4-examples\minimal-scenario_data_example\output\minHigh\Default_Run_Output_2026_01_08_13_41
+|-> Output_path=
+|-> generate_output_files=true
+|-> generate_charts_plots_PNG=true
+|-> generate_charts_plots_PDF=true
+|-> generate_map_output_files=true
+|-> generate_map_plots_tif=false
+|-> map_output_frequency=10
+|-> track_changes=false
+|-> export_LOGGER=false
+|-> LOGGER_info=true
+|-> LOGGER_warn=true
+|-> LOGGER_trace=false
+|-> map_output_years=[2020, 2022, 2023, 2035, 2100]
+|-> comments=
+] 
+

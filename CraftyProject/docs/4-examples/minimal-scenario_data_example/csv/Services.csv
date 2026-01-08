@@ -1,0 +1,4 @@
+Name,Penalise_Oversupply,Description
+Food,yes,Provisioning: food production/service
+Timber,yes,Provisioning: timber/wood production/service
+Carbon,no,Regulating: carbon storage/sequestration service

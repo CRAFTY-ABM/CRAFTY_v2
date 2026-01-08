@@ -1,0 +1,3 @@
+Name,startYear,endtYear,Description
+minLow,2020,2025,Low-demand (mild driver scenario for quick tests)
+minHigh,2020,2025,High-demand (strong driver scenario for stress tests)

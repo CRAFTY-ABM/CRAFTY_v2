@@ -1,0 +1,4 @@
+Label,Type,Color,Category,Category_Color,Intesity_name,Intesity_level,Name,Description
+Crop,AFT,#ffbc00,Agriculture,#ffbc00,ext,1,Crop,Food-oriented AFT
+Pasture,AFT,#ffef00,Agriculture,#ffef00,ext,1,Pasture,"Lower food, modest carbon"
+Forest,AFT,#008e00,Forest,#008e00,ext,1,Forest,Timber + carbon-oriented AFT
