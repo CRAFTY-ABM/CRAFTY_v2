@@ -79,6 +79,64 @@ public class AftsUpdater extends AbstractUpdater {
 				load_land_taxes_subsidies(R);
 			});
 		}
+		update_AFT_capital_adjustments_values();
+
+	}
+
+	private void update_AFT_capital_adjustments_values() {
+		// Clear AFT_capital_adjustments for each AFT
+		// Find if there is any file for capital adjusments in YAML
+		// if No,check the default
+		// if No, ignore -> for all afts -> capital_adjustments=null
+		// if yes, read the path and assosiete each AFt with the capitals adjsument
+		AFTsLoader.getActivateAFTsHash().values().forEach(a -> {
+			a.getCapital_adjustments().clear();
+		});
+
+		Path path = null;
+		ArrayList<Path> directory;
+		if (Paths.get(ConfigLoader.config.AFT_capital_adjustments).toFile().isDirectory()) {
+			directory = PathTools.findAllFilePaths(Paths.get(ConfigLoader.config.AFT_capital_adjustments));
+		} else {
+			directory = PathTools.fileFilter("AFT_capital_adjustments", ProjectLoader.getScenario(),
+					Timestep.getCurrentYear() + ".csv");
+		}
+		if (directory != null) {
+			ArrayList<Path> ps = PathTools.fileFilter(directory, Timestep.getCurrentYear() + ".csv");
+			if (ps != null && !ps.isEmpty()) {
+				path = ps.get(0);
+			}
+		}
+		if (path != null) {
+			Map<String, Map<String, String>> csv = CsvTools.csvToColumnRowValue(path);
+			csv.forEach((aftName, capitals) -> {
+				capitals.forEach((capitalName, value) -> {
+					if (AFTsLoader.getActivateAFTsHash().keySet().contains(aftName)
+							&& CapitalUpdater.getCapitalsList().contains(capitalName)) {
+					}
+					AFTsLoader.getActivateAFTsHash().get(aftName).getCapital_adjustments().put(capitalName,
+							Utils.sToD(value));
+				});
+			});
+			adjust_cell_capitals();
+		}
+	}
+
+	public static void adjust_cell_capitals() {
+		LOGGER.info("adjust_cell_capitals");
+		CellsLoader.hashCell.values().parallelStream().forEach(c -> {
+			Aft a = c.getOwner();
+			if (a != null) {
+				if (!a.getCapital_adjustments().isEmpty()) {
+					CapitalUpdater.getCapitalsList().forEach(cn -> {
+						if (a.getCapital_adjustments().get(cn) != null) {
+							c.getCapitals().put(cn,
+									Math.max(c.getCapitals().get(cn) * (1 + a.getCapital_adjustments().get(cn)), 0));
+						}
+					});
+				}
+			}
+		});
 	}
 
 	private void updateProduction(String pORb) {

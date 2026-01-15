@@ -14,6 +14,7 @@ import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import institutions.InstitutionManager;
+import utils.External_variables_Manager;
 import utils.InstitutionOutput;
 import utils.TargetModelOutput;
 
@@ -35,6 +36,7 @@ public class Connector_Runner {
 		MainHeadless.runner = new ModelRunner();
 		MainHeadless.runner.start();
 		MainHeadless.runner.initialzeRun();
+		External_variables_Manager.Initializer();
 		// -------------------
 		InstitutionManager institutionManager = new InstitutionManager();
 		Path directory = Paths.get(ConfigLoader.config.institutions_directory);
@@ -79,7 +81,6 @@ public class Connector_Runner {
 		PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
 				Listener.exportConfigurationFile(), false);
 		ModelRunner.demandEquilibrium();
-
 	}
 
 }

@@ -2,6 +2,7 @@ package de.cesr.crafty.gui.main;
 
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Group;
 import javafx.scene.transform.Scale;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -11,6 +12,8 @@ import java.util.List;
 public class GuiScaler {
 
 	public static Screen lastScreen = getScreenForStage(FxMain.primaryStage);
+	public static double graphicScaleX;
+	public static double graphicScaleY;
 //	public static boolean igorInitialScaled = true;
 
 	public static void reScale(Stage stage) {
@@ -25,7 +28,6 @@ public class GuiScaler {
 		updateForScreenChange(stage);
 	}
 
-
 	private static void updateForScreenChange(Stage stage) {
 		Screen current = getScreenForStage(stage);
 		if (current != lastScreen) {
@@ -34,10 +36,23 @@ public class GuiScaler {
 		}
 	}
 
+	public static void scaleLogoD(Group logoD) {
+		logoD.setTranslateX(GuiScaler.lastScreen.getBounds().getWidth() / 2.5);
+		logoD.setTranslateY(GuiScaler.lastScreen.getBounds().getHeight() / 4);
+//		scaler(lastScreen);
+	
+		double graphicScaleX = Screen.getPrimary().getBounds().getWidth() / 2750;
+		double graphicScaleY = Screen.getPrimary().getBounds().getHeight() / 1550;
+		double scale = Math.min(graphicScaleX * 1.2, graphicScaleY * 1.2);
+		Scale scaleTransform = new Scale(scale, scale, 0, 0);
+		logoD.getTransforms().clear();
+		logoD.getTransforms().add(scaleTransform);
+	}
+
 	public static void scaler(Screen current) {
-		FxMain.graphicScaleX = current.getBounds().getWidth() / 2750;
-		FxMain.graphicScaleY = current.getBounds().getHeight() / 1550;
-		double scale = Math.min(FxMain.graphicScaleX, FxMain.graphicScaleY);
+		graphicScaleX = current.getBounds().getWidth() / 2750;
+		graphicScaleY = current.getBounds().getHeight() / 1550;
+		double scale = Math.min(graphicScaleX, graphicScaleY);
 		Scale scaleTransform = new Scale(scale, scale, 0, 0);
 		FxMain.anchor.getTransforms().clear();
 		FxMain.anchor.getTransforms().add(scaleTransform);

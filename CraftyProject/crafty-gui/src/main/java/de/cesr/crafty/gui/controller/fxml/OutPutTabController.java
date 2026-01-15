@@ -88,7 +88,7 @@ public class OutPutTabController {
 		Path output = Paths.get(ProjectLoader.getProjectPath() + File.separator + "output");
 		tree = FileTreeView.build(output, null, 1);
 		fileTreeView.getChildren().add(tree);
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * FxMain.graphicScaleY);
+		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY);
 		tree.setMaxHeight(scaleY);
 		tree.setMinHeight(scaleY);
 		mouseTreeFiles(tree);

@@ -53,6 +53,7 @@ public class SeedUpdater {
 		} else if (ConfigLoader.config.seedID.equals("0")) {
 			ConfigLoader.config.longSeedID.set(ThreadLocalRandom.current().nextLong());
 		} else if (ConfigLoader.config.seedID.matches("[-+]?\\d+")) {
+			LOGGER.info("seedID is a number ID--> "+ConfigLoader.config.seedID);
 			ConfigLoader.config.longSeedID.set((long) Long.parseLong(ConfigLoader.config.seedID));// ConfigLoader.config.seedID.hashCode();
 		} else if (Paths.get(ConfigLoader.config.seedID).toFile().isDirectory()) {
 			// not implemented yet
@@ -77,7 +78,7 @@ public class SeedUpdater {
 
 	private static ConcurrentHashMap<String, Cell> seedRanking(Collection<Cell> cells, double percent, boolean byAfts) {
 		if (!byAfts) {
-			return rankCellByUtilities(cells, percent); // your existing fast path
+			return rankCellByUtilities(cells, percent);
 		}
 
 		Map<String, ArrayList<Cell>> groups = groupByOwner(cells);

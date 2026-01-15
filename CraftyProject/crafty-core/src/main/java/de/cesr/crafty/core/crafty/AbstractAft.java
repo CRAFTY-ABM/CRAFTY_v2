@@ -36,17 +36,35 @@ public abstract class AbstractAft {
 	private String label;
 	private String completeName;
 	ManagerTypes type;
-//	ConcurrentHashMap<String, Double> sensitivity = new ConcurrentHashMap<>();
 	ConcurrentHashMap<String, Double> productivityLevel = new ConcurrentHashMap<>();
 	double giveInMean = 0, giveInSD = 0, giveUpMean = 0, giveUpSD = 0, serviceLevelNoiseMin = 0,
 			serviceLevelNoiseMax = 0, giveUpProbabilty = 0;
 	AftCategory category;
 	String color;
 	private ConcurrentHashMap<Integer, Double> land_taxes_subsidies = new ConcurrentHashMap<>();// <year,TS>
+	private ConcurrentHashMap<String, Double> capital_adjustments = new ConcurrentHashMap<>(); // <capital_Name,
+																								// adjustment_value>
 
 	private double cachedLandTax;
 
-	protected Map<String, Map<String, Double>> sensitivity= new ConcurrentHashMap<>(); // service -> (capital -> exponent)
+	protected Map<String, Map<String, Double>> sensitivity = new ConcurrentHashMap<>(); // <service,capital,exponent>
+	private int min_life_cycle = 0, max_life_cycle = Integer.MAX_VALUE;
+
+	public int getMin_life_cycle() {
+		return min_life_cycle;
+	}
+
+	public void setMin_life_cycle(int min_life_cycle) {
+		this.min_life_cycle = min_life_cycle;
+	}
+
+	public int getMax_life_cycle() {
+		return max_life_cycle;
+	}
+
+	public void setMax_life_cycle(int max_life_cycle) {
+		this.max_life_cycle = max_life_cycle;
+	}
 
 	public Map<String, Map<String, Double>> getSensByService() {
 		return sensitivity;
@@ -95,7 +113,6 @@ public abstract class AbstractAft {
 	public boolean isAbandoned() {
 		return type == ManagerTypes.Abandoned;
 	}
-
 
 	public double getServiceLevelNoiseMin() {
 		return serviceLevelNoiseMin;
@@ -187,6 +204,10 @@ public abstract class AbstractAft {
 
 	public void setLand_taxes_subsidies(ConcurrentHashMap<Integer, Double> land_taxes_subsidies) {
 		this.land_taxes_subsidies = land_taxes_subsidies;
+	}
+
+	public ConcurrentHashMap<String, Double> getCapital_adjustments() {
+		return capital_adjustments;
 	}
 
 }

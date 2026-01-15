@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
+
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
@@ -23,6 +24,7 @@ import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.updaters.AftsUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
+import de.cesr.crafty.core.utils.general.Utils;
 
 /**
  * Loads, initializes, and provides global access to the set of Agent Functional Types (AFTs) used in a run.
@@ -81,10 +83,14 @@ public class AFTsLoader extends HashSet<Aft> {
 				.forEach(entry -> activateAFTsHash.put(entry.getKey(), entry.getValue()));
 		LOGGER.info(" AFTs: " + hashAFTs.keySet());
 		LOGGER.info("Active AFTs: " + activateAFTsHash.keySet());
+
+		hashAFTs.forEach((l, a) -> {
+			System.out.println("##  "+l + ": max= " + a.getMax_life_cycle() + ", min= " + a.getMin_life_cycle());
+		});
 	}
 
 	void initializeAFTs() {
-		initializeAftTypes();
+		initializeAftList();
 		AftCategorised.CategoriesLoader();
 		AftCategorised.initializeBehevoirByCategories();
 		aft_production_paths = aftParametersPaths("production");
@@ -165,7 +171,7 @@ public class AFTsLoader extends HashSet<Aft> {
 				}
 			});
 		} else {
-			ArrayList<Path> directory =PathTools.fileFilter(PathTools.asFolder(productioOrBehevoir) );
+			ArrayList<Path> directory = PathTools.fileFilter(PathTools.asFolder(productioOrBehevoir));
 			hashAFTs.keySet().forEach(label -> {
 				Map<String, Path> yPath = new HashMap<>();
 				directory.forEach(p -> {
@@ -197,21 +203,21 @@ public class AFTsLoader extends HashSet<Aft> {
 		AftsUpdater.updateAFTProduction(hashAFTs.get(file.getName().replace(".csv", "")), file);
 	}
 
-	void initializeAftTypes() {// mask, AFT, or unmanaged //
+	private void initializeAftList() {// mask, AFT, or unmanaged //
 		hashAFTs.clear();
-		Map<String, List<String>> matrix = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
-		if (matrix.get("Type") != null) {
-			for (int i = 0; i < matrix.get("Label").size(); i++) {
-				String label = matrix.get("Label").get(i);
+		Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
+		if (csv.get("Type") != null) {
+			for (int i = 0; i < csv.get("Label").size(); i++) {
+				String label = csv.get("Label").get(i);
 				Aft a = new Aft(label);
-				a.setColor(matrix.get("Color").get(i));
-				if (matrix.keySet().contains("Name")) {
-					a.setCompleteName(matrix.get("Name").get(i));
+				a.setColor(csv.get("Color").get(i));
+				if (csv.keySet().contains("Name")) {
+					a.setCompleteName(csv.get("Name").get(i));
 				} else {
 					a.setCompleteName("-");
 				}
 				hashAFTs.put(label, a);
-				switch (matrix.get("Type").get(i)) {
+				switch (csv.get("Type").get(i)) {
 				case "Mask":
 					a.setType(ManagerTypes.MASK);
 					break;
@@ -220,6 +226,13 @@ public class AFTsLoader extends HashSet<Aft> {
 					break;
 				default:
 					a.setType(ManagerTypes.AFT);
+				}
+				if (csv.get("min_life_cycle") != null) {
+					a.setMin_life_cycle(Utils.sToI(csv.get("min_life_cycle").get(i)));
+				}
+				if (csv.get("max_life_cycle") != null) {
+					int max = Utils.sToI(csv.get("max_life_cycle").get(i));
+					a.setMax_life_cycle(max > 0 ? max : Integer.MAX_VALUE);
 				}
 			}
 		}

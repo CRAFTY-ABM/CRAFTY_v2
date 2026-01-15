@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
@@ -14,11 +15,14 @@ import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.main.MainHeadless;
+import de.cesr.crafty.core.updaters.AftsUpdater;
+import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
 import institutions.InstitutionManager;
+import utils.External_variables_Manager;
 import utils.InstitutionOutput;
 import utils.ModelOutputProvider;
 import utils.TargetModelOutput;
@@ -37,9 +41,8 @@ public class Connector implements ModelOutputProvider {
 	Map<String, Double> policyEffectsListner = new HashMap<>();// <instutition@policy@service,policyValue>
 	///////////////////
 	private Map<String, Map<String, List<String>>> IPTs = new HashMap<>(); // <instutition,policy,targets>
-	private Map<String, Map<String, Double>> targetToServiceHash = new HashMap<>();// <target,service,weight>
+	private Map<String, Map<String, Double>> targetToCraftyElements = new HashMap<>();// <target,service/AFt/externalVariable/capitals,weight>
 	Map<String, Map<String, Double>> policyEffects = new HashMap<>();// <policy, service,weight>
-
 	Map<String, Double> targetToValue = new HashMap<>();
 
 	public Connector(InstitutionManager institutionManager) {
@@ -56,7 +59,6 @@ public class Connector implements ModelOutputProvider {
 				});
 			});
 		});
-
 		initializeIPTs();
 		InitializePolicies();
 		InitializeTargets();
@@ -98,6 +100,12 @@ public class Connector implements ModelOutputProvider {
 									Utils.sToD(csv.get("Weight").get(i)));
 							policyEffectsListner.put(instituteName + "@" + policyName + "@" + csv.get("AFT").get(i),
 									0.);
+						} else if (csv.containsKey("AFT_capital_adjustments")) {
+							policyEffects.get(instituteName + "@" + policyName).put(
+									csv.get("AFT_capital_adjustments").get(i), Utils.sToD(csv.get("Weight").get(i)));
+							policyEffectsListner.put(
+									instituteName + "@" + policyName + "@" + csv.get("AFT_capital_adjustments").get(i),
+									0.);
 						}
 					}
 				}
@@ -110,7 +118,7 @@ public class Connector implements ModelOutputProvider {
 		getIPTs().forEach((in, poliHash) -> {
 			poliHash.forEach((name, targets) -> {
 				targets.forEach(target -> {
-					targetToServiceHash.put(target, new HashMap<>());
+					targetToCraftyElements.put(target, new HashMap<>());
 					ArrayList<Path> p = PathTools.fileFilter(directory, "target@" + target);
 					if (p == null) {
 						LOGGER.error("Target path not fund: " + "target@" + target);
@@ -118,32 +126,38 @@ public class Connector implements ModelOutputProvider {
 						Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(p.get(0));
 						for (int i = 0; i < csv.values().iterator().next().size(); i++) {
 							if (csv.containsKey("Service")) {
-								targetToServiceHash.get(target).put(csv.get("Service").get(i),
+								targetToCraftyElements.get(target).put(csv.get("Service").get(i),
 										Utils.sToD(csv.get("Weight").get(i)));
 							} else if (csv.containsKey("AFT")) {
-								targetToServiceHash.get(target).put(csv.get("AFT").get(i),
+								targetToCraftyElements.get(target).put(csv.get("AFT").get(i),
 										Utils.sToD(csv.get("Weight").get(i)));
+							} else if (csv.containsKey("External")) {
+								targetToCraftyElements.get(target).put(csv.get("External").get(i), 1.);
 							}
 						}
 					}
 				});
 			});
 		});
+		System.out.println("@@" + targetToCraftyElements);
 	}
 
 	private void PreparModelOutput(RegionalModelRunner r) {
-		targetToServiceHash.keySet().forEach(target -> {
+		targetToCraftyElements.keySet().forEach(target -> {
 			Map<String, Double> supplies = new HashMap<>();
 			Map<String, Double> weights = new HashMap<>();
-			targetToServiceHash.get(target).forEach((name, weight) -> {
+			targetToCraftyElements.get(target).forEach((name, weight) -> {
 				if (ServiceSet.getServicesList().contains(name)) {
 					supplies.merge(target, weight * r.getRegionalSupply().get(name), Double::sum);
 					weights.merge(target, weight, Double::sum);
 				} else if (AFTsLoader.getAftHash().keySet().contains(name)) {
 					supplies.merge(target, weight * AFTsLoader.hashAgentNbr.get(name), Double::sum);
 					weights.merge(target, weight, Double::sum);
-					System.out.println("If is an AFT not implemeted yet: Add sub/tex to Management ");
+				} else if (targetToCraftyElements.get(target).keySet().contains(name)) {
+					supplies.merge(target, External_variables_Manager.getExternal_variables(name), Double::sum);
+					weights.merge(target, weight, Double::sum);
 				}
+
 			});
 			prepModelOutput.get(target).add(supplies.get(target) / weights.get(target));
 		});
@@ -151,6 +165,7 @@ public class Connector implements ModelOutputProvider {
 
 	@Override
 	public TargetModelOutput step(InstitutionOutput institutionOutput) {
+		External_variables_Manager.valuesInjector();
 		MainHeadless.runner.step();
 		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(r -> {
 			applyPolicyEffects(institutionOutput, r);
@@ -169,7 +184,7 @@ public class Connector implements ModelOutputProvider {
 			for (Map.Entry<String, Double> entryPolicies : policyValues.entrySet()) {
 				String policyName = entryPolicies.getKey();
 				Double policyValue = entryPolicies.getValue();
-				System.out.println(institutionName + ", " + policyName + "-> " + policyValue);
+				System.out.println(institutionName + "@ " + policyName + "-> " + policyValue);
 				// Update current policy values map
 				policyListener.put(institutionName + "@" + policyName, policyValue);
 				applyOnePolicy(r, institutionName, policyName, policyValue);
@@ -182,6 +197,8 @@ public class Connector implements ModelOutputProvider {
 			LOGGER.warn("Unknown policy or instute: " + policyName + ", " + instuteName);
 			return;
 		}
+		AtomicBoolean s = new AtomicBoolean(false);
+		System.out.println("==> " + instuteName + "@" + policyName + "@" + policyValue);
 		policyEffects.get(instuteName + "@" + policyName).forEach((serviceOrAFT, wieght) -> {
 			if (ServiceSet.getServicesList().contains(serviceOrAFT)) {
 				r.R.getServicesHash().get(serviceOrAFT).getTaxes_subsidies().merge(Timestep.getCurrentYear() + 1,
@@ -190,9 +207,21 @@ public class Connector implements ModelOutputProvider {
 				// add tax to AFt
 				AFTsLoader.getAftHash().get(serviceOrAFT).getLand_taxes_subsidies().merge(Timestep.getCurrentYear() + 1,
 						wieght * policyValue, Double::sum);
+			} else if (serviceOrAFT.contains("@")) {
+				String[] str = serviceOrAFT.split("@");
+				if (AFTsLoader.getActivateAFTsHash().keySet().contains(str[0])
+						&& CapitalUpdater.getCapitalsList().contains(str[1])) {
+					s.set(true);
+					AFTsLoader.getActivateAFTsHash().get(str[0]).getCapital_adjustments().merge(str[1],
+							wieght * policyValue, Double::sum);
+				}
 			}
 			policyEffectsListner.put(instuteName + "@" + policyName + "@" + serviceOrAFT, wieght * policyValue);
 		});
+		if (s.get()) {
+			System.out.println("###### adjust_cell_capitals #######");
+			AftsUpdater.adjust_cell_capitals();
+		}
 	}
 
 	@Override

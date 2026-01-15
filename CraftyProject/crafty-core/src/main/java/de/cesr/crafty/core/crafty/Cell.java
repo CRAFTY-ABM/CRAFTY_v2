@@ -90,6 +90,7 @@ public class Cell extends AbstractCell {
 					&& getOwner().getGiveUpProbabilty() > Math.random())) {
 				setOwner(null);
 				r.R.getUnmanageCellsR().add(this);
+				setOwnerLifeCounter(0);
 				Listener.landUseChangeCounter.getAndIncrement();
 			}
 		}

@@ -51,8 +51,7 @@ public class Config {
 	public String land_taxes_subsidies_path = "";
 	public String capital_degradation_directory = "";
 	public String waitingFlag_directories_path = "";
-	// institutions
-	public String institutions_directory = "";
+	public String AFT_capital_adjustments = "";
 
 	// Regionalisation
 	public boolean regionalization = false;
@@ -64,7 +63,7 @@ public class Config {
 	public double mutation_interval = 0.01;
 	public double MostCompetitorAFTProbability = 0.8;
 	public boolean averaged_residual_demand_per_cell = false;
-	public boolean use_AFTs_categories_GiveIn=true;
+	public boolean use_AFTs_categories_GiveIn = true;
 	// Neighboring Effects
 	public boolean use_neighbor_priority = true;
 	public double neighbor_priority_probability = 0.95;
@@ -125,8 +124,7 @@ public class Config {
 				+ service_demands_path + "\n" + "|-> service_utility_weight_path=" + service_utility_weight_path + "\n"
 				+ "|-> services_taxes_subsidies_path=" + services_taxes_subsidies_path + "\n"
 				+ "|-> land_taxes_subsidies_path=" + land_taxes_subsidies_path + "\n"
-				+ "|-> capital_degradation_directory=" + capital_degradation_directory + "\n"
-				+ "|-> institutions_directory=" + institutions_directory + "\n" + "|-> regionalization="
+				+ "|-> capital_degradation_directory=" + capital_degradation_directory + "\n" + "|-> regionalization="
 				+ regionalization + "\n" + "|-> initial_demand_supply_equilibrium=" + initial_demand_supply_equilibrium
 				+ "\n" + "|-> remove_negative_marginal_utility=" + remove_negative_marginal_utility + "\n"
 				+ "|-> use_abandonment_threshold=" + use_abandonment_threshold + "\n" + "|-> mutate_on_competition_win="
@@ -151,4 +149,7 @@ public class Config {
 				+ "|-> comments=" + comments + "\n" + "] \n\n";
 	}
 
+	// institutions
+	public String institutions_directory = "";
+	public String external_variable_values_directory = "";
 }

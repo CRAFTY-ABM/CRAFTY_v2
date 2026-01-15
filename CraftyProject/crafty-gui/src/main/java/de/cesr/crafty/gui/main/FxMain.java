@@ -1,9 +1,9 @@
 package de.cesr.crafty.gui.main;
 
-
 import java.io.InputStream;
 import java.net.URL;
 
+import de.cesr.crafty.gui.utils.graphical.CraftyLogoNode;
 import de.cesr.crafty.gui.utils.graphical.Tools;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -27,8 +27,6 @@ public class FxMain extends Application {
 	public static VBox topLevelBox = new VBox();
 	public static BorderPane anchor = new BorderPane();
 	public static ImageView logo;
-	public static double graphicScaleX;
-	public static double graphicScaleY;
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
@@ -51,7 +49,11 @@ public class FxMain extends Application {
 	private void addLogo() {
 		InputStream imageStream = getClass().getResourceAsStream("/graphic/CRAFTY_logo_modern3.png");
 		logo = Tools.logo(imageStream, 1);
-		anchor.setCenter(logo);
+		CraftyLogoNode logoD = new CraftyLogoNode();
+		logoD.playEntry();
+		logoD.playLoading();
+		GuiScaler.scaleLogoD(logoD);
+		anchor.getChildren().add(logoD);
 	}
 
 	public static void main(String[] args) {

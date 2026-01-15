@@ -136,7 +136,7 @@ public class OutPuterController {
 	private void treeFiles() {
 		System.out.println(outputpath);
 		tree = FileTreeView.build(outputpath, ".csv", "-Cell-", -1);
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * FxMain.graphicScaleY);
+		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY);
 		tree.setMaxHeight(scaleY);
 		tree.setMinHeight(scaleY);
 		treeBox.getChildren().add(tree);
@@ -218,7 +218,7 @@ public class OutPuterController {
 	}
 
 	private void forceResizing() {
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (FxMain.graphicScaleY * 1.1);
+		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (GuiScaler.graphicScaleY * 1.1);
 		scroll.setMaxHeight(scaleY);
 		scroll.setMinHeight(scaleY);
 		scrollRegions.setMaxHeight(scaleY);
@@ -499,7 +499,7 @@ public class OutPuterController {
 
 			borderPane.getChildren().add(grid);
 		} else {
-			double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (FxMain.graphicScaleY * 1.2);
+			double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (GuiScaler.graphicScaleY * 1.2);
 			sankeyAfts.setMaxHeight(scaleY);
 			sankeyAfts.setMinHeight(scaleY);
 		}

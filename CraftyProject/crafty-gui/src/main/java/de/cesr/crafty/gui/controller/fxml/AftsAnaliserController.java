@@ -48,7 +48,7 @@ public class AftsAnaliserController {
 	}
 
 	private void forceResizing() {
-		double scaley = GuiScaler.lastScreen.getBounds().getHeight() / (FxMain.graphicScaleY * 1.2);
+		double scaley = GuiScaler.lastScreen.getBounds().getHeight() / (GuiScaler.graphicScaleY * 1.2);
 		scroll.setMaxHeight(scaley);
 		scroll.setMinHeight(scaley);
 	}

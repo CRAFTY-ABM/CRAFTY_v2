@@ -31,7 +31,6 @@ import de.cesr.crafty.gui.main.FxMain;
 import de.cesr.crafty.gui.main.GuiScaler;
 import de.cesr.crafty.gui.utils.graphical.Tools;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.Screen;
 
 /**
  * @author Mohamed Byari
@@ -195,8 +194,8 @@ public class Tools {
 		double width = GuiScaler.lastScreen.getBounds().getWidth() * scale;
 
 		for (int i = 0; i < nodes.length; i++) {
-			nodes[i].setMaxWidth(width / (2 * FxMain.graphicScaleX));
-			nodes[i].setMinWidth(width / (2 * FxMain.graphicScaleX));
+			nodes[i].setMaxWidth(width / (2 * GuiScaler.graphicScaleX));
+			nodes[i].setMinWidth(width / (2 * GuiScaler.graphicScaleX));
 		}
 	}
 
@@ -205,7 +204,7 @@ public class Tools {
 	}
 
 	public static void forceResisingHeight(double scale, Pane... nodes) {
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * FxMain.graphicScaleY * scale);
+		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY * scale);
 		for (int i = 0; i < nodes.length; i++) {
 			nodes[i].setMaxHeight(scaleY);
 			nodes[i].setMinHeight(scaleY);
@@ -213,7 +212,7 @@ public class Tools {
 	}
 
 	public static void forceResisingHeight(double scale, ScrollPane... nodes) {
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * FxMain.graphicScaleY * scale);
+		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY * scale);
 		for (int i = 0; i < nodes.length; i++) {
 			nodes[i].setMaxHeight(scaleY);
 			nodes[i].setMinHeight(scaleY);

@@ -100,6 +100,7 @@ public class Competitiveness {
 			} else {
 				landUsechange(c, competitor, r);
 			}
+
 		}
 	}
 
@@ -116,6 +117,8 @@ public class Competitiveness {
 						makeCompetition = mask.get(c.owner.getLabel() + "_" + competitor.getLabel());
 				}
 			}
+		} else if (c.owner != null && c.getOwnerLifeCounter() < c.owner.getMin_life_cycle()) {
+			makeCompetition = false;
 		}
 		return makeCompetition;
 	}
@@ -168,6 +171,7 @@ public class Competitiveness {
 
 	private static void takeOverAcell(Cell c, Aft newOwner) {
 		c.owner = ConfigLoader.config.mutate_on_competition_win ? new Aft(newOwner) : newOwner;
+		c.setOwnerLifeCounter(1);
 		Listener.landUseChangeCounter.getAndIncrement();
 	}
 

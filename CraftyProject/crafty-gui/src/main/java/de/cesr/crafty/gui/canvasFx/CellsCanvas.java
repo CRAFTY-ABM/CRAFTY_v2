@@ -74,8 +74,8 @@ public class CellsCanvas {
 		gc.setImageSmoothing(false);
 		MapPane canvasPane = new MapPane();
 
-		subScene = new SubScene(canvasPane, GuiScaler.lastScreen.getBounds().getWidth() / (2 * FxMain.graphicScaleX),
-				(GuiScaler.lastScreen.getBounds().getHeight() / FxMain.graphicScaleY));
+		subScene = new SubScene(canvasPane, GuiScaler.lastScreen.getBounds().getWidth() / (2 * GuiScaler.graphicScaleX),
+				(GuiScaler.lastScreen.getBounds().getHeight() / GuiScaler.graphicScaleY));
 		MapPane.fitMapInWindow();
 	}
 

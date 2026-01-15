@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -20,7 +22,6 @@ import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-
 
 /**
  * Utility methods for reading, writing, and exporting CSV files used throughout CRAFTY.
@@ -120,13 +121,14 @@ public class CsvTools {
 
 			return String.join(",", String.valueOf(c.getID()), String.valueOf(c.getX()), String.valueOf(c.getY()),
 					c.getOwner() != null ? c.getOwner().getLabel() : "null", String.valueOf(c.getCurrentUtility()),
-					servicesFlattened);
+					String.valueOf(c.getOwnerLifeCounter()), servicesFlattened);
 		}).collect(Collectors.toSet());
 
 		LOGGER.info("Writing processed lines to the CSV file : " + filePath);
 		// Write the processed lines to the CSV file
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-			writer.write("ID,X,Y,Agent,Utility," + String.join(",", serviceImmutableList) + "\n"); // CSV header
+			writer.write("ID,X,Y,Agent,Utility,OwnerLifeCounter," + String.join(",", serviceImmutableList) + "\n"); // CSV
+																													// header
 			for (String line : csvLines) {
 				writer.write(line + "\n");
 			}
@@ -231,4 +233,40 @@ public class CsvTools {
 		return tokens.toArray(new String[0]);
 	}
 
+	public static Map<String, Map<String, String>> csvToColumnRowValue(Path path) {
+		List<String> lines;
+		try {
+			lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+
+			if (lines.isEmpty())
+				return Map.of();
+
+			String[] header = lines.get(0).split(",", -1); // keep empty cells
+			if (header.length < 2)
+				return Map.of();
+
+			// column -> (rowKey -> value)
+			Map<String, Map<String, String>> out = new LinkedHashMap<>();
+			for (int c = 1; c < header.length; c++) {
+				out.put(header[c], new LinkedHashMap<>());
+			}
+
+			for (int r = 1; r < lines.size(); r++) {
+				if (lines.get(r).isBlank())
+					continue;
+
+				String[] cells = lines.get(r).split(",", -1);
+				String rowKey = cells.length > 0 ? cells[0] : String.valueOf(r - 1);
+
+				for (int c = 1; c < header.length; c++) {
+					String value = c < cells.length ? cells[c] : "";
+					out.get(header[c]).put(rowKey, value);
+				}
+			}
+			return out;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 }

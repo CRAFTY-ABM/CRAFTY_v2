@@ -125,10 +125,6 @@ public class RegionalModelRunner {
 		});
 	}
 
-	private void productivityForAll() {
-		R.getCells().values()/**/.parallelStream().forEach(cell -> cell.calculateCurrentProductivity());
-	}
-
 	private void utilitytyForAll() {
 
 		// Cache everything locally (cheaper than repeated virtual calls)
@@ -222,6 +218,7 @@ public class RegionalModelRunner {
 				Competitiveness.competition(c, this);
 				if (c.getOwner() != null && !c.getOwner().isAbandoned()) {
 					R.getUnmanageCellsR().remove(c);
+					c.setOwnerLifeCounter(0);
 					Listener.landUseChangeCounter.getAndIncrement();
 				}
 			}
@@ -229,14 +226,9 @@ public class RegionalModelRunner {
 	}
 
 	public void regionalSupply() {
-		if (CellsLoader.regionalization) {
-			productivityForAll();
-		} else {
-			productivityForAllExecutor();
-		}
+		productivityForAllExecutor();
 		computeRegionsSupply();
 		LOGGER.info("Rigion: [" + R.getName() + "] Total Supply = " + getRegionalSupply());
-
 	}
 
 	public void initialDSEquilibriumFactorCalculation() {
@@ -323,12 +315,15 @@ public class RegionalModelRunner {
 
 	private void competition() {
 		// Randomly select % of the land available for competition
-		ConcurrentHashMap<String, Cell> randomCellsubSet = SeedUpdater.selectSeed(this,
+		ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(this,
 				ConfigLoader.config.participating_cells_percentage, true, ConfigLoader.config.longSeedID.get());
+
+		seed.putAll(cellsWhereOwnerExceededMaxLifeCycle());
+
 //				Selector.randomSeed(R.getCells(),
 //				ConfigLoader.config.participating_cells_percentage, ConfigLoader.config.longSeedID);
-		if (randomCellsubSet != null) {
-			List<ConcurrentHashMap<String, Cell>> subsubsets = Utils.splitIntoSubsets(randomCellsubSet,
+		if (seed != null) {
+			List<ConcurrentHashMap<String, Cell>> subsubsets = Utils.splitIntoSubsets(seed,
 					ConfigLoader.config.marginal_utility_calculations_per_tick);
 			ConcurrentHashMap<String, Double> servicesBeforeCompetition = new ConcurrentHashMap<>();
 			ConcurrentHashMap<String, Double> servicesAfterCompetition = new ConcurrentHashMap<>();
@@ -356,10 +351,38 @@ public class RegionalModelRunner {
 		}
 	}
 
+	private ConcurrentHashMap<String, Cell> cellsWhereOwnerExceededMaxLifeCycle() {
+		// check if the max used
+//		Select cells exite the max 
+//		add them to the seed (the cell should be Mask free)
+		////
+		ConcurrentHashMap<String, Cell> cells = new ConcurrentHashMap<>();
+		boolean useMax = false;
+		for (Aft a : AFTsLoader.getActivateAFTsHash().values()) {
+			if (a.getMax_life_cycle() != Integer.MAX_VALUE) {
+				useMax = true;
+				break;
+			}
+		}
+		if (useMax) {
+			CellsLoader.hashCell.values().parallelStream().forEach(c -> {
+				if (c.owner != null && c.getMaskType() == null
+						&& c.getOwnerLifeCounter() >= c.owner.getMax_life_cycle()) {
+					cells.put(c.getX() + "," + c.getY(), c);
+				}
+			});
+		}
+		return cells;
+
+	}
+
 	private void productivityForAllExecutor() {
 		final ConcurrentHashMap<String, Cell> cells = R.getCells();
 		cells.forEach(150_000, (id, c) -> {
 			c.calculateCurrentProductivity();
+			if (Timestep.getTick() > 0) {
+				c.OwnerLifeCounterIncrement();
+			}
 		});
 
 	}

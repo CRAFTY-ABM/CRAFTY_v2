@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractCell {
 //	static int size = 1;
 	private String id;
-	int x,y;
+	int x, y;
 	private ConcurrentHashMap<String, Double> capitals = new ConcurrentHashMap<>();
 	private double[] currentProd;
 	private double currentUtility;
@@ -39,8 +39,20 @@ public abstract class AbstractCell {
 	protected String color = "#848484";
 	private String maskType;
 
-	
-	
+	private int OwnerLifeCounter = 1;
+
+	public int getOwnerLifeCounter() {
+		return OwnerLifeCounter;
+	}
+
+	public void setOwnerLifeCounter(int ownerLifeCounter) {
+		OwnerLifeCounter = ownerLifeCounter;
+	}
+
+	public void OwnerLifeCounterIncrement() {
+		OwnerLifeCounter++;
+	}
+
 	public void setCurrentUtility(double currentUtility) {
 		this.currentUtility = currentUtility;
 	}
