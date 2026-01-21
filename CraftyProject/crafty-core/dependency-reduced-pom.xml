@@ -30,7 +30,7 @@
                   </excludes>
                 </filter>
               </filters>
-              <finalName>crafty-core-v2-1.0</finalName>
+              <finalName>crafty-core-v2-1.1.X</finalName>
               <transformers>
                 <transformer>
                   <mainClass>de.cesr.crafty.core.main.MainHeadless</mainClass>

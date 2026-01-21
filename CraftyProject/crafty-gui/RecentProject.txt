@@ -43,3 +43,4 @@ C:\Users\byari-m\Downloads\CRAFTY-EU-Upscaled-EU-Summer-School
 C:\Users\byari-m\Desktop\CRAFTY_DATA\data0.8\CRAFTY-EU-Upscaled-Eastern-Region
 C:\Users\byari-m\Desktop\CRAFTY_DATA\minimal-scenario
 C:\Users\byari-m\Documents\GitRepo\CraftyProject\docs\4-examples\minimal-scenario_data_example
+C:\Users\byari-m\Desktop\CRAFTY_DATA\CRAFTY-Finland\Finland-data

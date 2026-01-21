@@ -4,11 +4,11 @@
 CRAFTY running from: classes/IDE Not a JAR file
 
 Config [
-|-> project_path=C:\Users\byari-m\Desktop\CRAFTY_DATA\minimal-scenario
-|-> scenario=minLow
+|-> project_path=C:\Users\byari-m\Desktop\CRAFTY_DATA\CRAFTY-Finland\Finland-data
+|-> scenario=policy
 |-> start_End_Year=null
 |-> metaData_directory=
-|-> BASELINE_path=C:\Users\byari-m\Desktop\CRAFTY_DATA\minimal-scenario\worlds\Baseline_map.csv
+|-> BASELINE_path=C:\Users\byari-m\Desktop\CRAFTY_DATA\CRAFTY-Finland\Finland-data\worlds\Baseline_map_Finland.csv
 |-> CAPITALS_directory=
 |-> landControle_directories=null
 |-> Behevoir_Cells_directory=
@@ -19,7 +19,6 @@ Config [
 |-> services_taxes_subsidies_path=
 |-> land_taxes_subsidies_path=
 |-> capital_degradation_directory=
-|-> institutions_directory=
 |-> regionalization=false
 |-> initial_demand_supply_equilibrium=true
 |-> remove_negative_marginal_utility=false

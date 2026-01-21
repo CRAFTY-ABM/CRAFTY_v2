@@ -71,6 +71,7 @@ public class AftAnalyzer {
 		ConcurrentHashMap<String, Double> aftsP = new ConcurrentHashMap<>();
 		AFTsLoader.getActivateAFTsHash().values().forEach(manager -> {
 			if (manager.getType() != ManagerTypes.Abandoned) {
+//				System.out.println("@@  "+manager.getLabel()+"-> "+manager.getSensByService());
 				double product = c.getCapitals().entrySet().stream().mapToDouble(
 						e -> Math.pow(e.getValue(), manager.getSensByService().get(serviceName).get(e.getKey())))
 						.reduce(1.0, (x, y) -> x * y);
