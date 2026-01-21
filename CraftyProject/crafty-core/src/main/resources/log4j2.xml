@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="ConsoleInfo" target="SYSTEM_OUT">
+            <PatternLayout pattern="%-5level: [%logger{1}] - %msg%n"/>
+            <Filters>
+                <!-- Deny WARN and ERROR messages -->
+                <ThresholdFilter level="WARN" onMatch="DENY" onMismatch="NEUTRAL"/>
+            </Filters>
+        </Console>
+        <Console name="ConsoleError" target="SYSTEM_ERR">
+            <PatternLayout pattern="[%-5level]: [%logger{1}] - %msg%n"/>
+            <!--"[%-5level]:%d{HH:mm:ss.SSS} [%t] %n        %logger{36} %C{1}.%M(%F:%L) - %msg%n" -->
+            <Filters>
+                <!-- Accept only WARN and ERROR messages -->
+                <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="ALL">
+            <!-- Attach both appenders to root logger -->
+            <AppenderRef ref="ConsoleInfo"/>
+            <AppenderRef ref="ConsoleError"/>
+        </Root>
+    </Loggers>
+</Configuration>
