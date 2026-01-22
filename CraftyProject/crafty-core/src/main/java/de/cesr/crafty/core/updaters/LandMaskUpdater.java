@@ -15,6 +15,7 @@ import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
+import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.utils.file.CsvTools;
 import de.cesr.crafty.core.utils.general.Utils;
 
@@ -235,6 +236,10 @@ public class LandMaskUpdater extends AbstractUpdater {
 	private static void maskToOwner(Cell c, String maskType) {// need to be revised
 		for (Aft a : AFTsLoader.getAftHash().values()) {
 			if (maskType.contains(a.getLabel())) {
+				if (c.getOwner() != null && !a.getLabel().equals(c.getOwner().getLabel())) {
+					Tracker.sankeydata.get(a.getLabel()).get(Timestep.getCurrentYear())
+							.merge((c.getOwner() != null ? c.getOwner().getLabel() : "Abandoned"), 1, Integer::sum);
+				}
 				c.setOwner(a);
 				break;
 			}

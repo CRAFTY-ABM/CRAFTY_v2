@@ -85,7 +85,7 @@ class TrackerTest {
 		Path csvPath = tempDir.resolve("tracker.csv");
 
 		// Act
-		Tracker.writeCSV(container, csvPath.toString());
+		Tracker.writeMatrixToCSV(container, csvPath.toString());
 
 		// Assert: read file & check content
 		try (BufferedReader reader = new BufferedReader(new FileReader(csvPath.toFile()))) {
@@ -97,7 +97,7 @@ class TrackerTest {
 			String header = lines.get(0);
 			// Headers are built from TreeSet of keys, so sorted lexicographically:
 			// "AggregateAFT", "S1" -> "ID,AggregateAFT,S1"
-			assertEquals("ID,AggregateAFT,S1", header);
+			assertEquals(",AggregateAFT,S1", header);
 
 			// Remaining lines: we don't know row order (ConcurrentHashMap), so parse them
 			List<String> dataLines = lines.subList(1, 3);
@@ -127,14 +127,14 @@ class TrackerTest {
 		Map<String, Map<String, Double>> container = new ConcurrentHashMap<>();
 		Path csvPath = tempDir.resolve("empty.csv");
 
-		Tracker.writeCSV(container, csvPath.toString());
+		Tracker.writeMatrixToCSV(container, csvPath.toString());
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(csvPath.toFile()))) {
 			List<String> lines = reader.lines().collect(Collectors.toList());
 
 			// Only header row should be present
 			assertEquals(1, lines.size());
-			assertEquals("ID", lines.get(0));
+			assertEquals("", lines.get(0));
 		}
 	}
 

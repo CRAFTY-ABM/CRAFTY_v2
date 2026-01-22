@@ -15,6 +15,8 @@ import org.mockito.Mockito;
 
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
+import de.cesr.crafty.core.output.Tracker;
+import de.cesr.crafty.core.updaters.Timestep;
 
 class CellTest {
 
@@ -224,7 +226,9 @@ class CellTest {
 
 			RegionalModelRunner runner = mock(RegionalModelRunner.class);
 			setField(runner, "R", region);
-
+			when(owner.getLabel()).thenReturn(""); // Math.random always < 1 => true
+			Tracker.sankeydata.put("Abandoned", new ConcurrentHashMap<>() );
+			Tracker.sankeydata.get("Abandoned").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
 			c.giveUp(runner, mean);
 
 			assertNull(getOwner(c), "Owner should be cleared after giveUp");

@@ -13,6 +13,7 @@ import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.updaters.LandMaskUpdater;
+import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.general.CellsSubSets;
 
 /**
@@ -126,6 +127,9 @@ public class Competitiveness {
 
 	private static void landUsechange(Cell c, Aft competitor, RegionalModelRunner r) {
 		double uC = utility(c, competitor, r);
+		if (c.owner == competitor) {
+			return;
+		}
 		if (c.owner == null || c.owner.isAbandoned()) {
 			if (uC >= r.getDistributionMeanY().get(competitor)) {
 				takeOverAcell(c, competitor);
@@ -143,6 +147,9 @@ public class Competitiveness {
 
 	private static void landUsechangeNormalisedUtility(Cell c, Aft competitor, RegionalModelRunner r) {
 		if (r.getMaxUtility() == r.getMinUtility()) {
+			return;
+		}
+		if (c.owner == competitor) {
 			return;
 		}
 		double uC = (utility(c, competitor, r) - r.getMinUtility()) / (r.getMaxUtility() - r.getMinUtility());
@@ -171,14 +178,14 @@ public class Competitiveness {
 	}
 
 	private static void takeOverAcell(Cell c, Aft newOwner) {
-//		String oldOwner = (c.owner != null ? c.owner.getLabel() : "Abandoned") + "_old";
+		String oldOwner = c.owner != null ? c.owner.getLabel() : "Abandoned";
 
 		c.owner = ConfigLoader.config.mutate_on_competition_win ? new Aft(newOwner) : newOwner;
 		c.setOwnerLifeCounter(1);
 		Listener.landUseChangeCounter.getAndIncrement();
 		if (newOwner.getLabel() != null) {
 			Listener.newAftsInLandNbr.merge(newOwner.getLabel(), 1, Integer::sum);
-//			Tracker.sankeydata.get(oldOwner).merge(newOwner.getLabel()+"_new", 1., Double::sum);
+			Tracker.sankeydata.get(newOwner.getLabel()).get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
 		}
 	}
 

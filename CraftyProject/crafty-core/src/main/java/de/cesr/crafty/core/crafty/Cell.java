@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
+import de.cesr.crafty.core.updaters.Timestep;
 
 /**
  * Concrete spatial cell implementation used during simulation.
@@ -85,6 +86,7 @@ public class Cell extends AbstractCell {
 	void giveUp(RegionalModelRunner r, ConcurrentHashMap<Aft, Double> distributionMean) {
 		if (owner != null && getOwner().isInteract()) {
 //			String oldOwner = owner.getLabel() + "_old";
+			String oldOwner = owner.getLabel();
 			double utility = getCurrentUtility();
 			double averageutility = distributionMean.get(getOwner());
 			if ((utility < averageutility
@@ -96,6 +98,7 @@ public class Cell extends AbstractCell {
 				Listener.landUseChangeCounter.getAndIncrement();
 				Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
 //				Tracker.sankeydata.get(oldOwner).merge("Abandoned_new", 1., Double::sum);
+				Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
 			}
 		}
 	}
