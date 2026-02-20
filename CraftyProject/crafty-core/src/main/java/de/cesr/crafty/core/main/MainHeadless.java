@@ -28,6 +28,7 @@ import de.cesr.crafty.core.updaters.SeedUpdater;
  */
 public class MainHeadless {
 	public static ModelRunner runner;
+	public static CraftyOptions options;
 
 	public static void main(String[] args) {
 		System.out.println("--Starting CRAFTY execution--");
@@ -41,7 +42,7 @@ public class MainHeadless {
 
 	public static void initializeConfig(String[] args) {
 		// Load config using the path from CraftyOptions
-		CraftyOptions options = OptionsParser.parseArguments(args);
+		options = OptionsParser.parseArguments(args);
 		ConfigLoader.configPath = options.getConfigFilePath();
 		ConfigLoader.init();
 		SeedUpdater.inialize();
@@ -58,6 +59,14 @@ public class MainHeadless {
 		String ouputPath = options.getOutput_path();
 		if (ouputPath != null) {
 			ConfigLoader.config.Output_path = ouputPath;
+		}
+		String external = options.getExternal_variables_path();
+		if (external != null) {
+			ConfigLoader.config.external_variable_values_directory = external;
+		}
+		String output_folder_name = options.getOutput_foder_name();
+		if (output_folder_name != null) {
+			ConfigLoader.config.output_folder_name = output_folder_name;
 		}
 	}
 

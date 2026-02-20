@@ -2,6 +2,7 @@ package de.cesr.crafty.core.utils.general;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
+import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.updaters.Timestep;
@@ -9,6 +10,7 @@ import de.cesr.crafty.core.utils.file.PathTools;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -25,11 +27,10 @@ public final class MapPngExporter {
 	/**
 	 * Exports the current owner map as PNG into: <output>/MapsPlots/map_<year>.png
 	 */
-	public static void exportOwnerMapAsPng() {
+	public static void exportOwnerMapAsPng(ConcurrentHashMap<String, Cell> cells, String name) {
 		// Headless-safe (recommended for HPC)
 		System.setProperty("java.awt.headless", "true");
 
-		// For now, reuse your year-filter logic and just run when years match.
 		if (ConfigLoader.config == null)
 			return;
 
@@ -46,7 +47,7 @@ public final class MapPngExporter {
 		int[] argb = new int[width * height];
 
 		// Fill pixels from cells
-		CellsLoader.hashCell.values().forEach(c -> {
+		cells.values().forEach(c -> {
 			if (c == null || c.getOwner() == null)
 				return;
 
@@ -61,7 +62,7 @@ public final class MapPngExporter {
 			argb[y * width + x] = pixel;
 		});
 
-		File out = new File(outDir + File.separator + "map_" + year + ".png");
+		File out = new File(outDir + File.separator + name + "_" + year + ".png");
 		ensureParentDir(out);
 
 		try {

@@ -139,7 +139,7 @@ public class Connector implements ModelOutputProvider {
 				});
 			});
 		});
-		System.out.println("@@" + targetToCraftyElements);
+		LOGGER.info("@@" + targetToCraftyElements);
 	}
 
 	private void PreparModelOutput(RegionalModelRunner r) {
@@ -159,16 +159,20 @@ public class Connector implements ModelOutputProvider {
 				}
 
 			});
+			LOGGER.info(target + "; " + supplies.get(target) + ":  " + weights.get(target));
 			prepModelOutput.get(target).add(supplies.get(target) / weights.get(target));
 		});
 	}
 
 	@Override
 	public TargetModelOutput step(InstitutionOutput institutionOutput) {
-		External_variables_Manager.valuesInjector();
 		MainHeadless.runner.step();
+		External_variables_Manager.valuesInjector();
 		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(r -> {
-			applyPolicyEffects(institutionOutput, r);
+			if (Timestep.getCurrentYear() > ConfigLoader.config.start_year_of_policy_effect
+					&& Timestep.getCurrentYear() <= ConfigLoader.config.end_year_of_policy_effect + 1) {
+				applyPolicyEffects(institutionOutput, r);
+			}
 			PreparModelOutput(r);
 			DataCollector.outputFiles(r);
 		});
@@ -184,7 +188,7 @@ public class Connector implements ModelOutputProvider {
 			for (Map.Entry<String, Double> entryPolicies : policyValues.entrySet()) {
 				String policyName = entryPolicies.getKey();
 				Double policyValue = entryPolicies.getValue();
-				System.out.println(institutionName + "@ " + policyName + "-> " + policyValue);
+				LOGGER.info(institutionName + "@ " + policyName + "-> " + policyValue);
 				// Update current policy values map
 				policyListener.put(institutionName + "@" + policyName, policyValue);
 				applyOnePolicy(r, institutionName, policyName, policyValue);
@@ -198,7 +202,7 @@ public class Connector implements ModelOutputProvider {
 			return;
 		}
 		AtomicBoolean s = new AtomicBoolean(false);
-		System.out.println("==> " + instuteName + "@" + policyName + "@" + policyValue);
+		LOGGER.info("==> " + instuteName + "@" + policyName + "@" + policyValue);
 		policyEffects.get(instuteName + "@" + policyName).forEach((serviceOrAFT, wieght) -> {
 			if (ServiceSet.getServicesList().contains(serviceOrAFT)) {
 				r.R.getServicesHash().get(serviceOrAFT).getTaxes_subsidies().merge(Timestep.getCurrentYear() + 1,
@@ -219,7 +223,7 @@ public class Connector implements ModelOutputProvider {
 			policyEffectsListner.put(instuteName + "@" + policyName + "@" + serviceOrAFT, wieght * policyValue);
 		});
 		if (s.get()) {
-			System.out.println("###### adjust_cell_capitals #######");
+			LOGGER.info("###### adjust_cell_capitals #######");
 			AftsUpdater.adjust_cell_capitals();
 		}
 	}

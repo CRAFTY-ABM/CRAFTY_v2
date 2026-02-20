@@ -23,6 +23,7 @@ import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
+import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.utils.file.CsvTools;
 
 class LandMaskUpdaterTest {
@@ -84,7 +85,11 @@ class LandMaskUpdaterTest {
             cellsLoader.when(() -> CellsLoader.getCell(5, 6)).thenReturn(c56.cell);
 
             aftsLoader.when(AFTsLoader::getAftHash).thenReturn(afts);
-
+            Tracker.sankeydata.put("Abandoned", new ConcurrentHashMap<>());
+            Tracker.sankeydata.put("Urban", new ConcurrentHashMap<>());
+            Tracker.sankeydata.get("Abandoned").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
+            Tracker.sankeydata.get("Urban").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
+            LandMaskUpdater.cellsForecedToChange.put(maskType, new ConcurrentHashMap<>());
             LandMaskUpdater.cellOneMaskUpdater(maskType, year);
 
             // (1,2) should be masked + owned

@@ -43,13 +43,16 @@ public class External_variables_Manager {
 	public static void valuesInjector() {
 		external_variables.clear();
 		if (useExternal_variables) {
+			LOGGER.info("Seaching for external_variable in directory: "
+					+ ConfigLoader.config.external_variable_values_directory);
 			ArrayList<Path> list = PathTools
 					.findAllFilePaths(Paths.get(ConfigLoader.config.external_variable_values_directory));
-			ArrayList<Path> ps = PathTools.fileFilter(list, "year_" + Timestep.getCurrentYear());
+			ArrayList<Path> ps = PathTools.fileFilter(list, "year_" + (Timestep.getCurrentYear()-1));
 			if (ps == null || ps.isEmpty()) {
 				LOGGER.info(
 						"The external variables directory isEmpty or null (No external variables considered in this year"
-								+ Timestep.getCurrentYear() + ")");
+								+ (Timestep.getCurrentYear()-1) + " expected = year_" + (Timestep.getCurrentYear()-1)
+								+ ") ");
 				return;
 			}
 			Path path = ps.get(0);
@@ -67,6 +70,9 @@ public class External_variables_Manager {
 			for (int i = 0; i < csv.values().iterator().next().size(); i++) {
 				external_variables.put(csv.get("variable").get(i), Utils.sToD(csv.get("value").get(i)));
 			}
+			LOGGER.info("External variables successfully imported from:" + path);
+			LOGGER.info("External_variables:" + external_variables);
+
 		}
 	}
 }

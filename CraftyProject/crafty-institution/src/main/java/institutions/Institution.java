@@ -250,8 +250,8 @@ public class Institution {
 				// This naming convention must be used in the FCL file
 				String gapName = input_name + "_gap";
 				policy.getGapNameToGap().put(gapName, pid_error);
-//				System.out.println("| pid_error= " + pid_error + "print Gap:  input_name= " + input_name
-//						+ "| policy_goal= " + policy_goal + " supply " + time_series.getLast());
+				System.out.println("| pid_error= " + pid_error + "print Gap:  input_name= " + input_name
+						+ "| policy_goal= " + policy_goal + " supply " + time_series.getLast());
 			});
 
 		}

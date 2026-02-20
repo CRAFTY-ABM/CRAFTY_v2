@@ -8,6 +8,7 @@ import java.util.Map;
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
+import de.cesr.crafty.core.main.MainHeadless;
 import de.cesr.crafty.core.utils.file.DirectoryWatcher;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
@@ -41,38 +42,57 @@ public class FlagUpdater extends AbstractUpdater {
 	HashMap<Integer, Path> flags = new HashMap<>();
 
 	public FlagUpdater() {
-		Path csv;
-		if (Paths.get(ConfigLoader.config.waitingFlag_directories_path).toFile().isFile()) {
-			csv = Paths.get(ConfigLoader.config.waitingFlag_directories_path);
-		} else {
-			ArrayList<Path> matches = PathTools.fileFilter(PathTools.asFolder("config"), "waitingFlags.csv");
-			csv = (matches != null && !matches.isEmpty()) ? matches.get(0) : null;
+		flags.clear();
+		checkCLIforAnnualFlags();
+		if (flags.isEmpty()) {
+			Path csv;
+			if (Paths.get(ConfigLoader.config.waitingFlag_directories_path).toFile().isFile()) {
+				csv = Paths.get(ConfigLoader.config.waitingFlag_directories_path);
+			} else {
+				ArrayList<Path> matches = PathTools.fileFilter(PathTools.asFolder("config"), "waitingFlags.csv");
+				csv = (matches != null && !matches.isEmpty()) ? matches.get(0) : null;
+			}
+			if (csv == null) {
+				return;
+			}
+
+			Map<String, List<String>> hash = CsvProcessors.ReadAsaHash(csv);
+			if (hash == null || hash.isEmpty()) {
+				return;
+			}
+
+			List<String> years = hash.get("Year");
+			List<String> paths = hash.get("Waiting_Flag");
+			if (years == null || paths == null) {
+				return;
+			}
+
+			int n = Math.min(years.size(), paths.size());
+			for (int i = 0; i < n; i++) {
+				Integer y = Utils.sToI(years.get(i));
+				String p = paths.get(i);
+				if (p == null || p.isBlank())
+					continue;
+				flags.put(y, Paths.get(p));
+			}
 		}
-		if (csv == null) {
+		LOGGER.info(
+				"CRAFTY will wait for these flag files  before starting a new iteration for the corresponding years."
+						+ flags);
+
+	}
+
+	private void checkCLIforAnnualFlags() {
+		if (MainHeadless.options == null || MainHeadless.options.getAnnual_waiting_flag_path() == null) {
 			return;
 		}
-
-		Map<String, List<String>> hash = CsvProcessors.ReadAsaHash(csv);
-		if (hash == null || hash.isEmpty()) {
+		String waitingPath = MainHeadless.options.getAnnual_waiting_flag_path();
+		if (!Paths.get(waitingPath).toFile().isDirectory()) {
 			return;
 		}
-
-		List<String> years = hash.get("Year");
-		List<String> paths = hash.get("Waiting_Flag");
-		if (years == null || paths == null) {
-			return;
+		for (int i = Timestep.getStartYear() + 1; i < Timestep.getEndtYear() - 1; i++) {
+			flags.put(i, Paths.get(waitingPath).resolve("done_" + i));
 		}
-
-		int n = Math.min(years.size(), paths.size());
-		for (int i = 0; i < n; i++) {
-			Integer y = Utils.sToI(years.get(i));
-			String p = paths.get(i);
-			if (p == null || p.isBlank())
-				continue;
-			flags.put(y, Paths.get(p));
-		}
-		System.out.println("flags+:"+flags);
-		LOGGER.info("CRAFTY will wait for these flag files  before starting a new iteration for the corresponding years."+flags);
 	}
 
 	@Override

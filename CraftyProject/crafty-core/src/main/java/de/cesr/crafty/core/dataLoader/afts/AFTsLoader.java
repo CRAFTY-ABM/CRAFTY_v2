@@ -67,6 +67,8 @@ public class AFTsLoader extends HashSet<Aft> {
 	private static ConcurrentHashMap<String, Aft> hashAFTs = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<String, Aft> activateAFTsHash = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<String, Integer> hashAgentNbr = new ConcurrentHashMap<>();
+	public static ConcurrentHashMap<String, Integer> hashAgentNbr_initialYear = new ConcurrentHashMap<>();
+
 	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> hashAgentNbrRegions = new ConcurrentHashMap<>();
 
 	public static Map<String, Map<String, Path>> aft_production_paths = new HashMap<>();// <aftName,default/year,path>
@@ -208,7 +210,7 @@ public class AFTsLoader extends HashSet<Aft> {
 				});
 				// if Name contain only default_-> go to rest and define file as default_
 				ArrayList<Path> exist2 = new ArrayList<>(data.get(aftName).values());
-				ArrayList<Path> tmp = PathTools.fileFilter(folder, aftName + ".csv", "default_");
+				ArrayList<Path> tmp = PathTools.fileFilter(folder, File.separator + aftName + ".csv", "default_");
 				if (tmp != null) {
 					ArrayList<Path> rest2 = new ArrayList<>(tmp);
 					rest2.removeAll(new HashSet<>(exist2));
@@ -337,9 +339,17 @@ public class AFTsLoader extends HashSet<Aft> {
 				hashAgentNbr.merge("Abandoned", 1, Integer::sum);
 			}
 		});
-		if (!hashAgentNbr.containsKey("Abandoned") || !hashAgentNbr.containsKey("Abandoned")) {
-			hashAgentNbr.put("Abandoned", 0);
+//		loop for all AFT and put 0 if missing 
+		hashAFTs.keySet().forEach(aftName -> {
+			hashAgentNbr.putIfAbsent(aftName, 0);
+		});
+
+		if (Timestep.getTick() == 0) {
+			hashAgentNbr.forEach((name, value) -> {
+				hashAgentNbr_initialYear.put(name, value);
+			});
 		}
+
 		LOGGER.info("Number of cells for each AFT: " + hashAgentNbr);
 	}
 

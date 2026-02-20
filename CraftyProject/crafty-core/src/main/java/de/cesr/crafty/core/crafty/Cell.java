@@ -84,8 +84,17 @@ public class Cell extends AbstractCell {
 	}
 
 	void giveUp(RegionalModelRunner r, ConcurrentHashMap<Aft, Double> distributionMean) {
+
 		if (owner != null && getOwner().isInteract()) {
-//			String oldOwner = owner.getLabel() + "_old";
+////##########		// tmp for special rules
+//			if (owner.getCategory() != null && owner.getCategory().getName().equals("forest")) {
+//				return;
+//			}
+//			###
+//			if (owner.getLabel().equals("CW")) {
+//				return;
+//			}
+//############
 			String oldOwner = owner.getLabel();
 			double utility = getCurrentUtility();
 			double averageutility = distributionMean.get(getOwner());
@@ -97,7 +106,6 @@ public class Cell extends AbstractCell {
 				setOwnerLifeCounter(0);
 				Listener.landUseChangeCounter.getAndIncrement();
 				Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
-//				Tracker.sankeydata.get(oldOwner).merge("Abandoned_new", 1., Double::sum);
 				Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
 			}
 		}

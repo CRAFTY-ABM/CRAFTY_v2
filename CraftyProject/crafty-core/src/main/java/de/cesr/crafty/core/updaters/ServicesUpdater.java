@@ -42,7 +42,7 @@ public class ServicesUpdater extends AbstractUpdater {
 	private static Map<String, Map<String, Double>> demandByRegions = new HashMap<>(); // <regionName,serviceName,dmValue>
 	private static Map<String, Map<String, Double>> weightByRegions = new HashMap<>();
 	private static Map<String, Map<String, Double>> taxesByRegions = new HashMap<>();
-	private static Map<String, Map<String, Map<Integer, Double>>> supplys = new HashMap<>();
+	private static Map<String, Map<String, Map<Integer, Double>>> supplys = new HashMap<>();//<regionName,serviceName,year,value>
 	private static Map<String, Map<String, Map<Integer, Double>>> gaps = new HashMap<>();
 
 	@Override
@@ -108,5 +108,10 @@ public class ServicesUpdater extends AbstractUpdater {
 	public static Map<String, Map<String, Map<Integer, Double>>> getGaps() {
 		return gaps;
 	}
+
+	public static Map<String, Map<String, Map<Integer, Double>>> getSupplys() {
+		return supplys;
+	}
+	
 
 }

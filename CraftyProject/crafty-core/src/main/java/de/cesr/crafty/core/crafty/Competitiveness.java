@@ -76,7 +76,7 @@ public class Competitiveness {
 		c.setcCurrentUtility(utility(c, c.owner, r));
 	}
 
-	static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
+	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
 		if (setAfts.size() == 0) {
 			return c.owner;
 		}
@@ -97,16 +97,40 @@ public class Competitiveness {
 			return;
 		}
 		if (makeCompetition(c, competitor)) {
-			if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
-				landUsechangeNormalisedUtility(c, competitor, r);
-			} else {
-				landUsechange(c, competitor, r);
-			}
+
+//			if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
+//				landUsechangeNormalisedUtility(c, competitor, r);
+//			} else {
+			landUsechange(c, competitor, r);
 
 		}
 	}
 
 	private static boolean makeCompetition(Cell c, Aft competitor) {
+
+//####### tmp for special rules
+//########### no deforestation ##############
+//		if (c.getOwner() != null && c.getOwner().getCategory() != null && competitor != null
+//				&& competitor.getCategory() != null) {
+//			boolean tmp = (c.getOwner().getCategory().getName().equals("forest"))
+//					&& (!competitor.getCategory().getName().equals("forest") || competitor.getLabel().equals("AF"));
+//			if (tmp) {
+//				return false;
+//			}
+//		}
+//		################### protecte CW ###########
+//		if (c.getOwner() != null && c.getOwner().getLabel() != null && c.getOwner().getLabel().equals("CW")) {
+//			return false;
+//		}
+//############ CW can't compite for land ##########
+//		if (competitor != null && competitor.getLabel() != null && competitor.getLabel().equals("CW")) {
+//		return false;
+//	}
+//		###############
+		if (c.owner == competitor) {
+			return false;
+		}
+
 		boolean makeCompetition = true;
 		if (c.getMaskType() != null) {
 			ConcurrentHashMap<String, Boolean> mask = LandMaskUpdater.restrictions.get(c.getMaskType());
@@ -123,6 +147,7 @@ public class Competitiveness {
 			makeCompetition = false;
 		}
 		return makeCompetition;
+
 	}
 
 	private static void landUsechange(Cell c, Aft competitor, RegionalModelRunner r) {
@@ -212,7 +237,7 @@ public class Competitiveness {
 				: AFTsLoader.getActivateAFTsHash().values();
 
 		if (Math.random() < ConfigLoader.config.MostCompetitorAFTProbability) {
-			mostCompetitiveAgent(c, afts, r);
+//			mostCompetitiveAgent(c, afts, r);
 			Competition(c, mostCompetitiveAgent(c, afts, r), r);
 		} else {
 			Competition(c, AFTsLoader.getRandomAFT(afts), r);

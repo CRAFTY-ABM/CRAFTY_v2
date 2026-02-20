@@ -47,6 +47,7 @@ public class DirectoryWatcher {
 				while (true) {
 					long remainingMs = Duration.between(Instant.now(), deadline).toMillis();
 					System.out.print(".");
+					
 					// 2) check file
 					if (existsAsFileOrDir(targetPath)) {
 						System.out.println("Found");
@@ -77,4 +78,22 @@ public class DirectoryWatcher {
 	private static boolean existsAsFileOrDir(Path p) {
 		return (Files.isRegularFile(p) || Files.isDirectory(p));
 	}
+	
+    public static void writeDoneFile(Path dir, int year) {
+        try {
+            Files.createDirectories(dir);
+
+            Path current = dir.resolve("done_" + year);
+            // Create or truncate to ensure it's empty
+            Files.write(current, new byte[0],
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+
+            Path previous = dir.resolve("done_" + (year - 1));
+            Files.deleteIfExists(previous);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write done file for year " + year + " in " + dir, e);
+        }
+    }
 }

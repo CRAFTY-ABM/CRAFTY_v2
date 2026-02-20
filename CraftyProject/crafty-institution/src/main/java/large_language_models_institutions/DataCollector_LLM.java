@@ -1,13 +1,14 @@
-package crafty;
+package large_language_models_institutions;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
-import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.RegionalModelRunner;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
@@ -20,26 +21,31 @@ import de.cesr.crafty.core.utils.general.Utils;
 /**
  * Collects and stores data from crafty model simulation for analysis.
  */
-public class DataCollector {
+public class DataCollector_LLM {
 
-	private static final CustomLogger LOGGER = new CustomLogger(DataCollector.class);
-	static Connector connector;
+//	private static final CustomLogger LOGGER = new CustomLogger(DataCollector_LLM.class);
 	static String instititeDirectory;
 
-	private static String[][] serviceTxSu;
-	private static String[][] aftTxSu;
-	private static String[][] policies;
-	private static String[][] policiesEffect;
-	private static String[][] targets;
+	private String[][] serviceTxSu;
+	private String[][] aftTxSu;
+	private String[][] policies;
+	private String[][] policiesEffect;
+	private String[][] targets;
 
-	public static void init(Connector connector) {
-		DataCollector.connector = connector;
+	Map<String, Double> policyListener = new HashMap<>();// <instutition@policy,policyValue>
+	Map<String, Double> policyEffectsListner = new HashMap<>();// <instutition@policy@type@element,policyValue>
+	HashMap<String, String> recorder = new HashMap<>();// <institute,promp_outputs>
+	HashMap<String, ArrayList<Double>> crafty_Output_history = new HashMap<>();// <target,
+	// List_time_stateObservation>
+
+	public DataCollector_LLM(LLM_connector connector) {
+		init(connector);
 		int l = Timestep.getSize() + 1;
 		serviceTxSu = new String[l][ServiceSet.getServicesList().size() + 1];
-		aftTxSu     = new String[l][AFTsLoader.getActivateAFTsHash().size() + 1];
-		policies = new String[l][connector.policyListener.size() + 1];
-		policiesEffect = new String[l][connector.policyEffectsListner.size() + 1];
-		targets = new String[l][2 * connector.prepModelOutput().size() + 1];
+		aftTxSu = new String[l][AFTsLoader.getActivateAFTsHash().size() + 1];
+		policies = new String[l][policyListener.size() + 1];
+		policiesEffect = new String[l][policyEffectsListner.size() + 1];
+		targets = new String[l][crafty_Output_history.size() + 1];
 
 		targets[0][0] = policiesEffect[0][0] = policies[0][0] = aftTxSu[0][0] = serviceTxSu[0][0] = "Year";
 		for (int i = 0; i < ServiceSet.getServicesList().size(); i++)
@@ -48,30 +54,58 @@ public class DataCollector {
 		for (String aftName : AFTsLoader.getActivateAFTsHash().keySet())
 			aftTxSu[0][i++] = aftName;
 		i = 1;
-		for (String p : connector.policyListener.keySet())
+		for (String p : policyListener.keySet())
 			policies[0][i++] = p;
 		i = 1;
-		for (String pe : connector.policyEffectsListner.keySet())
+		for (String pe : policyEffectsListner.keySet())
 			policiesEffect[0][i++] = pe;
 		i = 1;
-		for (String pe : connector.prepModelOutput().keySet()) {
+		for (String pe : crafty_Output_history.keySet()) {
 			targets[0][i] = pe + "_observed";
-			targets[0][connector.prepModelOutput().size() + i] = pe + "_target";
 			i++;
 		}
 	}
 
-	public static void outputFiles(RegionalModelRunner r) {
+	private void init(LLM_connector connector) {
+		connector.IPs.forEach((instName, hash) -> {
+			hash.forEach((policyName, has) -> {
+				policyListener.put(instName + "@" + policyName, 0.);
+				has.forEach((type, list) -> {
+					list.forEach(ha -> {
+						ha.forEach((ele, weight) -> {
+							policyEffectsListner.put(instName + "@" + policyName + "@" + type + "@" + ele, 0.);
+						});
+					});
+				});
+			});
+		});
+		connector.targetToCraftyElements.keySet().forEach(target_name -> {
+			crafty_Output_history.put(target_name, new ArrayList<>());
+		});
+	}
+
+	public void outputFiles(RegionalModelRunner r) {
 		instititeDirectory = PathTools.makeDirectory(
-				ConfigLoader.config.output_folder_name + File.separator + "instititions" + File.separator);
+				ConfigLoader.config.output_folder_name + File.separator + "LLM_outputs" + File.separator);
 		outputServicesTxSuCsv(r);
 		outputLandTxSuCsv();
 		outputPolicies();
 		outputPoliciesEffects();
 		outputTargets();
+		outputs();
 	}
 
-	private static void outputServicesTxSuCsv(RegionalModelRunner r) {
+	private void outputs() {
+		String folder = PathTools
+				.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "LLM_outputs");
+		recorder.forEach((inst, txt) -> {
+			String instFolder = PathTools.makeDirectory(folder + File.separator + inst);
+			PathTools.writeFile(instFolder + File.separator + inst + "_" + (Timestep.getCurrentYear() - 1) + ".txt",
+					txt, false);
+		});
+	}
+
+	private void outputServicesTxSuCsv(RegionalModelRunner r) {
 		// find crafty ouput add taxes/subsidies file
 		// catch
 		serviceTxSu[Timestep.getTick()][0] = String.valueOf(Timestep.getCurrentYear() - 1);
@@ -84,7 +118,7 @@ public class DataCollector {
 		CsvTools.writeCSVfile(serviceTxSu, csv);
 	}
 
-	private static void outputLandTxSuCsv() {
+	private void outputLandTxSuCsv() {
 		int iteration = Timestep.getTick();
 		aftTxSu[iteration][0] = String.valueOf(Timestep.getCurrentYear() - 1);
 		for (Aft aft : AFTsLoader.getActivateAFTsHash().values()) {
@@ -95,38 +129,35 @@ public class DataCollector {
 		CsvTools.writeCSVfile(aftTxSu, csv);
 	}
 
-	private static void outputPolicies() {
+	private void outputPolicies() {
 		policies[Timestep.getTick()][0] = String.valueOf(Timestep.getCurrentYear() - 1);
 		AtomicInteger index = new AtomicInteger(1);
-		connector.policyListener.forEach((pName, pValue) -> {
+		policyListener.forEach((pName, pValue) -> {
 			policies[Timestep.getTick()][index.getAndIncrement()] = String.valueOf(pValue);
 		});
 		Path csv = Paths.get(instititeDirectory + "policies.csv");
 		CsvTools.writeCSVfile(policies, csv);
 	}
 
-	private static void outputPoliciesEffects() {
+	private void outputPoliciesEffects() {
 		policiesEffect[Timestep.getTick()][0] = String.valueOf(Timestep.getCurrentYear() - 1);
 		AtomicInteger index = new AtomicInteger(1);
-		connector.policyEffectsListner.forEach((pName, pValue) -> {
+		policyEffectsListner.forEach((pName, pValue) -> {
 			policiesEffect[Timestep.getTick()][index.getAndIncrement()] = String.valueOf(pValue);
 		});
 		Path csv = Paths.get(instititeDirectory + "policiesEffects.csv");
 		CsvTools.writeCSVfile(policiesEffect, csv);
 	}
 
-	private static void outputTargets() {
+	private void outputTargets() {
 		int iteration = Timestep.getTick();
 		targets[iteration][0] = String.valueOf(Timestep.getCurrentYear() - 1);
 		AtomicInteger index = new AtomicInteger(1);
-		connector.prepModelOutput().forEach((targetName, listValues) -> {
+		crafty_Output_history.forEach((targetName, listValues) -> {
 			targets[iteration][index.get()] = String.valueOf(listValues.get(iteration - 1));
-			targets[iteration][index.get() + connector.prepModelOutput().size()] = String
-					.valueOf(connector.targetToValue.get(targetName));
 			index.getAndIncrement();
 		});
 		Path csv = Paths.get(instititeDirectory + "targets.csv");
-	    LOGGER.info("Target writer: "+Timestep.getCurrentYear()+"->"+Arrays.toString(targets[iteration]));
 		CsvTools.writeCSVfile(targets, csv);
 	}
 

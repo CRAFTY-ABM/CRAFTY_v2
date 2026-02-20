@@ -56,7 +56,9 @@ public class Connector_Runner {
 			}
 			try {
 				// Load institutions
-				institutionManager.loadInstitutions(institutionsJsonPath.toString(), fclPath.toString(), 1, true);
+				institutionManager.loadInstitutions(institutionsJsonPath.toString(), fclPath.toString(),
+						ConfigLoader.config.institution_time_lag, true);
+				LOGGER.info("institution_time_lag= "+ConfigLoader.config.institution_time_lag);
 				// get initial policy values
 				InstitutionOutput institutionOutput = institutionManager.getInitPolicies();
 				Connector model = new Connector(institutionManager);
@@ -68,6 +70,7 @@ public class Connector_Runner {
 				LOGGER.fatal("Error running test: " + e.getMessage());
 				e.printStackTrace();
 			}
+			ModelRunner.exportChartsPlots();
 		}
 	}
 

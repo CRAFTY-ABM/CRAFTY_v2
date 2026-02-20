@@ -6,13 +6,18 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.Cell;
+import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
+import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
 import de.cesr.crafty.core.output.Tracker;
@@ -64,10 +69,23 @@ public class LandMaskUpdater extends AbstractUpdater {
 	private static final CustomLogger LOGGER = new CustomLogger(LandMaskUpdater.class);
 
 	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Boolean>> restrictions = new ConcurrentHashMap<>();
+	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Set<Cell>>> cellsMasked = new ConcurrentHashMap<>();// <region,categoryName,cell>
+
+	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Cell>> cellsForecedToChange = new ConcurrentHashMap<>();// <maskType,cell_coor,cell>
+
+	private void initzializeCellsMasked() {
+		cellsMasked.clear();
+		CellsLoader.regions.keySet().forEach(r -> {
+			cellsMasked.put(r, new ConcurrentHashMap<>());
+			AftCategorised.aftCategories.forEach((categoryName, afts) -> {
+				cellsMasked.get(r).put(categoryName, Collections.synchronizedSet(new HashSet<>()));
+			});
+		});
+	}
 
 	public LandMaskUpdater() {
 		MaskLoader.initialize();
-
+		initzializeCellsMasked();
 		if (MaskLoader.restriction_paths.size() > 0) {
 			MaskLoader.restriction_paths.keySet().forEach(maskName -> {
 				Path initialRestection = MaskLoader.restriction_paths.get(maskName).get(Timestep.getStartYear());
@@ -81,6 +99,9 @@ public class LandMaskUpdater extends AbstractUpdater {
 				}
 			});
 		}
+		MaskLoader.restriction_paths.keySet().forEach(maskType -> {
+			cellsForecedToChange.put(maskType, new ConcurrentHashMap<>());
+		});
 	}
 
 	@Override
@@ -90,6 +111,7 @@ public class LandMaskUpdater extends AbstractUpdater {
 
 	@Override
 	public void step() {
+		initzializeCellsMasked();
 		MaskLoader.mask_paths.keySet().forEach(maskType -> {
 			cellOneMaskUpdater(maskType, Timestep.getCurrentYear());
 			updateRestrections(maskType);
@@ -111,7 +133,6 @@ public class LandMaskUpdater extends AbstractUpdater {
 		} else {
 			LOGGER.info("No Resrection Update for: " + maskType);
 		}
-
 	}
 
 	private static ConcurrentHashMap<String, Boolean> importResrection(Path path) {
@@ -205,9 +226,6 @@ public class LandMaskUpdater extends AbstractUpdater {
 						if (v != null && v.contains("1")) {
 							shouldApply = true;
 							break;
-							// The original code might apply the same mask repeatedly
-							// if multiple Year_ columns contain "1".
-							// Breaking avoids redundant calls while preserving intent.
 						}
 					}
 				}
@@ -233,17 +251,39 @@ public class LandMaskUpdater extends AbstractUpdater {
 		});
 	}
 
-	private static void maskToOwner(Cell c, String maskType) {// need to be revised
+	private static void maskToOwner(Cell c, String maskType) {// need to be rewied
+		boolean shoudlReturn = false;
 		for (Aft a : AFTsLoader.getAftHash().values()) {
-			if (maskType.contains(a.getLabel())) {
-				if (c.getOwner() != null && !a.getLabel().equals(c.getOwner().getLabel())) {
+			boolean isExactName = maskType.equalsIgnoreCase(a.getLabel());
+			boolean ifContainName = maskType.contains(a.getLabel());
+
+			if (ifContainName) {
+				if ((c.getOwner() == null) || (c.getOwner() != null && !a.getLabel().equals(c.getOwner().getLabel()))) {
 					Tracker.sankeydata.get(a.getLabel()).get(Timestep.getCurrentYear())
 							.merge((c.getOwner() != null ? c.getOwner().getLabel() : "Abandoned"), 1, Integer::sum);
 				}
 				c.setOwner(a);
-				break;
+				cellsForecedToChange.get(maskType).put(c.getX() + "," + c.getY(), c);
+				shoudlReturn = true;
+				if (isExactName) {
+					return;
+				}
 			}
 		}
+		if (shoudlReturn) {
+			return;
+		}
+
+		AftCategorised.aftCategories.forEach((categoryName, afts) -> {
+			if (maskType.contains(categoryName)) {
+				if ((c.getOwner() != null && c.getOwner().getCategory() != null
+						&& !c.getOwner().getCategory().getName().equals(categoryName)) || (c.getOwner() == null)) {
+					cellsMasked.get(ProjectLoader.WorldName).get(categoryName).add(c);
+					c.setOwner(null);
+					return;
+				}
+			}
+		});
 	}
 
 }

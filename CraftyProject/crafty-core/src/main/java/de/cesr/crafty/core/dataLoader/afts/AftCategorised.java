@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.AftCategory;
@@ -56,6 +55,7 @@ public class AftCategorised {
 	private static final CustomLogger LOGGER = new CustomLogger(AftCategorised.class);
 
 	public static ConcurrentHashMap<String, Set<Aft>> aftCategories = new ConcurrentHashMap<>();
+
 	public static ConcurrentHashMap<String, Set<String>> CategoriesIntestisy = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<String, String> categoriesColor = new ConcurrentHashMap<>();
 
@@ -64,11 +64,11 @@ public class AftCategorised {
 	public static boolean useCategorisationGivIn = false;
 
 	private static boolean useCategories() {
-		if (ConfigLoader.config.use_AFTs_categories_GiveIn) {
-			Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
-			return csv.keySet().contains("Category");
-		}
-		return false;
+		// if (ConfigLoader.config.use_AFTs_categories_GiveIn) {
+		Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
+		return csv.keySet().contains("Category");
+		// }
+		// return false;
 	}
 
 	public static void CategoriesLoader() {

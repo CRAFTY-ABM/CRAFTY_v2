@@ -200,7 +200,7 @@ public class ModelRunner extends AbstractModelRunner {
 		});
 	}
 
-	private static void exportChartsPlots() {
+	public static void exportChartsPlots() {
 		if (ConfigLoader.config.generate_charts_plots_PNG || ConfigLoader.config.generate_charts_plots_PDF) {
 			String path = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "plots");
 			Listener.servicedemandHash.forEach((serviceName, serviceHash) -> {

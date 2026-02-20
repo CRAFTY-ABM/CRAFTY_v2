@@ -102,7 +102,7 @@ public class ServiceSet {
 	}
 
 	public static boolean isRegionalServicesExisting() {
-		System.out.println("!-Regoinal-! " + CellsLoader.regions.keySet());
+		System.out.println("!-Regions-! " + CellsLoader.regions.keySet());
 		for (String r : CellsLoader.regions.keySet()) {
 			ArrayList<Path> paths = PathTools.fileFilter(ProjectLoader.getScenario(), PathTools.asFolder("demand"),
 					"_" + r + ".csv");

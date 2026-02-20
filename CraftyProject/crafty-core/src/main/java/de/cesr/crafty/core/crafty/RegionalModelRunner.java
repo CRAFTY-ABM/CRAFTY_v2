@@ -8,10 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
+import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.ListenerByRegion;
+import de.cesr.crafty.core.updaters.LandMaskUpdater;
 import de.cesr.crafty.core.updaters.SeedUpdater;
 import de.cesr.crafty.core.updaters.ServicesUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
@@ -202,18 +204,20 @@ public class RegionalModelRunner {
 			double marg = ServiceSet.getPenalise_Oversupply().get(serviceName) ? (serviceDemand - serviceSupply)
 					: Math.max((serviceDemand - serviceSupply), 0);
 
+			marg = marg * serviceWeight;
 			if (ConfigLoader.config.averaged_residual_demand_per_cell) {
 				marg = marg / R.getCells().size();
 			}
-			marg = marg * serviceWeight;
-			marg = serviceDemand != 0 ? marg / serviceDemand : 0;
+			if (ConfigLoader.config.use_relative_marginal_utility) {
+				marg = serviceDemand != 0 ? marg / serviceDemand : marg;
+			}
 			getMarginal().put(serviceName, marg);
 		});
 	}
 
 	private void takeOverUnmanageCells() {
 		LOGGER.trace("Region: [" + R.getName() + "] Take over unmanaged cells & Launching the competition process...");
-		R.getUnmanageCellsR()/**/.parallelStream().forEach(c -> {
+		R.getUnmanageCellsR().parallelStream().forEach(c -> {
 			if (Math.random() < ConfigLoader.config.takeOverUnmanageCells_percentage) {
 				Competitiveness.competition(c, this);
 				if (c.getOwner() != null && !c.getOwner().isAbandoned()) {
@@ -223,6 +227,19 @@ public class RegionalModelRunner {
 				}
 			}
 		});
+	}
+
+	private void takeOverMaskedCellByCategories() {
+		if (LandMaskUpdater.cellsMasked.keySet().contains(R.getName())) {
+			LandMaskUpdater.cellsMasked.get(R.getName()).forEach((categoryName, cells) -> {
+				cells.parallelStream().forEach(c -> {
+					Aft a = Competitiveness.mostCompetitiveAgent(c, AftCategorised.aftCategories.get(categoryName),
+							this);
+					c.setOwner(a);
+					LandMaskUpdater.cellsForecedToChange.get(c.getMaskType()).put(c.getX() + "," + c.getY(), c);
+				});
+			});
+		}
 	}
 
 	public void regionalSupply() {
@@ -281,6 +298,9 @@ public class RegionalModelRunner {
 		}
 		try (var t = profiler.section("calculeMaxMinUtility")) {
 			computeMaxMinUtility();
+		}
+		try (var t = profiler.section("takeOverMaskedCellByCategories")) {
+			takeOverMaskedCellByCategories();
 		}
 		try (var t = profiler.section("giveUp")) {
 			giveUp();

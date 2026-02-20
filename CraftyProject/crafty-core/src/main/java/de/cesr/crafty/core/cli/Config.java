@@ -74,6 +74,7 @@ public class Config {
 	public int marginal_utility_calculations_per_tick = 1;
 	public double land_abandonment_percentage = 0.03;
 	public double takeOverUnmanageCells_percentage = 0.8;
+	public boolean use_relative_marginal_utility = true;
 
 	// Output Configurati
 	public String output_folder_name = "";
@@ -152,4 +153,9 @@ public class Config {
 	// institutions
 	public String institutions_directory = "";
 	public String external_variable_values_directory = "";
+	public int start_year_of_policy_effect = 0;
+	public int end_year_of_policy_effect = Integer.MAX_VALUE;
+	public int institution_time_lag = 1;
+	
+
 }

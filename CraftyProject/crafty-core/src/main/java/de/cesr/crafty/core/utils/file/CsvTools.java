@@ -16,11 +16,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
-import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 
 /**
@@ -112,11 +112,11 @@ public class CsvTools {
 		return filePaths;
 	}
 
-	public static void exportToCSV(String filePath) {
+	public static void exportCellsToCSV(String filePath,ConcurrentHashMap<String, Cell> cells) {
 		LOGGER.info("Processing data to write a csv file...");
 		List<String> serviceImmutableList = Collections.unmodifiableList(ServiceSet.getServicesList());
 		// Process the cells in parallel to transform each Cell into a CSV string
-		Set<String> csvLines = CellsLoader.hashCell.values().stream()/* .parallelStream() */ .map(c -> {
+		Set<String> csvLines = cells.values().stream()/* .parallelStream() */ .map(c -> {
 			String servicesFlattened = flattenHashMap(c, serviceImmutableList);
 
 			return String.join(",", String.valueOf(c.getID()), String.valueOf(c.getX()), String.valueOf(c.getY()),
@@ -137,6 +137,8 @@ public class CsvTools {
 			LOGGER.error("Unable to export file: " + filePath + "\n" + e.getMessage());
 		}
 	}
+
+
 
 	private static String flattenHashMap(Cell c, List<String> serviceImmutableList) {
 		List<String> service = Collections.synchronizedList(new ArrayList<>());
@@ -269,4 +271,5 @@ public class CsvTools {
 		}
 		return null;
 	}
+
 }

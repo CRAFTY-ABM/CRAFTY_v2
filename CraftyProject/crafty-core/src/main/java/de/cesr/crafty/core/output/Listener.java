@@ -13,14 +13,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Region;
 import de.cesr.crafty.core.crafty.RegionalModelRunner;
 import de.cesr.crafty.core.crafty.Service;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
+import de.cesr.crafty.core.dataLoader.land.MaskLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.AbstractUpdater;
+import de.cesr.crafty.core.updaters.LandMaskUpdater;
 import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
 import de.cesr.crafty.core.updaters.SupplyUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
@@ -68,6 +71,7 @@ import de.cesr.crafty.core.utils.general.Utils;
 
 public class Listener extends AbstractUpdater {
 
+	private static final CustomLogger LOGGER = new CustomLogger(Listener.class);
 
 	public static String[][] newAftsInLandListener;
 	public static ConcurrentHashMap<String, Integer> newAftsInLandNbr = new ConcurrentHashMap<>();
@@ -106,8 +110,6 @@ public class Listener extends AbstractUpdater {
 			});
 		}
 	}
-
-
 
 	public void initializeListeners() {
 		initializeListExportingYearsMap();
@@ -253,7 +255,7 @@ public class Listener extends AbstractUpdater {
 	public void writOutPutMap() {
 		if (yearsMapExporting.contains(Timestep.getCurrentYear())) {
 			writeMap();
-			MapPngExporter.exportOwnerMapAsPng();
+			MapPngExporter.exportOwnerMapAsPng(CellsLoader.hashCell, "map");
 		}
 	}
 
@@ -284,8 +286,22 @@ public class Listener extends AbstractUpdater {
 	}
 
 	private void writeMap() {
-		CsvTools.exportToCSV(ConfigLoader.config.output_folder_name + File.separator + ProjectLoader.getScenario()
-				+ "-Cell-" + Timestep.getCurrentYear() + ".csv");
+		CsvTools.exportCellsToCSV(ConfigLoader.config.output_folder_name + File.separator + ProjectLoader.getScenario()
+				+ "-Cell-" + Timestep.getCurrentYear() + ".csv", CellsLoader.hashCell);
+		// make directory for forced then a file for every one ? make more sense
+		String tmp = PathTools.makeDirectory(
+				ConfigLoader.config.output_folder_name + File.separator + "cells-forced-to-change-by-masks");
+		MaskLoader.restriction_paths.keySet().forEach(maskType -> {
+			if (LandMaskUpdater.cellsForecedToChange.get(maskType).size() > 0) {
+				CsvTools.exportCellsToCSV(tmp + File.separator + maskType + "-" + Timestep.getCurrentYear() + ".csv",
+						LandMaskUpdater.cellsForecedToChange.get(maskType));
+				LOGGER.info("number of cells forced  to change by mask (" + maskType + "):  "
+						+ LandMaskUpdater.cellsForecedToChange.get(maskType).size());
+				MapPngExporter.exportOwnerMapAsPng(LandMaskUpdater.cellsForecedToChange.get(maskType), "forced_"+maskType);
+				LandMaskUpdater.cellsForecedToChange.get(maskType).clear();
+			}
+		});
+
 //		if (year != Timestep.getStartYear())
 //			CsvTools.writeCSVfile(Selector.seedMap,
 //					Paths.get(ConfigLoader.config.output_folder_name + File.separator + "-SEED-" + year + ".csv"));

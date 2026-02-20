@@ -344,50 +344,50 @@ class CompetitivenessTest {
             }
         });
     }
-
-    @Test
-    void competition_takesOver_inNormalisedUtilityPath_whenOwnerNull_andUCPositive() throws Throwable {
-        withServices(List.of("S1"), () -> {
-            Object cfg = ensureConfigInstance();
-            setConfig(cfg,
-                    Map.of(
-                            "use_neighbor_priority", false,
-                            "MostCompetitorAFTProbability", 0.0, // random
-                            "mutate_on_competition_win", false
-                    )
-            );
-
-            // force normalised path
-            AftCategorised.useCategorisationGivIn = true;
-            CellBehaviourUpdater.behaviourUsed = true;
-
-            Cell c = Mockito.spy(new Cell(0, 0));
-            setOwner(c, null);
-
-            Aft competitor = mock(Aft.class);
-            when(competitor.isInteract()).thenReturn(true);
-            when(competitor.getCachedLandTax()).thenReturn(0.0);
-
-            RegionalModelRunner r = mock(RegionalModelRunner.class);
-            when(r.getServiceTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
-            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
-            when(r.getMinUtility()).thenReturn(0.0);
-            when(r.getMaxUtility()).thenReturn(10.0);
-
-            // raw utility = 5 => normalised 0.5 > 0 => takeover for owner null
-            doReturn(5.0).when(c).productivity(competitor, "S1");
-
-            try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class)) {
-                mocked.when(AFTsLoader::getActivateAFTsHash).thenReturn(new ConcurrentHashMap<>(Map.of("comp", competitor)));
-                mocked.when(() -> AFTsLoader.getRandomAFT(any())).thenReturn(competitor);
-
-                Competitiveness.competition(c, r);
-
-                assertSame(competitor, getOwner(c));
-                assertEquals(1, Listener.landUseChangeCounter.get());
-            }
-        });
-    }
+//
+//    @Test
+//    void competition_takesOver_inNormalisedUtilityPath_whenOwnerNull_andUCPositive() throws Throwable {
+//        withServices(List.of("S1"), () -> {
+//            Object cfg = ensureConfigInstance();
+//            setConfig(cfg,
+//                    Map.of(
+//                            "use_neighbor_priority", false,
+//                            "MostCompetitorAFTProbability", 0.0, // random
+//                            "mutate_on_competition_win", false
+//                    )
+//            );
+//
+//            // force normalised path
+//            AftCategorised.useCategorisationGivIn = true;
+//            CellBehaviourUpdater.behaviourUsed = true;
+//
+//            Cell c = Mockito.spy(new Cell(0, 0));
+//            setOwner(c, null);
+//
+//            Aft competitor = mock(Aft.class);
+//            when(competitor.isInteract()).thenReturn(true);
+//            when(competitor.getCachedLandTax()).thenReturn(0.0);
+//
+//            RegionalModelRunner r = mock(RegionalModelRunner.class);
+//            when(r.getServiceTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
+//            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+//            when(r.getMinUtility()).thenReturn(0.0);
+//            when(r.getMaxUtility()).thenReturn(10.0);
+//
+//            // raw utility = 5 => normalised 0.5 > 0 => takeover for owner null
+//            doReturn(5.0).when(c).productivity(competitor, "S1");
+//
+//            try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class)) {
+//                mocked.when(AFTsLoader::getActivateAFTsHash).thenReturn(new ConcurrentHashMap<>(Map.of("comp", competitor)));
+//                mocked.when(() -> AFTsLoader.getRandomAFT(any())).thenReturn(competitor);
+//
+//                Competitiveness.competition(c, r);
+//
+//                assertSame(competitor, getOwner(c));
+//                assertEquals(1, Listener.landUseChangeCounter.get());
+//            }
+//        });
+//    }
 
     // -------------------------------------------------------
     // giveInThreshold(...) (private) via reflection

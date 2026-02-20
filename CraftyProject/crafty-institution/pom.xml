@@ -23,6 +23,11 @@
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>com.openai</groupId>
+			<artifactId>openai-java</artifactId>
+			<version>4.20.0</version>
+		</dependency>
 		<!-- internal -->
 		<dependency>
 			<groupId>de.cesr</groupId>
@@ -62,6 +67,15 @@
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>2.10.1</version>
+		</dependency>
+
+		<!-- Source:
+		https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-annotations -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>2.20</version>
+			<scope>compile</scope>
 		</dependency>
 
 		<!-- core dependencies -->
@@ -164,62 +178,65 @@
 
 	</dependencies>
 
-<build>
-    <plugins>
-        <!-- Still useful to run via: mvn exec:java -->
-        <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>3.5.0</version>
-            <configuration>
-                <mainClass>crafty.Connector_Runner</mainClass>
-            </configuration>
-        </plugin>
+	<build>
+		<plugins>
+			<!-- Still useful to run via: mvn exec:java -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.5.0</version>
+				<configuration>
+					<mainClass>crafty.Connector_Runner</mainClass>
+				</configuration>
+			</plugin>
 
-        <!-- Create runnable fat JAR with all dependencies -->
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
-            <version>3.6.0</version>
-            <executions>
-                <execution>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>shade</goal>
-                    </goals>
-                    <configuration>
-                        <!-- Keep the normal (thin) JAR AND attach a separate shaded one -->
-                        <shadedArtifactAttached>true</shadedArtifactAttached>
-                        <shadedClassifierName>shaded</shadedClassifierName>
+			<!-- Create runnable fat JAR with all dependencies -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.6.0</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<!-- Keep the normal (thin) JAR AND attach a
+							separate shaded one -->
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<shadedClassifierName>shaded</shadedClassifierName>
 
-                        <!-- Don't generate a dependency-reduced POM, keeps life simpler -->
-                        <createDependencyReducedPom>false</createDependencyReducedPom>
+							<!-- Don't generate a dependency-reduced POM, keeps
+							life simpler -->
+							<createDependencyReducedPom>false</createDependencyReducedPom>
 
-                        <!-- Remove signatures from included JARs to avoid "Invalid signature file digest" -->
-                        <filters>
-                            <filter>
-                                <artifact>*:*</artifact>
-                                <excludes>
-                                    <exclude>META-INF/*.SF</exclude>
-                                    <exclude>META-INF/*.DSA</exclude>
-                                    <exclude>META-INF/*.RSA</exclude>
-                                </excludes>
-                            </filter>
-                        </filters>
+							<!-- Remove signatures from included JARs to avoid
+							"Invalid signature file digest" -->
+							<filters>
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
 
-                        <!-- Manifest: which main class to run -->
-                        <transformers>
-                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                <mainClass>crafty.Connector_Runner</mainClass>
-                            </transformer>
-                        </transformers>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
-
+							<!-- Manifest: which main class to run -->
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>crafty.Connector_Runner</mainClass>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
 
 </project>

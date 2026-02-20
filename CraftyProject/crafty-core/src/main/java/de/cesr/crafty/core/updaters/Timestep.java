@@ -1,4 +1,11 @@
 package de.cesr.crafty.core.updaters;
+
+import java.io.File;
+import java.nio.file.Paths;
+
+import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.utils.file.DirectoryWatcher;
+
 /**
  * Global simulation clock for CRAFTY.
  *
@@ -71,6 +78,7 @@ public class Timestep extends AbstractUpdater {
 
 	@Override
 	public void step() {
+		DirectoryWatcher.writeDoneFile(Paths.get(ConfigLoader.config.output_folder_name + File.separator), Timestep.getCurrentYear());
 		currentYear++;
 		tick++;
 	}
