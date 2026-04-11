@@ -3,9 +3,11 @@ package de.cesr.crafty.core.dataLoader.land;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.utils.file.PathTools;
@@ -18,7 +20,13 @@ public class GisLoader {
 
 	public void loadGisData() {
 		try {
-			Path path = PathTools.fileFilter(true, File.separator + "GIS" + File.separator).get(0);
+
+			Path path;
+			if (Paths.get(ConfigLoader.config.gisPath).toFile().isFile()) {
+				path = Paths.get(ConfigLoader.config.gisPath);
+			} else {
+				path = PathTools.fileFilter(true, File.separator + "GIS" + File.separator).get(0);
+			}
 			ProjectLoader.WorldName = path.toFile().getName().replace("_Regions", "").replace(".csv", "");
 			LOGGER.info("WorldName = " + ProjectLoader.WorldName);
 			CsvReadOptions options = CsvReadOptions.builder(path.toFile()).separator(',').build();

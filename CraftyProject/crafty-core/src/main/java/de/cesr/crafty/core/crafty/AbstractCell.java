@@ -38,8 +38,28 @@ public abstract class AbstractCell {
 	Aft owner;
 	protected String color = "#848484";
 	private String maskType;
-
 	private int OwnerLifeCounter = 1;
+
+	private long sID;
+	private long score;
+
+	public long getCellID() {
+		return sID;
+	}
+
+	public void setCellID(long sID) {
+		this.sID = sID;
+	}
+	
+	
+
+	public long getScore() {
+		return score;
+	}
+
+	public void setScore(long score) {
+		this.score = score;
+	}
 
 	public int getOwnerLifeCounter() {
 		return OwnerLifeCounter;
@@ -67,10 +87,6 @@ public abstract class AbstractCell {
 
 	public double getCurrentUtility() {
 		return currentUtility;
-	}
-
-	public void setcCurrentUtility(double utilityValue) {
-		this.currentUtility = utilityValue;
 	}
 
 	public String getColor() {

@@ -53,7 +53,7 @@ public class SeedUpdater {
 		} else if (ConfigLoader.config.seedID.equals("0")) {
 			ConfigLoader.config.longSeedID.set(ThreadLocalRandom.current().nextLong());
 		} else if (ConfigLoader.config.seedID.matches("[-+]?\\d+")) {
-			LOGGER.info("seedID is a number ID--> "+ConfigLoader.config.seedID);
+			LOGGER.info("seedID is a number ID--> " + ConfigLoader.config.seedID);
 			ConfigLoader.config.longSeedID.set((long) Long.parseLong(ConfigLoader.config.seedID));// ConfigLoader.config.seedID.hashCode();
 		} else if (Paths.get(ConfigLoader.config.seedID).toFile().isDirectory()) {
 			// not implemented yet
@@ -66,13 +66,13 @@ public class SeedUpdater {
 		}
 	}
 
-	public static ConcurrentHashMap<String, Cell> selectSeed(RegionalModelRunner r, double percent, boolean byAfts,
-			long id) {
+	public static ConcurrentHashMap<String, Cell> selectSeed(RegionalModelRunner r,
+			ConcurrentHashMap<String, Cell> cells, double percent, boolean byAfts, long id) {
 		if (ConfigLoader.config.seedID.equalsIgnoreCase("rank")) {
-			return seedRanking(r.R.getCells().values(), percent, byAfts);
+			return seedRanking(cells.values(), percent, byAfts);
 		} else {
 			ConfigLoader.config.longSeedID.getAndIncrement();
-			return Selector.randomSeed(r.R.getCells(), percent, id);
+			return Selector.randomSeed(cells, percent, id);
 		}
 	}
 

@@ -288,19 +288,23 @@ public class Listener extends AbstractUpdater {
 	private void writeMap() {
 		CsvTools.exportCellsToCSV(ConfigLoader.config.output_folder_name + File.separator + ProjectLoader.getScenario()
 				+ "-Cell-" + Timestep.getCurrentYear() + ".csv", CellsLoader.hashCell);
-		// make directory for forced then a file for every one ? make more sense
-		String tmp = PathTools.makeDirectory(
-				ConfigLoader.config.output_folder_name + File.separator + "cells-forced-to-change-by-masks");
-		MaskLoader.restriction_paths.keySet().forEach(maskType -> {
-			if (LandMaskUpdater.cellsForecedToChange.get(maskType).size() > 0) {
-				CsvTools.exportCellsToCSV(tmp + File.separator + maskType + "-" + Timestep.getCurrentYear() + ".csv",
-						LandMaskUpdater.cellsForecedToChange.get(maskType));
-				LOGGER.info("number of cells forced  to change by mask (" + maskType + "):  "
-						+ LandMaskUpdater.cellsForecedToChange.get(maskType).size());
-				MapPngExporter.exportOwnerMapAsPng(LandMaskUpdater.cellsForecedToChange.get(maskType), "forced_"+maskType);
-				LandMaskUpdater.cellsForecedToChange.get(maskType).clear();
-			}
-		});
+
+		if (ConfigLoader.config.generate_map_PAs_forced) {
+			String tmp = PathTools.makeDirectory(
+					ConfigLoader.config.output_folder_name + File.separator + "cells-forced-to-change-by-masks");
+			MaskLoader.restriction_paths.keySet().forEach(maskType -> {
+				if (LandMaskUpdater.cellsForecedToChange.get(maskType).size() > 0) {
+					CsvTools.exportCellsToCSV(
+							tmp + File.separator + maskType + "-" + Timestep.getCurrentYear() + ".csv",
+							LandMaskUpdater.cellsForecedToChange.get(maskType));
+					LOGGER.info("number of cells forced  to change by mask (" + maskType + "):  "
+							+ LandMaskUpdater.cellsForecedToChange.get(maskType).size());
+					MapPngExporter.exportOwnerMapAsPng(LandMaskUpdater.cellsForecedToChange.get(maskType),
+							"forced_" + maskType);
+					LandMaskUpdater.cellsForecedToChange.get(maskType).clear();
+				}
+			});
+		}
 
 //		if (year != Timestep.getStartYear())
 //			CsvTools.writeCSVfile(Selector.seedMap,

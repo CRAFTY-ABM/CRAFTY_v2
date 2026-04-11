@@ -1,6 +1,7 @@
 package de.cesr.crafty.core.main;
 
 import java.nio.file.Paths;
+import java.util.HashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CraftyOptions;
@@ -36,8 +37,8 @@ public class MainHeadless {
 		ProjectLoader.pathInitialisation(Paths.get(ConfigLoader.config.project_path));
 		runner = new ModelRunner();
 		runner.start();
-		runner.initialzeRun();
-		runner.run();
+//		runner.initialzeRun();
+//		runner.run();
 	}
 
 	public static void initializeConfig(String[] args) {

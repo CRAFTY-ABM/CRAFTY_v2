@@ -94,6 +94,11 @@ public class FlagUpdater extends AbstractUpdater {
 			flags.put(i, Paths.get(waitingPath).resolve("done_" + i));
 		}
 	}
+	
+	public void addNewWaitingFlags(HashMap<Integer, Path> f ) {
+		flags.clear();
+		flags.putAll(f);
+	}
 
 	@Override
 	public void toSchedule() {

@@ -166,7 +166,7 @@ class SeedUpdaterTest {
         RegionalModelRunner r = mock(RegionalModelRunner.class);
         r.R = region;
 
-        ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(r, 1.0 / 3.0, false, 42L);
+        ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(r,region.getCells(), 1.0 / 3.0, false, 42L);
         assertNotNull(seed);
         assertEquals(Set.of("1,0"), seed.keySet());
     }
@@ -196,7 +196,7 @@ class SeedUpdaterTest {
         RegionalModelRunner r = mock(RegionalModelRunner.class);
         r.R = region;
 
-        ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(r, 0.5, true, 42L);
+        ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(r, region.getCells(),0.5, true, 42L);
 
         assertNotNull(seed);
         assertEquals(4, seed.size());
@@ -224,7 +224,7 @@ class SeedUpdaterTest {
         try (MockedStatic<Selector> sel = Mockito.mockStatic(Selector.class)) {
             sel.when(() -> Selector.randomSeed(cellMap, 0.2, 777L)).thenReturn(expected);
 
-            ConcurrentHashMap<String, Cell> out = SeedUpdater.selectSeed(r, 0.2, false, 777L);
+            ConcurrentHashMap<String, Cell> out = SeedUpdater.selectSeed(r,region.getCells(), 0.2, false, 777L);
 
             assertSame(expected, out);
             sel.verify(() -> Selector.randomSeed(cellMap, 0.2, 777L), times(1));
@@ -396,7 +396,7 @@ class SeedUpdaterTest {
             double util = 1.0 + bucket * 1e-12 + jitter;
 
             Cell c = new Cell(x, y);
-            c.setcCurrentUtility(util);
+            c.setCurrentUtility(util);
             cells.add(c);
         }
         return cells;

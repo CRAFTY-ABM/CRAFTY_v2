@@ -1,6 +1,8 @@
 package de.cesr.crafty.core.crafty;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -61,7 +63,16 @@ import de.cesr.crafty.core.utils.general.CellsSubSets;
 
 public class Competitiveness {
 
-	static double utility(Cell c, Aft a, RegionalModelRunner r) {
+	private static final boolean COUPLED_WITH_PLUM = ConfigLoader.config.COUPLED_WITH_PLUM;
+
+	private static double utility(Cell c, Aft a, RegionalModelRunner r) {
+		if (COUPLED_WITH_PLUM) {
+			return utilityUseOnlyPrice(c, a, r);
+		}
+		return utilityUseMarginal(c, a, r);
+	}
+
+	private static double utilityUseMarginal(Cell c, Aft a, RegionalModelRunner r) {
 		if (a == null || !a.isInteract()) {
 			return 0;
 		}
@@ -72,25 +83,48 @@ public class Competitiveness {
 				.sum() + a.getCachedLandTax();
 	}
 
+//	## only in coupling withPlum
+	private static double utilityUseOnlyPrice(Cell c, Aft a, RegionalModelRunner r) {
+		if (a == null || !a.isInteract()) {
+			return 0;
+		}
+
+		double sum = ServiceSet.getServicesList().stream().mapToDouble(serviceName -> {
+			Service service = r.R.getServicesHash().get(serviceName);
+
+			double currentWeight = service.getWeights().get(Timestep.getCurrentYear());
+			double initialWeight = service.getWeights().get(Timestep.getStartYear());
+
+			double result = (currentWeight / initialWeight) * c.productivity(a, serviceName);
+			if (Double.isNaN(result) || Double.isInfinite(result)) {
+				return 0.0;
+			}
+			return result;
+		}).sum();
+
+		return sum;
+	}
+//	####
+
 	static void associateUtility(Cell c, RegionalModelRunner r) {
-		c.setcCurrentUtility(utility(c, c.owner, r));
+		c.setCurrentUtility(utility(c, c.owner, r));
 	}
 
-	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
-		if (setAfts.size() == 0) {
-			return c.owner;
-		}
-		double uti = 0;
-		Aft theBestAFT = setAfts.iterator().next();
-		for (Aft agent : setAfts) {
-			double u = utility(c, agent, r);
-			if (u > uti) {
-				uti = u;
-				theBestAFT = agent;
-			}
-		}
-		return theBestAFT;
-	}
+//	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
+//		if (setAfts.size() == 0) {
+//			return c.owner;
+//		}
+//		double uti = Double.NEGATIVE_INFINITY;
+//		Aft theBestAFT = setAfts.iterator().next();
+//		for (Aft agent : setAfts) {
+//			double u = utility(c, agent, r);
+//			if (u > uti) {
+//				uti = u;
+//				theBestAFT = agent;
+//			}
+//		}
+//		return theBestAFT;
+//	}
 
 	private static void Competition(Cell c, Aft competitor, RegionalModelRunner r) {
 		if (competitor == null || !competitor.isInteract()) {
@@ -242,6 +276,69 @@ public class Competitiveness {
 		} else {
 			Competition(c, AFTsLoader.getRandomAFT(afts), r);
 		}
+	}
+
+	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
+		if (setAfts == null || setAfts.isEmpty()) {
+			return c.owner;
+		}
+
+		final double EPS = 1e-12;
+		double bestUtility = Double.NEGATIVE_INFINITY;
+
+		List<Aft> winners = new ArrayList<>();
+
+		for (Aft agent : setAfts) {
+			double u = utility(c, agent, r);
+
+			if (u > bestUtility + EPS) {
+				bestUtility = u;
+				winners.clear();
+				winners.add(agent);
+			} else if (Math.abs(u - bestUtility) <= EPS) {
+				winners.add(agent);
+			}
+		}
+
+		if (winners.size() == 1) {
+			return winners.get(0);
+		}
+
+		// deterministic pseudo-random tie-break
+		Aft bestAft = winners.get(0);
+		long bestScore = tieBreakScore(c.getX(), c.getY(), getStableAftId(bestAft), r);
+
+		for (int i = 1; i < winners.size(); i++) {
+			Aft aft = winners.get(i);
+			long score = tieBreakScore(c.getX(), c.getY(), getStableAftId(aft), r);
+
+			if (Long.compareUnsigned(score, bestScore) < 0) {
+				bestScore = score;
+				bestAft = aft;
+			}
+		}
+
+		return bestAft;
+	}
+
+	private static int getStableAftId(Aft aft) {
+		return aft.getLabel().hashCode();
+	}
+
+	private static long tieBreakScore(int x, int y, int aftId, RegionalModelRunner r) {
+		long seed = 0x9E3779B97F4A7C15L;
+		seed ^= mix64(x);
+		seed ^= mix64(y);
+		seed ^= mix64(aftId);
+
+		return mix64(seed);
+	}
+
+	private static long mix64(long z) {
+		z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+		z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+		z = z ^ (z >>> 31);
+		return z;
 	}
 
 }

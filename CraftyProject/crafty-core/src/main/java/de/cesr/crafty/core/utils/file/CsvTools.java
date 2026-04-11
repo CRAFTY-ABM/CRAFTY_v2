@@ -112,7 +112,7 @@ public class CsvTools {
 		return filePaths;
 	}
 
-	public static void exportCellsToCSV(String filePath,ConcurrentHashMap<String, Cell> cells) {
+	public static void exportCellsToCSV(String filePath, ConcurrentHashMap<String, Cell> cells) {
 		LOGGER.info("Processing data to write a csv file...");
 		List<String> serviceImmutableList = Collections.unmodifiableList(ServiceSet.getServicesList());
 		// Process the cells in parallel to transform each Cell into a CSV string
@@ -138,8 +138,6 @@ public class CsvTools {
 		}
 	}
 
-
-
 	private static String flattenHashMap(Cell c, List<String> serviceImmutableList) {
 		List<String> service = Collections.synchronizedList(new ArrayList<>());
 		serviceImmutableList.forEach(ServiceName -> {
@@ -164,13 +162,13 @@ public class CsvTools {
 		return rows;
 	}
 
-	public static void writeCSVfile(Map<String, ArrayList<Double>> dataInput, Path filePathOutput) {
+	public static void writeCSVfileString(Map<String, List<String>> dataInput, Path filePathOutput) {
 		// Extract headers in insertion order
 		List<String> headers = new ArrayList<>(dataInput.keySet());
 
 		// Determine the maximum number of rows
 		int maxRows = 0;
-		for (ArrayList<Double> column : dataInput.values()) {
+		for (List<String> column : dataInput.values()) {
 			if (column.size() > maxRows) {
 				maxRows = column.size();
 			}
@@ -186,7 +184,48 @@ public class CsvTools {
 			for (int row = 0; row < maxRows; row++) {
 				for (int col = 0; col < headers.size(); col++) {
 					String header = headers.get(col);
-					ArrayList<Double> columnData = dataInput.get(header);
+					List<String> columnData = dataInput.get(header);
+					String cell = "";
+					if (row < columnData.size()) {
+						cell = columnData.get(row).toString();
+					}
+					writer.write(cell);
+					if (col < headers.size() - 1) {
+						writer.write(",");
+					}
+				}
+				writer.newLine();
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	public static void writeCSVfile(Map<String, List<Double>> dataInput, Path filePathOutput) {
+		// Extract headers in insertion order
+		List<String> headers = new ArrayList<>(dataInput.keySet());
+
+		// Determine the maximum number of rows
+		int maxRows = 0;
+		for (List<Double> column : dataInput.values()) {
+			if (column.size() > maxRows) {
+				maxRows = column.size();
+			}
+		}
+
+		// Open writer in try-with-resources to ensure closure
+		try (BufferedWriter writer = Files.newBufferedWriter(filePathOutput)) {
+			// Write header line
+			writer.write(String.join(",", headers));
+			writer.newLine();
+
+			// Write each row
+			for (int row = 0; row < maxRows; row++) {
+				for (int col = 0; col < headers.size(); col++) {
+					String header = headers.get(col);
+					List<Double> columnData = dataInput.get(header);
 					String cell = "";
 					if (row < columnData.size()) {
 						cell = columnData.get(row).toString();

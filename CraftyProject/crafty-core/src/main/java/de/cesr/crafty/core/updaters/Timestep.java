@@ -29,6 +29,7 @@ public class Timestep extends AbstractUpdater {
 	private static int tick = 0;
 	private static int size;
 
+	
 	public static int getStartYear() {
 		return startYear;
 	}

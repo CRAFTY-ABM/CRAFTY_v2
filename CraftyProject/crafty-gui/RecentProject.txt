@@ -45,3 +45,4 @@ C:\Users\byari-m\Desktop\CRAFTY_DATA\minimal-scenario
 C:\Users\byari-m\Documents\GitRepo\CraftyProject\docs\4-examples\minimal-scenario_data_example
 C:\Users\byari-m\Desktop\CRAFTY_DATA\CRAFTY-Finland\Finland-data
 E:\CRAFTY-Global
+C:\Users\byari-m\Desktop\LandSyMM\crafty_data

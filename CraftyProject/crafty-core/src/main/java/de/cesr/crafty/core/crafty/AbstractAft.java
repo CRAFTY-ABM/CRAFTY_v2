@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class AbstractAft {
 	private String label;
+	private long id;
 	private String completeName;
 	ManagerTypes type;
 	ConcurrentHashMap<String, Double> productivityLevel = new ConcurrentHashMap<>();
@@ -43,12 +44,21 @@ public abstract class AbstractAft {
 	String color;
 	private ConcurrentHashMap<Integer, Double> land_taxes_subsidies = new ConcurrentHashMap<>();// <year,TS>
 	private ConcurrentHashMap<String, Double> capital_adjustments = new ConcurrentHashMap<>(); // <capital_Name,
-																								// adjustment_value>
 
 	private double cachedLandTax;
 
 	protected Map<String, Map<String, Double>> sensitivity = new ConcurrentHashMap<>(); // <service,capital,exponent>
 	private int min_life_cycle = 0, max_life_cycle = Integer.MAX_VALUE;
+
+	
+	
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
 
 	public int getMin_life_cycle() {
 		return min_life_cycle;

@@ -11,6 +11,6 @@
 		<module>crafty-core</module>
 		<module>crafty-gui</module>
 		<module>crafty-institution</module>
-		
+		<module>crafty-plum</module>
 	</modules>
 </project>

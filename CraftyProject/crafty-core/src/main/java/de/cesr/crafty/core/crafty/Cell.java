@@ -8,6 +8,7 @@ import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.updaters.Timestep;
+import de.cesr.crafty.core.utils.general.DeterministicRandom;
 
 /**
  * Concrete spatial cell implementation used during simulation.
@@ -43,6 +44,7 @@ public class Cell extends AbstractCell {
 	public Cell(int x, int y) {
 		this.x = x;
 		this.y = y;
+		this.setCellID(DeterministicRandom.stableCellId(x, y));
 		setCurrentProd(new double[ServiceSet.getServicesList().size()]);
 	}
 

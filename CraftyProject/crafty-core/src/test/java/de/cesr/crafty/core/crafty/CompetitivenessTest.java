@@ -88,17 +88,29 @@ class CompetitivenessTest {
     // utility(...)
     // -------------------------------------------------------
 
+    
+    private double callUtility(Cell c, Aft a, RegionalModelRunner r) {
+        try {
+            Method m = Competitiveness.class.getDeclaredMethod(
+                    "utility", Cell.class, Aft.class, RegionalModelRunner.class
+            );
+            m.setAccessible(true); // bypass private
+            return (double) m.invoke(null, c, a, r); // null because it's static
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
     @Test
     void utility_returnsZero_whenAftNullOrNotInteract() throws Throwable {
         withServices(List.of("S1"), () -> {
             Cell c = new Cell(0, 0);
             RegionalModelRunner r = mock(RegionalModelRunner.class);
 
-            assertEquals(0.0, Competitiveness.utility(c, null, r), 1e-12);
+            assertEquals(0.0, callUtility(c, null, r), 1e-12);
 
             Aft a = mock(Aft.class);
             when(a.isInteract()).thenReturn(false);
-            assertEquals(0.0, Competitiveness.utility(c, a, r), 1e-12);
+            assertEquals(0.0, callUtility(c, a, r), 1e-12);
         });
     }
 
@@ -120,7 +132,7 @@ class CompetitivenessTest {
             doReturn(3.0).when(c).productivity(a, "S2");
 
             // expected: (1+0.5)*2 + (10-2)*3 + 5 = 3 + 24 + 5 = 32
-            assertEquals(32.0, Competitiveness.utility(c, a, r), 1e-12);
+            assertEquals(32.0, callUtility(c, a, r), 1e-12);
         });
     }
 
@@ -315,7 +327,7 @@ class CompetitivenessTest {
             setOwner(c, owner);
 
             // set current utility uO=1
-            c.setcCurrentUtility(1.0);
+            c.setCurrentUtility(1.0);
 
             Aft competitor = mock(Aft.class);
             when(competitor.isInteract()).thenReturn(true);

@@ -1,5 +1,6 @@
 package de.cesr.crafty.core.crafty;
 
+import java.util.Collection;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.StringJoiner;
@@ -72,6 +73,7 @@ public class RegionalModelRunner {
 	private ConcurrentHashMap<String, Double> serviceTax = new ConcurrentHashMap<>();
 	private ConcurrentHashMap<Integer, ConcurrentHashMap<Aft, Double>> distributionMean = new ConcurrentHashMap<>();
 
+	double score;
 	private double maxUtility, minUtility;
 	public Region R;
 
@@ -123,7 +125,6 @@ public class RegionalModelRunner {
 						: 0;
 				aft.setCachedLandTax(100 * calib * tx);
 			}
-
 		});
 	}
 
@@ -150,7 +151,7 @@ public class RegionalModelRunner {
 		cells.forEach(100_000, (k, c) -> {
 			final Aft a = c.owner;
 			if (a == null || !a.isInteract()) {
-				c.setcCurrentUtility(0.0);
+				c.setCurrentUtility(0.0);
 				return;
 			}
 
@@ -158,7 +159,7 @@ public class RegionalModelRunner {
 			for (int i = 0; i < services.length; i++) {
 				u += coeff[i] * c.productivity(a, services[i]);
 			}
-			c.setcCurrentUtility(u);
+			c.setCurrentUtility(u);
 		});
 	}
 
@@ -215,20 +216,6 @@ public class RegionalModelRunner {
 		});
 	}
 
-	private void takeOverUnmanageCells() {
-		LOGGER.trace("Region: [" + R.getName() + "] Take over unmanaged cells & Launching the competition process...");
-		R.getUnmanageCellsR().parallelStream().forEach(c -> {
-			if (Math.random() < ConfigLoader.config.takeOverUnmanageCells_percentage) {
-				Competitiveness.competition(c, this);
-				if (c.getOwner() != null && !c.getOwner().isAbandoned()) {
-					R.getUnmanageCellsR().remove(c);
-					c.setOwnerLifeCounter(0);
-					Listener.landUseChangeCounter.getAndIncrement();
-				}
-			}
-		});
-	}
-
 	private void takeOverMaskedCellByCategories() {
 		if (LandMaskUpdater.cellsMasked.keySet().contains(R.getName())) {
 			LandMaskUpdater.cellsMasked.get(R.getName()).forEach((categoryName, cells) -> {
@@ -276,6 +263,14 @@ public class RegionalModelRunner {
 	private final StepProfiler profiler = new StepProfiler(ConfigLoader.config.printRegionalModelRunnerMeasures);
 
 	public void step() {
+//		double score = DeterministicRandom.randomDouble(
+//		        runSeed,
+//		        Timestep.getCurrentYear(),
+//		        DeterministicRandom.Process.CELL_SELECTION,
+//		        cellId,
+//		        0L,
+//		        0
+//		);
 		profiler.reset();
 
 		try (var t = profiler.section("exportFiles")) {
@@ -323,7 +318,7 @@ public class RegionalModelRunner {
 
 	private void giveUp() {
 		if (ConfigLoader.config.use_abandonment_threshold) {
-			ConcurrentHashMap<String, Cell> randomCellsubSetForGiveUp = SeedUpdater.selectSeed(this,
+			ConcurrentHashMap<String, Cell> randomCellsubSetForGiveUp = SeedUpdater.selectSeed(this, R.getCells(),
 					ConfigLoader.config.land_abandonment_percentage, true, ConfigLoader.config.longSeedID.get());
 			if (randomCellsubSetForGiveUp != null) {
 				randomCellsubSetForGiveUp.values()/**/ .parallelStream().forEach(c -> {
@@ -333,12 +328,42 @@ public class RegionalModelRunner {
 		}
 	}
 
+	private void takeOverUnmanageCells() {
+		LOGGER.trace("Region: [" + R.getName() + "] Take over unmanaged cells ...");
+		Collection<Cell> cells = R.getUnmanageCellsR();
+		ConcurrentHashMap<String, Cell> map = new ConcurrentHashMap<>(cells.size());
+		for (Cell cell : cells) {
+			map.put(cell.getX() + "," + cell.getY(), cell);
+		}
+		ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(this, map,
+				ConfigLoader.config.land_abandonment_percentage, true, ConfigLoader.config.longSeedID.get());
+
+		seed.values().parallelStream().forEach(c -> {
+			if (Math.random() < ConfigLoader.config.takeOverUnmanageCells_percentage) {
+				Competitiveness.competition(c, this);
+				if (c.getOwner() != null && !c.getOwner().isAbandoned()) {
+					R.getUnmanageCellsR().remove(c);
+					c.setOwnerLifeCounter(0);
+					Listener.landUseChangeCounter.getAndIncrement();
+				}
+			}
+		});
+
+	}
+
 	private void competition() {
 		// Randomly select % of the land available for competition
-		ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(this,
+		ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(this, R.getCells(),
 				ConfigLoader.config.participating_cells_percentage, true, ConfigLoader.config.longSeedID.get());
-
 		seed.putAll(cellsWhereOwnerExceededMaxLifeCycle());
+
+//		Map<String, List<String>> csv = new LinkedHashMap<>();
+//		csv.put("ID,X,Y", new ArrayList<String>());
+//		seed.forEach((coor, c) -> {
+//			csv.get("ID,X,Y").add(c.getId() + "," + c.getX() + "," + c.getX());
+//		});
+//		CsvTools.writeCSVfileString(csv, Paths.get(
+//				ConfigLoader.config.output_folder_name + File.separator + "seed" + Timestep.getCurrentYear() + ".csv"));
 
 //				Selector.randomSeed(R.getCells(),
 //				ConfigLoader.config.participating_cells_percentage, ConfigLoader.config.longSeedID);
@@ -446,5 +471,7 @@ public class RegionalModelRunner {
 	public ConcurrentHashMap<String, Double> getMarginal() {
 		return marginal;
 	}
+	
+	private void updateCellsScoresForSeed() {}
 
 }

@@ -38,7 +38,7 @@ public class LLM_connector {
 
 	// policy effects
 	private Map<String, Map<String, Double>> policiesValues = new HashMap<>();// <institute,policy,value>
-	private Map<String, Map<String, Double>> previous_policiesValues = new HashMap<>();// <institute,policy,value>
+	private Map<String, Map<String, Double>> accumulativePolicies = new HashMap<>();// <institute,policy,value>
 
 	private Map<String, Map<String, ArrayList<Double>>> policiesValues_history = new HashMap<>();// <institute,policy,list<values>
 
@@ -82,7 +82,7 @@ public class LLM_connector {
 		});
 
 		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(r -> {
-			policiesValues.forEach((instituteName, hash) -> {
+			accumulativePolicies.forEach((instituteName, hash) -> {// Acumulative Policy not the policy
 				hash.forEach((policyName, value) -> {
 					applyOnePolicy(r, instituteName, policyName, value);
 				});
@@ -101,26 +101,26 @@ public class LLM_connector {
 //					+ " ( " + policyValue + ")");
 //			int tick = Math.max(0, policiesValues_history.get(institutionName).get(policyName).size() -2);
 //			System.out.println(tick+",  "+policiesValues_history.get(institutionName).get(policyName));
-			Double oldPolicy = previous_policiesValues.get(institutionName).get(policyName);
-			if (oldPolicy == null) {
-				oldPolicy = 0d;
-			}
-			double policyValueChange = policyValue - oldPolicy;
+//			Double oldPolicy = previous_policiesValues.get(institutionName).get(policyName);
+//			if (oldPolicy == null) {
+//				oldPolicy = 0d;
+//			}
+//			double policyValueChange = policyValue - oldPolicy;
 			listOfElementMaps.forEach((hash) -> {
 				hash.forEach((element, weight) -> {
 					if (typeName.equalsIgnoreCase("AFT")) {
 						AFTsLoader.getAftHash().get(element).getLand_taxes_subsidies()
-								.merge(Timestep.getCurrentYear() + 1, (weight * policyValueChange / 100), Double::sum);
+								.merge(Timestep.getCurrentYear() + 1, (weight * policyValue / 100), Double::sum);
 					} else if (typeName.equalsIgnoreCase("Service")) {
 						r.R.getServicesHash().get(element).getTaxes_subsidies().merge(Timestep.getCurrentYear() + 1,
-								(weight * policyValueChange / 100), Double::sum);
+								(weight * policyValue / 100), Double::sum);
 					} else if (typeName.equalsIgnoreCase("Capital")) {
 						String[] str = element.split(":");
 						if (AFTsLoader.getActivateAFTsHash().keySet().contains(str[0])
 								&& CapitalUpdater.getCapitalsList().contains(str[1])) {
 							shoudlUpdateCapitalAdjustments.set(true);
 							AFTsLoader.getActivateAFTsHash().get(str[0]).getCapital_adjustments().merge(str[1],
-									(weight * policyValueChange / 100), Double::sum);
+									(weight * policyValue / 100), Double::sum);
 						}
 					}
 					collector.policyEffectsListner
@@ -173,16 +173,16 @@ public class LLM_connector {
 			policies.forEach((policyName, value) -> {
 				if (IPs.get(instituteName).containsKey(policyName)) {
 					policiesValues.get(instituteName).put(policyName, value);
+					accumulativePolicies.get(instituteName).merge(policyName, value, Double::sum);
 					policiesValues_history.get(instituteName).get(policyName).add(value);
 				}
 			});
 		} else {
-			policiesValues.forEach((institute, hash) -> {
-				previous_policiesValues.put(instituteName, hash);
-			});
+
 			policiesValues_history.get(instituteName).forEach((policyName, list) -> {
 				double v = !list.isEmpty() ? list.getLast() : 0;
 				policiesValues.get(instituteName).put(policyName, v);
+
 			});
 		}
 	}
@@ -286,7 +286,7 @@ public class LLM_connector {
 			String intName = dir.getName().replace("institute@", "").toLowerCase();
 			instituteTocrafty_Output_Observed.put(intName, new ArrayList<>());
 			policiesValues.put(intName, new HashMap<>());
-			previous_policiesValues.put(intName, new HashMap<>());
+			accumulativePolicies.put(intName, new HashMap<>());
 			policiesValues_history.put(intName, new HashMap<>());
 			IPs.put(intName, tmp);
 			List<Path> policy_List = PathTools.findAllFilePaths(dir.toPath());

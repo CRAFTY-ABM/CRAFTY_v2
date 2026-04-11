@@ -130,7 +130,6 @@ public class MaskLoader {
 		ArrayList<Path> MasksFilesBySce = PathTools.fileFilter(true,
 				ProjectLoader.getProjectPath() + PathTools.asFolder("worlds") + "LandUseControl",
 				ProjectLoader.getScenario(), PathTools.asFolder(maskType));
-
 		TreeMap<Integer, Path> maskFinder = new TreeMap<>();
 
 		MasksFilesBySce.forEach(path -> {

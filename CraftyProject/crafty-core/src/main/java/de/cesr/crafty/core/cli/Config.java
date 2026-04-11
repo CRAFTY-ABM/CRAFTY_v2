@@ -40,6 +40,7 @@ public class Config {
 	public String metaData_directory = "";
 	public String BASELINE_path = "";
 	public String CAPITALS_directory = "";
+	public String gisPath = "";
 	public List<String> landControle_directories = null;
 	public String Behevoir_Cells_directory = "";;
 	public String SHOCKS_Maps_directory = "";;
@@ -84,6 +85,8 @@ public class Config {
 	public boolean generate_charts_plots_PDF = false;
 	public boolean generate_map_output_files = true;
 	public boolean generate_map_plots_tif = false;
+	public boolean generate_map_PAs_forced = false;
+
 	public int map_output_frequency = 10;
 	public boolean track_changes = false;
 	public boolean export_LOGGER = true;
@@ -156,6 +159,10 @@ public class Config {
 	public int start_year_of_policy_effect = 0;
 	public int end_year_of_policy_effect = Integer.MAX_VALUE;
 	public int institution_time_lag = 1;
-	
+//	 Only when CRAFTY coupled with PLUM
+	public boolean COUPLED_WITH_PLUM = false;
+	public String plumCalibPath = "";
+	public String plumOutPutPath = "";
+	public String services_commodities_map = "";
 
 }

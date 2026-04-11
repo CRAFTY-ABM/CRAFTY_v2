@@ -79,7 +79,7 @@ public class CapitalsAnalyzer {
 		});
 
 		CapitalUpdater.getCapitalsList().forEach(capitalName -> {
-			Map<String, ArrayList<Double>> data = new ConcurrentHashMap<>();
+			Map<String, List<Double>> data = new ConcurrentHashMap<>();
 			ProjectLoader.getScenariosList().forEach(scenario -> {
 
 				if (!scenario.equals("Baseline")) {

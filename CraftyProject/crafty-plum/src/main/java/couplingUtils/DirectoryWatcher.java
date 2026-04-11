@@ -1,4 +1,4 @@
-package de.cesr.crafty.core.utils.file;
+package couplingUtils;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -10,27 +10,21 @@ import java.util.concurrent.TimeoutException;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
-/**
- * Waits until a directory named {@code prefix + "_" + year} appears under
- * {@code parentDir}, or throws a TimeoutException if not found before
- * {@code timeout}.
- *
- * @param timeout how long to wait in total
- * @return Path to the created directory
- * @throws IOException          if I/O fails
- * @throws TimeoutException     if the folder wasn't created in time
- * @throws InterruptedException if the thread is interrupted while waiting
- */
-/**
- * @author Mohamed Byari
- *
- */
 public class DirectoryWatcher {
 
-
+	/**
+	 * Waits until a directory named {@code prefix + "_" + year} appears under
+	 * {@code parentDir}, or throws a TimeoutException if not found before
+	 * {@code timeout}.
+	 *
+	 * @param timeout how long to wait in total
+	 * @return Path to the created directory
+	 * @throws IOException          if I/O fails
+	 * @throws TimeoutException     if the folder wasn't created in time
+	 * @throws InterruptedException if the thread is interrupted while waiting
+	 */
 	public static void waitForYearFolder(Path path) {
-		final Instant deadline = Instant.now().plus(Duration.ofMinutes(40));
-		System.out.println("waitForYearFolder waiting for: "+ path);
+		final Instant deadline = Instant.now().plus(Duration.ofMinutes(30));
 		try {
 			Path parentDir = path.getParent();
 			if (!Files.isDirectory(parentDir)) {
@@ -48,7 +42,6 @@ public class DirectoryWatcher {
 				while (true) {
 					long remainingMs = Duration.between(Instant.now(), deadline).toMillis();
 					System.out.print(".");
-					
 					// 2) check file
 					if (existsAsFileOrDir(targetPath)) {
 						System.out.println("Found");
@@ -79,22 +72,16 @@ public class DirectoryWatcher {
 	private static boolean existsAsFileOrDir(Path p) {
 		return (Files.isRegularFile(p) || Files.isDirectory(p));
 	}
-	
-    public static void writeDoneFile(Path dir, int year) {
-        try {
-            Files.createDirectories(dir);
 
-            Path current = dir.resolve("done_" + year);
-            // Create or truncate to ensure it's empty
-            Files.write(current, new byte[0],
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING);
+	// --- Example usage ---
+	public static void main(String[] args) {
+		try {
+			Path parent = Paths.get("C:\\Users\\byari-m\\Documents\\Data\\PLUM\\PLUM_output\\run2\\crafty\\x\\y");
 
-            Path previous = dir.resolve("done_" + (year - 1));
-            Files.deleteIfExists(previous);
-
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to write done file for year " + year + " in " + dir, e);
-        }
-    }
+			waitForYearFolder(parent);
+			System.out.println("----");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }

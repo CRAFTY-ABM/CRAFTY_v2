@@ -101,7 +101,7 @@ class CsvToolsTest {
     @Test
     void writeCsvFileFromMapShouldWriteColumnsPerHeader() throws IOException {
         // Use LinkedHashMap to preserve insertion order of headers
-        Map<String, ArrayList<Double>> data = new LinkedHashMap<>();
+        Map<String, List<Double>> data = new LinkedHashMap<>();
 
         data.put("A", new ArrayList<>(Arrays.asList(1.0, 2.0)));
         data.put("B", new ArrayList<>(Arrays.asList(10.0, 20.0, 30.0)));

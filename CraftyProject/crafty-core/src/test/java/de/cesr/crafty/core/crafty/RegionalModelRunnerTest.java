@@ -197,8 +197,8 @@ class RegionalModelRunnerTest {
 
 			Cell c1 = new Cell(0, 0);
 			Cell c2 = new Cell(1, 1);
-			c1.setcCurrentUtility(3.0);
-			c2.setcCurrentUtility(-1.0);
+			c1.setCurrentUtility(3.0);
+			c2.setCurrentUtility(-1.0);
 
 			ConcurrentHashMap<String, Cell> cells = new ConcurrentHashMap<>();
 			cells.put("0,0", c1);
@@ -282,8 +282,8 @@ class RegionalModelRunnerTest {
 			Cell c2 = new Cell(1, 1);
 			setField(c1, "owner", owner);
 			setField(c2, "owner", owner);
-			c1.setcCurrentUtility(10.0);
-			c2.setcCurrentUtility(6.0);
+			c1.setCurrentUtility(10.0);
+			c2.setCurrentUtility(6.0);
 
 			ConcurrentHashMap<String, Cell> cells = new ConcurrentHashMap<>();
 			cells.put("0,0", c1);

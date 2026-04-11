@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.utils.general.DeterministicRandom;
 
 /**
  * Concrete Agent Functional Type (AFT) implementation used as the land manager/owner for cells.
@@ -63,6 +64,7 @@ public class Aft extends AbstractAft {
 			setColor("#cccccc");
 			setCategory(new AftCategory("Uncategorized"));
 		}
+		DeterministicRandom.stableAftId(label);
 	}
 
 	@Override
