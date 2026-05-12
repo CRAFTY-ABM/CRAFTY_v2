@@ -32,16 +32,20 @@ public abstract class AbstractCell {
 	private String id;
 	int x, y;
 	private ConcurrentHashMap<String, Double> capitals = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String, Double> ServicesTax = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String, Double> landTax = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String, Double> capitalsAdjusment = new ConcurrentHashMap<>();
+
 	private double[] currentProd;
 	private double currentUtility;
 	String CurrentRegion;
-	Aft owner;
+	private Aft owner;
 	protected String color = "#848484";
 	private String maskType;
 	private int OwnerLifeCounter = 1;
 
 	private long sID;
-	private long score;
+	private double score;
 
 	public long getCellID() {
 		return sID;
@@ -50,14 +54,12 @@ public abstract class AbstractCell {
 	public void setCellID(long sID) {
 		this.sID = sID;
 	}
-	
-	
 
-	public long getScore() {
+	public double getScore() {
 		return score;
 	}
 
-	public void setScore(long score) {
+	public void setScore(double score) {
 		this.score = score;
 	}
 
@@ -73,6 +75,10 @@ public abstract class AbstractCell {
 		OwnerLifeCounter++;
 	}
 
+	public double getCurrentUtility() {
+		return currentUtility;
+	}
+
 	public void setCurrentUtility(double currentUtility) {
 		this.currentUtility = currentUtility;
 	}
@@ -83,10 +89,6 @@ public abstract class AbstractCell {
 
 	public void setCurrentRegion(String currentRegion) {
 		CurrentRegion = currentRegion;
-	}
-
-	public double getCurrentUtility() {
-		return currentUtility;
 	}
 
 	public String getColor() {
@@ -136,7 +138,7 @@ public abstract class AbstractCell {
 	}
 
 	public ConcurrentHashMap<String, Double> getCapitals() {
-		return capitals;
+		return capitals ;
 	}
 
 	public double getOneCapitals(String capitalName) {
@@ -191,6 +193,18 @@ public abstract class AbstractCell {
 
 	public void setCapitals(ConcurrentHashMap<String, Double> capitals) {
 		this.capitals = capitals;
+	}
+
+	public ConcurrentHashMap<String, Double> getServicesTax() {
+		return ServicesTax;
+	}
+
+	public ConcurrentHashMap<String, Double> getLandTax() {
+		return landTax;
+	}
+
+	public ConcurrentHashMap<String, Double> getCapitalsAdjusment() {
+		return capitalsAdjusment;
 	}
 
 }

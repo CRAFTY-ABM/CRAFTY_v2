@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import de.cesr.crafty.core.cli.Config;
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 
@@ -23,7 +25,7 @@ class CellBehaviourTest {
 
 		// --- Owner AFT ---
 		owner = new Aft("Owner");
-		owner.category = lowIntensity; 
+		owner.category = lowIntensity;
 
 		// --- Competitor with same category (same intensity level) ---
 		competitorSameCategory = new Aft("CompetitorSame");
@@ -33,9 +35,9 @@ class CellBehaviourTest {
 		competitorHigherIntensity = new Aft("CompetitorHigh");
 		competitorHigherIntensity.category = highIntensity;
 
-		// --- Cell owned by 'owner' 
+		// --- Cell owned by 'owner'
 		cell = new Cell(0, 0);
-		cell.owner = owner; 
+		cell.setOwner(owner);
 
 		// --- CellBehaviour with some parameter values ---
 		behaviour = new CellBehaviour(cell);
@@ -50,6 +52,9 @@ class CellBehaviourTest {
 		// active)
 		AftCategorised.useCategorisationGivIn = true;
 		CellBehaviourUpdater.behaviourUsed = true;
+		 if (ConfigLoader.config == null) {
+				ConfigLoader.config = new Config();
+			}
 	}
 
 	@Test
@@ -95,8 +100,8 @@ class CellBehaviourTest {
 		double combinedInfluence = (1.0 - behaviour.getWeight_social()) * attitudeInfluence
 				+ behaviour.getWeight_social() * socialInfluence;
 
-		double exponent = behaviour.steepness_logistic_eq * combinedInfluence
-				+ behaviour.getWeight_inertia() * Math.abs(gap);
+		double exponent = ConfigLoader.config.steepness_logistic_eq
+				* (combinedInfluence - behaviour.getWeight_inertia() * Math.abs(gap));
 
 		double expected = behaviour.getMaxGive_in() / (1.0 + Math.exp(exponent));
 

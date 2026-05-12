@@ -211,8 +211,8 @@ public class AftsUpdater extends AbstractUpdater {
 		a.setGiveUpMean(Utils.sToD(reder.get("givingUpDistributionMean").get(0)));
 		a.setGiveInSD(Utils.sToD(reder.get("givingInDistributionSD").get(0)));
 		a.setGiveUpSD(Utils.sToD(reder.get("givingUpDistributionSD").get(0)));
-		a.setServiceLevelNoiseMin(Utils.sToD(reder.get("serviceLevelNoiseMin").get(0)));
-		a.setServiceLevelNoiseMax(Utils.sToD(reder.get("serviceLevelNoiseMax").get(0)));
+//		a.setServiceLevelNoiseMin(Utils.sToD(reder.get("serviceLevelNoiseMin").get(0)));
+//		a.setServiceLevelNoiseMax(Utils.sToD(reder.get("serviceLevelNoiseMax").get(0)));
 		a.setGiveUpProbabilty(Utils.sToD(reder.get("givingUpProb").get(0)));
 	}
 
@@ -221,7 +221,7 @@ public class AftsUpdater extends AbstractUpdater {
 		if (path == null) {
 			LOGGER.info("AFT lan_taxes_subsidies file not fund for |" + R.getName()
 					+ "| default value will use: land_taxes_subsidies = 0 for all AFts");
-			useDefaultTS(R);
+			ConfigLoader.config.consider_subsidies_taxes = false;
 			return;
 		}
 		Map<String, List<String>> hashTS = CsvProcessors.ReadAsaHash(path);
@@ -242,16 +242,6 @@ public class AftsUpdater extends AbstractUpdater {
 			}
 		});
 
-	}
-
-	private static void useDefaultTS(Region R) {
-		AFTsLoader.getActivateAFTsHash().values().forEach((a) -> {
-			ConcurrentHashMap<Integer, Double> dv = new ConcurrentHashMap<>();
-			for (int i = 0; i < Timestep.getSize(); i++) {
-				dv.put(i + Timestep.getStartYear(), 0.);
-			}
-			a.setLand_taxes_subsidies(dv);
-		});
 	}
 
 	private static Path landTSPath(Region R) {

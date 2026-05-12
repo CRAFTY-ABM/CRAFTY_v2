@@ -2,8 +2,10 @@ package de.cesr.crafty.core.updaters;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.RegionalModelRunner;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
+import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 
 /**
@@ -33,8 +35,11 @@ import de.cesr.crafty.core.dataLoader.land.CellsLoader;
  */
 
 public class RegionsModelRunnerUpdater extends AbstractUpdater {
+	private static final CustomLogger LOGGER = new CustomLogger(RegionsModelRunnerUpdater.class);
 
 	public static ConcurrentHashMap<String, RegionalModelRunner> regionsModelRunner;
+
+	private Runnable step = this::doStep;
 
 	public RegionsModelRunnerUpdater() {
 		regionsModelRunner = new ConcurrentHashMap<>();
@@ -50,11 +55,22 @@ public class RegionsModelRunnerUpdater extends AbstractUpdater {
 
 	@Override
 	public void step() {
-		regionsModelRunner.values().forEach(RegionalRunner -> {
-			RegionalRunner.step();
-		});
+		LOGGER.info("Use Behevoir Model= " + (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed));
+		step.run();
 		AFTsLoader.hashAgentNbrRegions();
 		AFTsLoader.hashAgentNbr();
 	}
 
+	private void doStep() {
+		regionsModelRunner.values().forEach(RegionalRunner -> {
+			RegionalRunner.step();
+		});
+	}
+
+	public void setStep(Runnable step) {
+		this.step = (step != null) ? step : this::doStep;
+	}
+//			RegionalRunner.setCellsUtilities(() -> {
+//			System.out.println("change the cells utilities ");
+//		});
 }

@@ -194,7 +194,7 @@ public class LandMaskUpdater extends AbstractUpdater {
 				LOGGER.error("Mask CSV missing X or Y columns: " + path);
 				return;
 			}
-			// Match old behavior: only clean after we confirm file is readable
+			// only clean after we confirm file is readable
 			cleanMaskType(maskType);
 
 			String line;
@@ -246,6 +246,7 @@ public class LandMaskUpdater extends AbstractUpdater {
 				c.setMaskType(null);
 				if (c.getOwner() != null && maskType.contains(c.getOwner().getLabel())) {
 					c.setOwner(null);
+//					CellsUpdater.decesionsNewOwner.put(c, AFTsLoader.getAftHash().get("Abandoned"));
 				}
 			}
 		});
@@ -263,6 +264,7 @@ public class LandMaskUpdater extends AbstractUpdater {
 							.merge((c.getOwner() != null ? c.getOwner().getLabel() : "Abandoned"), 1, Integer::sum);
 				}
 				c.setOwner(a);
+//				CellsUpdater.decesionsNewOwner.put(c, a);
 				cellsForecedToChange.get(maskType).put(c.getX() + "," + c.getY(), c);
 				shoudlReturn = true;
 				if (isExactName) {
@@ -280,6 +282,7 @@ public class LandMaskUpdater extends AbstractUpdater {
 						&& !c.getOwner().getCategory().getName().equals(categoryName)) || (c.getOwner() == null)) {
 					cellsMasked.get(ProjectLoader.WorldName).get(categoryName).add(c);
 					c.setOwner(null);
+//					CellsUpdater.decesionsNewOwner.put(c, AFTsLoader.getAftHash().get("Abandoned"));
 					return;
 				}
 			}

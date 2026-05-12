@@ -5,6 +5,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.ToLongFunction;
 
+import de.cesr.crafty.core.crafty.Cell;
+
 /**
  * Deterministic, stateless pseudo-random utilities for reproducible model decisions.
  *
@@ -33,12 +35,17 @@ public final class DeterministicRandom {
      * Add more if needed, but keep them stable once used in experiments.
      */
     public static final class Process {
-        public static final int CELL_SELECTION = 1;
-        public static final int COMPETITOR_PICK = 2;
-        public static final int NEIGHBOR_PICK = 3;
-        public static final int NON_NEIGHBOR_PICK = 4;
-        public static final int ABANDONMENT_TAKEOVER = 5;
-        public static final int TIE_BREAK = 6;
+        public static final int CELL_SELECTION_COMPETITION = 1;
+        public static final int CELL_SELECTION_ABANDONMENT = 2;
+        public static final int CELL_SELECTION_UNMANAGED_TAKEOVER = 3;
+        public static final int COMPETITOR_PICK = 4;
+        public static final int NEIGHBOR_PICK = 5;
+        public static final int NON_NEIGHBOR_PICK =6;
+        public static final int ABANDONMENT_TAKEOVER = 7;
+        public static final int TIE_BREAK = 8;
+        public static final int GIVE_UP_GAUSSIAN = 9;
+        public static final int GIVE_UP_PROBABILITY = 10;
+        public static final int GIVE_IN_THRESHOLD = 11;
 
         private Process() {
         }
@@ -83,7 +90,9 @@ public final class DeterministicRandom {
         z = mix64(z ^ (long) y);
         return z;
     }
-
+    public static long stableCellKey(Cell c) {
+        return (((long) c.getX()) << 32) ^ (c.getY() & 0xffffffffL);
+    }
 
     /**
      * Stable AFT ID from a persistent label/name.
@@ -225,5 +234,24 @@ public final class DeterministicRandom {
                                    long aftId) {
 
         return randomKey(runSeed, year, Process.TIE_BREAK, cellId, aftId, 0);
+    }
+    
+    /**
+     * Deterministic pseudo-random Gaussian ~ N(0,1).
+     * Uses Box-Muller with two deterministic uniform draws.
+     */
+    public static double randomGaussian(long runSeed,
+                                        int year,
+                                        int processCode,
+                                        long cellId,
+                                        long aftId,
+                                        int drawIndex) {
+
+        // Two independent uniforms in (0,1]
+        double u1 = 1.0 - randomDouble(runSeed, year, processCode, cellId, aftId, drawIndex * 2);
+        double u2 = 1.0 - randomDouble(runSeed, year, processCode, cellId, aftId, drawIndex * 2 + 1);
+
+        return StrictMath.sqrt(-2.0 * StrictMath.log(u1))
+                * StrictMath.cos(2.0 * StrictMath.PI * u2);
     }
 }

@@ -1,11 +1,13 @@
 package de.cesr.crafty.core.updaters;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.crafty.CellBehaviour;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
@@ -57,8 +59,10 @@ public class CellBehaviourUpdater extends AbstractUpdater {
 
 	public CellBehaviourUpdater() {
 		if (AftCategorised.useCategorisationGivIn) {
-			behaviourUsed = PathTools.fileFilter(PathTools.asFolder("behaviour"), ProjectLoader.getScenario(),
-					"Cell_behaviour_parameters", Timestep.getStartYear() + ".csv") != null;
+			behaviourUsed = Paths.get(ConfigLoader.config.Behevoir_Cells_directory).toFile().isDirectory()
+					|| PathTools.fileFilter(PathTools.asFolder("behaviour"), ProjectLoader.getScenario(),
+							"Cell_behaviour_parameters", Timestep.getStartYear() + ".csv") != null;
+//			System.out.println("Use CellBehaviourUpdater=  " + behaviourUsed);
 			step();
 		}
 	}
@@ -70,13 +74,20 @@ public class CellBehaviourUpdater extends AbstractUpdater {
 
 	@Override
 	public void step() throws IndexOutOfBoundsException {
-		if (!behaviourUsed)
+		if (!behaviourUsed) {
 			return;
-		ArrayList<Path> files = PathTools.fileFilter(PathTools.asFolder("behaviour"), ProjectLoader.getScenario(),
-				"Cell_behaviour_parameters", Timestep.getCurrentYear() + ".csv");
+		}
+		ArrayList<Path> files = PathTools.findAllFilePaths(Paths.get(ConfigLoader.config.Behevoir_Cells_directory));
+		if (files != null && !files.isEmpty()) {
+			files = PathTools.fileFilter(files, "Cell_behaviour_parameters", Timestep.getCurrentYear() + ".csv");
+		} else {
+			files = PathTools.fileFilter(PathTools.asFolder("behaviour"), ProjectLoader.getScenario(),
+					"Cell_behaviour_parameters", Timestep.getCurrentYear() + ".csv");
+		}
 		if (files == null || files.isEmpty())
 			return;
 		Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(files.get(0));
+
 		if (csv == null)
 			return;
 		for (int i = 0; i < csv.get("X").size(); i++) {
@@ -88,7 +99,8 @@ public class CellBehaviourUpdater extends AbstractUpdater {
 			behaviour.setCritical_mass(Utils.sToD(csv.get("Critical_mass").get(i)));
 			behaviour.setNeighborhood_size(Utils.sToI(csv.get("Neighborhood_size").get(i)));
 			behaviour.setMaxGive_in(Utils.sToD(csv.get("MaxGive_in").get(i)));
-			cellsBehevoir.put(c, behaviour);
+			if (c != null)
+				cellsBehevoir.put(c, behaviour);
 		}
 
 	}

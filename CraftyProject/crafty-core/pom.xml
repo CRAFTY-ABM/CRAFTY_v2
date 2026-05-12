@@ -79,6 +79,12 @@
 			<artifactId>okhttp</artifactId>
 			<version>4.12.0</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>net.mahdilamb</groupId>
+			<artifactId>colormap</artifactId>
+			<version>0.9.511</version>
+		</dependency>
 
 		<!-- geoTools -->
 		<!-- Core GeoTools libraries -->

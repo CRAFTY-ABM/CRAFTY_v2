@@ -13,7 +13,7 @@ import de.cesr.crafty.core.modelRunner.ModelRunner;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
-import institutions.InstitutionManager;
+import institutions_Fuzzy.InstitutionManager;
 import utils.External_variables_Manager;
 import utils.InstitutionOutput;
 import utils.TargetModelOutput;
@@ -37,6 +37,7 @@ public class Connector_Runner {
 		MainHeadless.runner.start();
 		MainHeadless.runner.initialzeRun();
 		External_variables_Manager.Initializer();
+		ConfigLoader.config.consider_subsidies_taxes = true;
 		// -------------------
 		InstitutionManager institutionManager = new InstitutionManager();
 		Path directory = Paths.get(ConfigLoader.config.institutions_directory);
@@ -57,8 +58,8 @@ public class Connector_Runner {
 			try {
 				// Load institutions
 				institutionManager.loadInstitutions(institutionsJsonPath.toString(), fclPath.toString(),
-						ConfigLoader.config.institution_time_lag, true);
-				LOGGER.info("institution_time_lag= "+ConfigLoader.config.institution_time_lag);
+						4, true);
+				LOGGER.info("institution_time_lag= "+4);
 				// get initial policy values
 				InstitutionOutput institutionOutput = institutionManager.getInitPolicies();
 				Connector model = new Connector(institutionManager);

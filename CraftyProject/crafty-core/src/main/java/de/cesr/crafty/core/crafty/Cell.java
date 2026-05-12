@@ -1,9 +1,9 @@
 package de.cesr.crafty.core.crafty;
 
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
@@ -62,8 +62,8 @@ public class Cell extends AbstractCell {
 			final double p = e.getValue();
 			if (p == 0.0)
 				continue;
-
-			final double capVal = getCapitals().getOrDefault(e.getKey(), 0.0); // assumes present
+			final double capVal = (getCapitals().getOrDefault(e.getKey(), 0.)
+					* (1 + getCapitalsAdjusment().getOrDefault(e.getKey(), 0.))); // assumes present
 			if (p == 1.0)
 				product *= capVal;
 			else
@@ -75,41 +75,87 @@ public class Cell extends AbstractCell {
 
 	public void calculateCurrentProductivity() {
 		for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
-			getCurrentProd()[i] = productivity(owner, ServiceSet.getServicesList().get(i));
+			getCurrentProd()[i] = productivity(getOwner(), ServiceSet.getServicesList().get(i));
 		}
 	}
 
 	public void calculateCurrentProductivity(String[] services) {
 		for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
-			getCurrentProd()[i] = productivity(owner, services[i]);
+			getCurrentProd()[i] = productivity(getOwner(), services[i]);
 		}
 	}
 
+//	void giveUp(RegionalModelRunner r, ConcurrentHashMap<Aft, Double> distributionMean) {
+//
+//		if (getOwner() != null && getOwner().isInteract()) {
+//////##########		// tmp for special rules
+////			if (owner.getCategory() != null && owner.getCategory().getName().equals("forest")) {
+////				return;
+////			}
+////			###
+////			if (owner.getLabel().equals("CW")) {
+////				return;
+////			}
+////############
+//			String oldOwner = getOwner().getLabel();
+//			double utility = getCurrentUtility();
+//			double averageutility = distributionMean.get(getOwner());
+//			boolean givUp= (utility < averageutility
+//					* (getOwner().getGiveUpMean() + getOwner().getGiveUpSD() * new Random().nextGaussian())
+//					&& getOwner().getGiveUpProbabilty() > Math.random());
+//			if (givUp) {
+//				CellsUpdater.decesionsNewOwner.put(this, new Aft("Abandoned"));
+//				r.R.getUnmanageCellsR().add(this);
+//				setOwnerLifeCounter(0);
+//				Listener.landUseChangeCounter.getAndIncrement();
+//				Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
+//				Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
+//			}
+//		}
+//	}
+
 	void giveUp(RegionalModelRunner r, ConcurrentHashMap<Aft, Double> distributionMean) {
 
-		if (owner != null && getOwner().isInteract()) {
-////##########		// tmp for special rules
-//			if (owner.getCategory() != null && owner.getCategory().getName().equals("forest")) {
-//				return;
-//			}
-//			###
-//			if (owner.getLabel().equals("CW")) {
-//				return;
-//			}
-//############
-			String oldOwner = owner.getLabel();
-			double utility = getCurrentUtility();
-			double averageutility = distributionMean.get(getOwner());
-			if ((utility < averageutility
-					* (getOwner().getGiveUpMean() + getOwner().getGiveUpSD() * new Random().nextGaussian())
-					&& getOwner().getGiveUpProbabilty() > Math.random())) {
-				setOwner(null);
-				r.R.getUnmanageCellsR().add(this);
-				setOwnerLifeCounter(0);
-				Listener.landUseChangeCounter.getAndIncrement();
-				Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
-				Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
-			}
+		Aft owner = getOwner();
+		if (owner == null || !owner.isInteract()) {
+			return;
+		}
+
+		Double averageUtilityObj = distributionMean.get(owner);
+		if (averageUtilityObj == null) {
+			return;
+		}
+
+		double utility = getCurrentUtility();
+		double averageUtility = averageUtilityObj;
+
+		long runSeed = ConfigLoader.config.longSeedID.get();
+		int year = Timestep.getCurrentYear();
+
+		long cellId = DeterministicRandom.stableCellKey(this);
+		long aftId = DeterministicRandom.stableAftId(owner.getLabel());
+
+		double gaussian = DeterministicRandom.randomGaussian(runSeed, year,
+				DeterministicRandom.Process.GIVE_UP_GAUSSIAN, cellId, aftId, 0);
+
+		double thresholdFactor = owner.getGiveUpMean() + owner.getGiveUpSD() * gaussian;
+
+		boolean passesUtilityTest = utility < averageUtility * thresholdFactor;
+		boolean passesProbabilityTest = DeterministicRandom.randomBoolean(runSeed, year,
+				DeterministicRandom.Process.GIVE_UP_PROBABILITY, cellId, aftId, 0, owner.getGiveUpProbabilty());
+
+		boolean giveUp = passesUtilityTest && passesProbabilityTest;
+//		System.out.println("Utility= "+utility +" average Utiulity= "+ averageUtility +" threshold= "+ thresholdFactor+"==> "+giveUp);
+		if (giveUp) {
+			String oldOwner = getOwner().getLabel();
+			setOwner(null);
+//			CellsUpdater.decesionsNewOwner.put(this, AFTsLoader.getAftHash().get("Abandoned"));
+			r.R.getUnmanageCellsR().add(this);
+			setOwnerLifeCounter(0);
+			Listener.landUseChangeCounter.getAndIncrement();
+			Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
+			Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
+//			RegionalModelRunner.tmp.getAndIncrement();
 		}
 	}
 

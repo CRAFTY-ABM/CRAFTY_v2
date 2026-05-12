@@ -1,6 +1,7 @@
 package de.cesr.crafty.core.dataLoader.afts;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,6 +11,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.AftCategory;
@@ -105,9 +107,16 @@ public class AftCategorised {
 
 	public static void initializeBehevoirByCategories() {
 		if (aftCategories.size() > 1) {
-			ArrayList<Path> paths = PathTools.fileFilter(PathTools.asFolder("AFTs"), PathTools.asFolder("behaviour"),
-					"categories_givingInDistribution");
-			if (paths != null) {
+			ArrayList<Path> paths = null;
+			if (Paths.get(ConfigLoader.config.categories_givingInDistribution).toFile().isDirectory()) {
+				paths = PathTools.findAllFilePaths(Paths.get(ConfigLoader.config.categories_givingInDistribution));
+			} else {
+				paths = PathTools.fileFilter(PathTools.asFolder("AFTs"), PathTools.asFolder("behaviour"),
+						"categories_givingInDistribution");
+			}
+//			System.out.println("--> " + paths);
+
+			if (paths != null && !paths.isEmpty()) {
 				Path mean_path = paths.stream()
 						.filter(path -> path.toString().contains("Mean_" + ProjectLoader.getScenario())).findFirst()
 						.orElse(paths.stream().filter(path -> path.toString().contains("Mean_Default")).findFirst()
@@ -120,9 +129,12 @@ public class AftCategorised {
 					mean = CsvProcessors.readCsvToMatrixMap(mean_path);
 					SD = CsvProcessors.readCsvToMatrixMap(SD_path);
 				}
+
+				useCategorisationGivIn = mean != null && SD != null;
 			}
-			useCategorisationGivIn = mean != null && SD != null;
 		}
+
+//		System.out.println("!! " + AftCategorised.useCategorisationGivIn + " , " + CellBehaviourUpdater.behaviourUsed);
 	}
 
 	public static HashMap<String, Double> getMean() {

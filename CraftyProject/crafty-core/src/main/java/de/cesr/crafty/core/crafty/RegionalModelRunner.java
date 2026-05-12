@@ -5,6 +5,7 @@ import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
@@ -19,6 +20,7 @@ import de.cesr.crafty.core.updaters.SeedUpdater;
 import de.cesr.crafty.core.updaters.ServicesUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.analysis.StepProfiler;
+import de.cesr.crafty.core.utils.general.DeterministicRandom;
 import de.cesr.crafty.core.utils.general.Utils;
 
 /**
@@ -89,9 +91,59 @@ public class RegionalModelRunner {
 		}
 	}
 
+	private final StepProfiler profiler = new StepProfiler(ConfigLoader.config.printRegionalModelRunnerMeasures);
+
+	public void step() {
+		profiler.reset();
+
+		try (var t = profiler.section("exportFiles")) {
+			listner.exportFiles(getRegionalSupply());
+		}
+		try (var t = profiler.section("compute Marginal")) {
+			computeMarginal();
+		}
+		try (var t = profiler.section("servicesTax")) {
+			servicesTax();
+		}
+		try (var t = profiler.section("landTS")) {
+			landTS();
+		}
+		try (var t = profiler.section("associet Taxes To Cells")) {
+			taxesToCells.run();
+		}
+		try (var t = profiler.section("utilitytyForAll")) {
+			utilitytyForAll();
+		}
+		try (var t = profiler.section("compute DistributionMean")) {
+			computeDistributionMean();
+		}
+		try (var t = profiler.section("compute MaxMinUtility")) {
+			computeMaxMinUtility();
+		}
+		try (var t = profiler.section("takeOverMaskedCellByCategories")) {
+			takeOverMaskedCellByCategories();
+		}
+		try (var t = profiler.section("giveUp")) {
+			giveUp();
+		}
+		try (var t = profiler.section("takeOverUnmanageCells")) {
+			takeOverUnmanageCells();
+		}
+		try (var t = profiler.section("competition")) {
+			competition();
+		}
+		try (var t = profiler.section("hashAgentNbr")) {
+			AFTsLoader.hashAgentNbr(R.getName());
+		}
+
+		LOGGER.info(profiler
+				.report("RegionalModelRunner (year=" + Timestep.getCurrentYear() + ", region=" + R.getName() + ")"));
+
+	}
+
 	private void computeRegionsSupply() {
 		setRegionalSupply(new ConcurrentHashMap<>());
-		R.getCells().values().parallelStream()/**/.forEach(c -> {
+		R.getCells().values().parallelStream().forEach(c -> {
 			for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
 				getRegionalSupply().merge(ServiceSet.getServicesList().get(i), c.getCurrentProd()[i], Double::sum);
 			}
@@ -113,6 +165,33 @@ public class RegionalModelRunner {
 		});
 	}
 
+	private Runnable taxesToCells = this::associetTaxesToCells;
+
+	public void setCellsUtilities(Runnable taxesToCells) {
+		this.taxesToCells = (taxesToCells != null) ? taxesToCells : this::associetTaxesToCells;
+	}
+
+	public void resetCellsUtilities() {
+		this.taxesToCells = this::associetTaxesToCells;
+	}
+
+	private void associetTaxesToCells() {
+		if (!ConfigLoader.config.consider_subsidies_taxes)
+			return;
+		final var cells = R.getCells();
+		cells.forEach(100_000, (k, c) -> {
+			ServiceSet.getServicesList().forEach(serviceName -> {
+				c.getServicesTax().put(serviceName, serviceTax.get(serviceName));
+			});
+			if (c.getOwner() != null) {
+
+				AFTsLoader.getActivateAFTsHash().values().forEach(a -> {
+					c.getLandTax().put(a.getLabel(), a.getCachedLandTax());
+				});
+			}
+		});
+	}
+
 	private void landTS() {
 		AFTsLoader.getActivateAFTsHash().forEach((aftName, aft) -> {
 			if (Timestep.getTick() == 0) {
@@ -120,9 +199,7 @@ public class RegionalModelRunner {
 			} else {
 				double initialAverageUtility = distributionMean.get(Timestep.getStartYear()).get(aft);
 				double calib = initialAverageUtility != 0 ? Math.abs(initialAverageUtility) : 1;
-				double tx = aft.getLand_taxes_subsidies().get(Timestep.getCurrentYear() + 1) != null
-						? aft.getLand_taxes_subsidies().get(Timestep.getCurrentYear() + 1)
-						: 0;
+				double tx = aft.getLand_taxes_subsidies().getOrDefault(Timestep.getCurrentYear() + 1, 0d);
 				aft.setCachedLandTax(100 * calib * tx);
 			}
 		});
@@ -134,33 +211,40 @@ public class RegionalModelRunner {
 		final var cells = R.getCells(); // ConcurrentHashMap<?, Cell>
 
 		// Snapshot services once
-		final var servicesList = ServiceSet.getServicesList();
+		final List<String> servicesList = ServiceSet.getServicesList();
 		final String[] services = servicesList.toArray(new String[0]);
 
 		// Precompute coeff[s] = serviceTax + marginal ONCE (per step/year/region)
+		final double[] coeff = buildUtilityCoeff(services);
+
+		// Faster than values().parallelStream() in many cases for CHM:
+		// parallelismThreshold: tune (e.g. 50_000 or 100_000)
+		cells.forEach(100_000, (k, c) -> c.setCurrentUtility(computeCellUtility(c, services, coeff)));
+	}
+
+	private double[] buildUtilityCoeff(String[] services) {
 		final double[] coeff = new double[services.length];
 		final var serviceTax = getServiceTax();
 		final var marginal = getMarginal();
+
 		for (int i = 0; i < services.length; i++) {
 			final String s = services[i];
 			coeff[i] = serviceTax.get(s) + marginal.get(s);
 		}
+		return coeff;
+	}
 
-		// Faster than values().parallelStream() in many cases for CHM:
-		// parallelismThreshold: tune (e.g. 50_000 or 100_000)
-		cells.forEach(100_000, (k, c) -> {
-			final Aft a = c.owner;
-			if (a == null || !a.isInteract()) {
-				c.setCurrentUtility(0.0);
-				return;
-			}
+	private double computeCellUtility(Cell c, String[] services, double[] coeff) {
+		final Aft owner = c.getOwner();
+		if (owner == null || !owner.isInteract()) {
+			return 0;
+		}
 
-			double u = a.getCachedLandTax();
-			for (int i = 0; i < services.length; i++) {
-				u += coeff[i] * c.productivity(a, services[i]);
-			}
-			c.setCurrentUtility(u);
-		});
+		double u = owner.getCachedLandTax();
+		for (int i = 0; i < services.length; i++) {
+			u += coeff[i] * c.productivity(owner, services[i]);
+		}
+		return u;
 	}
 
 	private void computeDistributionMean() {
@@ -223,6 +307,7 @@ public class RegionalModelRunner {
 					Aft a = Competitiveness.mostCompetitiveAgent(c, AftCategorised.aftCategories.get(categoryName),
 							this);
 					c.setOwner(a);
+//					CellsUpdater.decesionsNewOwner.put(c, a);
 					LandMaskUpdater.cellsForecedToChange.get(c.getMaskType()).put(c.getX() + "," + c.getY(), c);
 				});
 			});
@@ -260,71 +345,20 @@ public class RegionalModelRunner {
 				"Initial Demand Service Equilibrium Factor= " + R.getName() + ": " + R.getServiceCalibration_Factor());
 	}
 
-	private final StepProfiler profiler = new StepProfiler(ConfigLoader.config.printRegionalModelRunnerMeasures);
-
-	public void step() {
-//		double score = DeterministicRandom.randomDouble(
-//		        runSeed,
-//		        Timestep.getCurrentYear(),
-//		        DeterministicRandom.Process.CELL_SELECTION,
-//		        cellId,
-//		        0L,
-//		        0
-//		);
-		profiler.reset();
-
-		try (var t = profiler.section("exportFiles")) {
-			listner.exportFiles(getRegionalSupply());
-		}
-		try (var t = profiler.section("computeMarginal")) {
-			computeMarginal();
-		}
-		try (var t = profiler.section("servicesTax")) {
-			servicesTax();
-		}
-		try (var t = profiler.section("landTS")) {
-			landTS();
-		}
-		try (var t = profiler.section("utilitytyForAll")) {
-			utilitytyForAll();
-		}
-		try (var t = profiler.section("calculeDistributionMean")) {
-			computeDistributionMean();
-		}
-		try (var t = profiler.section("calculeMaxMinUtility")) {
-			computeMaxMinUtility();
-		}
-		try (var t = profiler.section("takeOverMaskedCellByCategories")) {
-			takeOverMaskedCellByCategories();
-		}
-		try (var t = profiler.section("giveUp")) {
-			giveUp();
-		}
-		try (var t = profiler.section("takeOverUnmanageCells")) {
-			takeOverUnmanageCells();
-		}
-		try (var t = profiler.section("competition")) {
-			competition();
-		}
-		try (var t = profiler.section("hashAgentNbr")) {
-			AFTsLoader.hashAgentNbr(R.getName());
-		}
-
-//		LOGGER.info(profiler.report("RegionalModelRunner (year=" + year + ", region=" + R.getName() + ")"));
-		System.out.print(
-				profiler.report("Step timings (year=" + Timestep.getCurrentYear() + ", region=" + R.getName() + ")"));
-
-	}
+	public static AtomicInteger tmp = new AtomicInteger();
 
 	private void giveUp() {
+//		tmp = new AtomicInteger();
 		if (ConfigLoader.config.use_abandonment_threshold) {
-			ConcurrentHashMap<String, Cell> randomCellsubSetForGiveUp = SeedUpdater.selectSeed(this, R.getCells(),
-					ConfigLoader.config.land_abandonment_percentage, true, ConfigLoader.config.longSeedID.get());
+			List<Cell> randomCellsubSetForGiveUp = SeedUpdater.selectSeed(this, R.getCells(),
+					ConfigLoader.config.land_abandonment_percentage, false,
+					DeterministicRandom.Process.CELL_SELECTION_ABANDONMENT);
 			if (randomCellsubSetForGiveUp != null) {
-				randomCellsubSetForGiveUp.values()/**/ .parallelStream().forEach(c -> {
+				randomCellsubSetForGiveUp.parallelStream().forEach(c -> {
 					c.giveUp(this, distributionMean.get(Timestep.getCurrentYear()));
 				});
 			}
+//			System.out.println("number of cells give up: " + tmp);
 		}
 	}
 
@@ -335,10 +369,10 @@ public class RegionalModelRunner {
 		for (Cell cell : cells) {
 			map.put(cell.getX() + "," + cell.getY(), cell);
 		}
-		ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(this, map,
-				ConfigLoader.config.land_abandonment_percentage, true, ConfigLoader.config.longSeedID.get());
+		List<Cell> seed = SeedUpdater.selectSeed(this, map, ConfigLoader.config.land_abandonment_percentage, false,
+				DeterministicRandom.Process.CELL_SELECTION_UNMANAGED_TAKEOVER);
 
-		seed.values().parallelStream().forEach(c -> {
+		seed.parallelStream().forEach(c -> {
 			if (Math.random() < ConfigLoader.config.takeOverUnmanageCells_percentage) {
 				Competitiveness.competition(c, this);
 				if (c.getOwner() != null && !c.getOwner().isAbandoned()) {
@@ -352,48 +386,35 @@ public class RegionalModelRunner {
 	}
 
 	private void competition() {
-		// Randomly select % of the land available for competition
-		ConcurrentHashMap<String, Cell> seed = SeedUpdater.selectSeed(this, R.getCells(),
-				ConfigLoader.config.participating_cells_percentage, true, ConfigLoader.config.longSeedID.get());
-		seed.putAll(cellsWhereOwnerExceededMaxLifeCycle());
+		List<Cell> seed = SeedUpdater.selectSeed(this, R.getCells(), ConfigLoader.config.participating_cells_percentage,
+				true, DeterministicRandom.Process.CELL_SELECTION_COMPETITION);
+		seed.addAll(cellsWhereOwnerExceededMaxLifeCycle().values());
+		if (seed == null || seed.isEmpty())
+			return;
 
-//		Map<String, List<String>> csv = new LinkedHashMap<>();
-//		csv.put("ID,X,Y", new ArrayList<String>());
-//		seed.forEach((coor, c) -> {
-//			csv.get("ID,X,Y").add(c.getId() + "," + c.getX() + "," + c.getX());
-//		});
-//		CsvTools.writeCSVfileString(csv, Paths.get(
-//				ConfigLoader.config.output_folder_name + File.separator + "seed" + Timestep.getCurrentYear() + ".csv"));
+		List<ConcurrentHashMap<String, Cell>> subsubsets = Utils.splitIntoSubsets(seed,
+				ConfigLoader.config.marginal_utility_calculations_per_tick);
 
-//				Selector.randomSeed(R.getCells(),
-//				ConfigLoader.config.participating_cells_percentage, ConfigLoader.config.longSeedID);
-		if (seed != null) {
-			List<ConcurrentHashMap<String, Cell>> subsubsets = Utils.splitIntoSubsets(seed,
-					ConfigLoader.config.marginal_utility_calculations_per_tick);
-			ConcurrentHashMap<String, Double> servicesBeforeCompetition = new ConcurrentHashMap<>();
-			ConcurrentHashMap<String, Double> servicesAfterCompetition = new ConcurrentHashMap<>();
-			subsubsets.forEach(subsubset -> {
-				if (subsubset != null) {
-					subsubset.values().parallelStream().forEach(c -> {
-						if (c.getOwner() != null && c.getOwner().isActive()) {
-							for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
-								servicesBeforeCompetition.merge(ServiceSet.getServicesList().get(i),
-										c.getCurrentProd()[i], Double::sum);
-							}
-							Competitiveness.competition(c, this);
-							c.calculateCurrentProductivity();
-							for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
-								servicesAfterCompetition.merge(ServiceSet.getServicesList().get(i),
-										c.getCurrentProd()[i], Double::sum);
-							}
+		subsubsets.forEach(subsubset -> {
+			ConcurrentHashMap<String, Double> before = new ConcurrentHashMap<>();
+			ConcurrentHashMap<String, Double> after = new ConcurrentHashMap<>();
+			if (subsubset != null) {
+				subsubset.values().parallelStream().forEach(c -> {
+					if (c.getOwner() != null && c.getOwner().isActive()) {
+						for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
+							before.merge(ServiceSet.getServicesList().get(i), c.getCurrentProd()[i], Double::sum);
 						}
-					});
-				}
-				servicesBeforeCompetition.forEach((key, value) -> getRegionalSupply().merge(key, -value, Double::sum));
-				servicesAfterCompetition.forEach((key, value) -> getRegionalSupply().merge(key, value, Double::sum));
-				computeMarginal();
-			});
-		}
+						Competitiveness.competition(c, this);
+						c.calculateCurrentProductivity();
+						for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
+							after.merge(ServiceSet.getServicesList().get(i), c.getCurrentProd()[i], Double::sum);
+						}
+					}
+				});
+			}
+			after.forEach((key, value) -> getRegionalSupply().merge(key, value - before.get(key), Double::sum));
+			computeMarginal();
+		});
 	}
 
 	private ConcurrentHashMap<String, Cell> cellsWhereOwnerExceededMaxLifeCycle() {
@@ -411,8 +432,8 @@ public class RegionalModelRunner {
 		}
 		if (useMax) {
 			CellsLoader.hashCell.values().parallelStream().forEach(c -> {
-				if (c.owner != null && c.getMaskType() == null
-						&& c.getOwnerLifeCounter() >= c.owner.getMax_life_cycle()) {
+				if (c.getOwner() != null && c.getMaskType() == null
+						&& c.getOwnerLifeCounter() >= c.getOwner().getMax_life_cycle()) {
 					cells.put(c.getX() + "," + c.getY(), c);
 				}
 			});
@@ -471,7 +492,5 @@ public class RegionalModelRunner {
 	public ConcurrentHashMap<String, Double> getMarginal() {
 		return marginal;
 	}
-	
-	private void updateCellsScoresForSeed() {}
 
 }

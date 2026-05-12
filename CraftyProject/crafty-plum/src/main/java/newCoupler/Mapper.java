@@ -79,6 +79,10 @@ public class Mapper {
 		for (int i = 0; i < EuCountries.length; i++) {
 			countryLongToShortName.put(EuCountries[i], shortNames[i]);
 			countryShortToLongName.put(shortNames[i], EuCountries[i]);
+			countryShortToLongName.forEach((k,v)->{
+				System.out.println(k+"-> "+v);
+			});
+			System.out.println("===================");
 		}
 	}
 

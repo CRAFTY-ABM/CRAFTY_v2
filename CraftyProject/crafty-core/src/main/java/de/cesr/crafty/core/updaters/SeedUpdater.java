@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -14,6 +15,7 @@ import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.crafty.RegionalModelRunner;
+import de.cesr.crafty.core.utils.general.DeterministicRandom;
 import de.cesr.crafty.core.utils.general.Selector;
 
 /**
@@ -54,7 +56,7 @@ public class SeedUpdater {
 			ConfigLoader.config.longSeedID.set(ThreadLocalRandom.current().nextLong());
 		} else if (ConfigLoader.config.seedID.matches("[-+]?\\d+")) {
 			LOGGER.info("seedID is a number ID--> " + ConfigLoader.config.seedID);
-			ConfigLoader.config.longSeedID.set((long) Long.parseLong(ConfigLoader.config.seedID));// ConfigLoader.config.seedID.hashCode();
+			ConfigLoader.config.longSeedID.set((long) Long.parseLong(ConfigLoader.config.seedID));
 		} else if (Paths.get(ConfigLoader.config.seedID).toFile().isDirectory()) {
 			// not implemented yet
 			LOGGER.fatal("seed for a file is not imlemented yet (use seedID:rank or seedID: nbr)");
@@ -66,50 +68,42 @@ public class SeedUpdater {
 		}
 	}
 
-	public static ConcurrentHashMap<String, Cell> selectSeed(RegionalModelRunner r,
-			ConcurrentHashMap<String, Cell> cells, double percent, boolean byAfts, long id) {
+	public static List<Cell> selectSeed(RegionalModelRunner r, ConcurrentHashMap<String, Cell> cells, double percent,
+			boolean byAfts, int processID) {
+		long runSeed = ConfigLoader.config.longSeedID.get();
+		int year = Timestep.getCurrentYear();
+		
+		cells.values().parallelStream().forEach(c -> {
+			double score = DeterministicRandom.randomDouble(runSeed, year, processID, c.getCellID(), 0L, 0);
+			c.setScore(score);
+		});
+		
 		if (ConfigLoader.config.seedID.equalsIgnoreCase("rank")) {
-			return seedRanking(cells.values(), percent, byAfts);
+			// Snapshot once for deterministic ranking over a stable candidate set
+			List<Cell> snapshot = new ArrayList<>(cells.values());
+			return seedRanking(snapshot, percent, byAfts, runSeed, year, processID);
 		} else {
-			ConfigLoader.config.longSeedID.getAndIncrement();
-			return Selector.randomSeed(cells, percent, id);
+			return Selector.randomSeed(cells, percent);
 		}
 	}
 
-	private static ConcurrentHashMap<String, Cell> seedRanking(Collection<Cell> cells, double percent, boolean byAfts) {
+	private static List<Cell> seedRanking(Collection<Cell> cells, double percent, boolean byAfts, long runSeed,
+			int year, int processID) {
+		List<Cell> selected = new ArrayList<>();
 		if (!byAfts) {
-			return rankCellByUtilities(cells, percent);
-		}
-
-		Map<String, ArrayList<Cell>> groups = groupByOwner(cells);
-		ConcurrentHashMap<String, Cell> seed = new ConcurrentHashMap<>();
-
-		groups.values().parallelStream().forEach(group -> {
-			List<Cell> worst = bottomPercent(group, percent);
-			for (Cell c : worst) {
-				seed.put(c.getX() + "," + c.getY(), c);
+			selected.addAll(bottomPercent(cells, percent, runSeed, year));
+		} else {
+			Map<String, List<Cell>> groups = new TreeMap<>();
+			for (Cell c : cells) {
+				groups.computeIfAbsent(c.getOwnerName(), k -> new ArrayList<>()).add(c);
 			}
-		});
-
-		return seed;
-	}
-
-	private static ConcurrentHashMap<String, ArrayList<Cell>> groupByOwner(Collection<Cell> cells) {
-		ConcurrentHashMap<String, ArrayList<Cell>> groups = new ConcurrentHashMap<>();
-		for (Cell c : cells) {
-			groups.computeIfAbsent(c.getOwnerName(), k -> new ArrayList<>()).add(c);
+			for (List<Cell> group : groups.values()) {
+				selected.addAll(bottomPercent(group, percent, runSeed, year));
+			}
 		}
-		return groups;
-	}
-
-	private static ConcurrentHashMap<String, Cell> rankCellByUtilities(Collection<Cell> cellsHash, double percent) {
-		ConcurrentHashMap<String, Cell> seed = new ConcurrentHashMap<>();
-		List<Cell> list = bottomPercent(cellsHash, percent);
-		list.forEach(c -> {
-			seed.put(c.getX() + "," + c.getY(), c);
-		});
-
-		return seed;
+		selected.sort(Comparator.comparingLong(c -> DeterministicRandom.randomLong(runSeed, year, processID,
+				DeterministicRandom.stableCellId(c.getX(), c.getY()), 0L, 0)));
+		return selected;
 	}
 
 	private static double util(Cell c) {
@@ -117,36 +111,34 @@ public class SeedUpdater {
 		return Double.isNaN(u) ? Double.POSITIVE_INFINITY : u;
 	}
 
-	public static List<Cell> bottomPercent(Collection<Cell> cells, double percent) {
-		if (cells == null || cells.isEmpty())
+	public static List<Cell> bottomPercent(Collection<Cell> cells, double percent, long runSeed, int year) {
+		if (cells == null || cells.isEmpty()) {
 			return List.of();
-
-		double p = Math.max(0.0, Math.min(1.0, percent));
-
-		// Count n without assuming size() is cheap
-		int n = 0;
-		for (@SuppressWarnings("unused")
-		Cell ignored : cells) {
-			n++;
 		}
 
+		// Snapshot defensively so selection is over a stable set
+		List<Cell> snapshot = new ArrayList<>(cells);
+
+		double p = Math.max(0.0, Math.min(1.0, percent));
+		int n = snapshot.size();
+
 		int k = (int) Math.ceil(n * p);
-		if (k <= 0)
+		if (k <= 0) {
 			return List.of();
-		if (k >= n)
-			return new ArrayList<>(cells);
+		}
+		if (k >= n) {
+			snapshot.sort(cellUtilityComparator(runSeed, year));
+			return snapshot;
+		}
 
-		final long tieSeed = ThreadLocalRandom.current().nextLong();
-		Comparator<Cell> asc = Comparator.comparingDouble((Cell c) -> util(c))
-				.thenComparingLong(c -> tieKey(c, tieSeed));
+		Comparator<Cell> asc = cellUtilityComparator(runSeed, year);
 		Comparator<Cell> worstFirst = asc.reversed();
-
 		PriorityQueue<Cell> pq = new PriorityQueue<>(k, worstFirst);
 
-		for (Cell c : cells) {
-			if (pq.size() < k)
+		for (Cell c : snapshot) {
+			if (pq.size() < k) {
 				pq.add(c);
-			else if (asc.compare(c, pq.peek()) < 0) {
+			} else if (asc.compare(c, pq.peek()) < 0) {
 				pq.poll();
 				pq.add(c);
 			}
@@ -157,15 +149,15 @@ public class SeedUpdater {
 		return out;
 	}
 
-	private static long tieKey(Cell c, long seed) {
-		long xy = (((long) c.getX()) << 32) ^ (c.getY() & 0xffffffffL);
-		return mix64(xy ^ seed);
+	private static long stableCellKey(Cell c) {
+		return DeterministicRandom.stableCellId(c.getX(), c.getY());
 	}
 
-	private static long mix64(long z) {
-		z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
-		z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
-		return z ^ (z >>> 31);
+	private static Comparator<Cell> cellUtilityComparator(long runSeed, int year) {
+		return Comparator.comparingDouble((Cell c) -> util(c))
+				.thenComparingLong(c -> DeterministicRandom.randomLong(runSeed, year,
+						DeterministicRandom.Process.TIE_BREAK, stableCellKey(c), 0L, 0))
+				.thenComparingLong(SeedUpdater::stableCellKey);
 	}
 
 }

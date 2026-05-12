@@ -27,7 +27,8 @@ import de.cesr.crafty.core.updaters.ServicesUpdater;
 import de.cesr.crafty.core.updaters.SupplyUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
-import de.cesr.crafty.core.utils.general.ChartExporter;
+import de.cesr.crafty.core.utils.graphics.ChartExporter;
+
 /**
  * Main CRAFTY model runner.
  *
@@ -92,6 +93,7 @@ public class ModelRunner extends AbstractModelRunner {
 	public static CapitalUpdater capitalUpdater;
 	public static AftsUpdater aftsUpdater;
 	private static Capital_Degradation_Updater capital_Degradation_Updater;
+	public RegionsModelRunnerUpdater regionsModelRunnerUpdater;
 
 	public void start() {
 		ProjectLoader.setScenario(ConfigLoader.config.scenario);
@@ -102,7 +104,7 @@ public class ModelRunner extends AbstractModelRunner {
 		cellsSet = new CellsLoader();
 		capitalUpdater.step();
 		capital_Degradation_Updater = new Capital_Degradation_Updater();
-
+		regionsModelRunnerUpdater=new RegionsModelRunnerUpdater();
 		getScheduled().clear();
 		getScheduled().add(new FlagUpdater());
 		getScheduled().add(new ServicesUpdater());
@@ -114,13 +116,15 @@ public class ModelRunner extends AbstractModelRunner {
 		getScheduled().add(new SupplyUpdater());
 		getScheduled().add(new Listener());
 		getScheduled().add(new Tracker());
-		getScheduled().add(new RegionsModelRunnerUpdater());
+		getScheduled().add(regionsModelRunnerUpdater);
 		getScheduled().add(new Timestep());
-	}
+	} 
 
 	public void initialzeRun() {
 		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.Output_path);
 		Listener.outputfolderPath(generatedPath, ConfigLoader.config.output_folder_name);
+//		System.out.println(ConfigLoader.config.Output_path+"===>  "+ ConfigLoader.config.output_folder_name);
+
 		if (ConfigLoader.config.export_LOGGER) {
 			CustomLogger
 					.configureLogger(Paths.get(ConfigLoader.config.output_folder_name + File.separator + "LOGGER.txt"));
@@ -129,7 +133,7 @@ public class ModelRunner extends AbstractModelRunner {
 				Listener.exportConfigurationFile(), false);
 		demandEquilibrium();
 	}
-	
+
 	public void run() {
 		for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
 			step();

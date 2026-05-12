@@ -3,6 +3,7 @@ package de.cesr.crafty.core.crafty;
 import java.util.Collection;
 import java.util.function.Predicate;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.utils.general.CellsSubSets;
@@ -44,7 +45,7 @@ public class CellBehaviour {
 	double weight_social;
 	double Critical_mass;//
 	int neighborhood_size;
-	double steepness_logistic_eq = 7;
+//	double steepness_logistic_eq = 7;
 	double maxGive_in;
 	private Cell c;
 
@@ -54,20 +55,19 @@ public class CellBehaviour {
 
 	public double give_In(Aft competitor) {
 		int intesificationGap = competitor.getCategory().getIntensityLevel()
-				- c.owner.getCategory().getIntensityLevel();
-
-		return maxGive_in / (1 + Math.exp(steepness_logistic_eq
-				* ((1 - weight_social) * Attitude_influence(competitor) + weight_social * social_influence(competitor))
-				+ Weight_inertia * Math.abs(intesificationGap)));
+				- c.getOwner().getCategory().getIntensityLevel();
+		return maxGive_in / (1 + Math.exp(ConfigLoader.config.steepness_logistic_eq
+				* ((1 - weight_social) * Attitude_influence(competitor) + weight_social * social_influence(competitor)
+						- Weight_inertia * Math.abs(intesificationGap))));
 	}
 
 	private double social_influence(Aft competitor) {
 		if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
-			if (c.owner.category.getName().equals(competitor.category.getName())) {
-				if (c.owner.category.getIntensity().equals(competitor.category.getIntensity())) {
+			if (c.getOwner().category.getName().equals(competitor.category.getName())) {
+				if (c.getOwner().category.getIntensity().equals(competitor.category.getIntensity())) {
 					return 0;
 				}
-				if (competitor.category.getIntensityLevel() > c.owner.category.getIntensityLevel()) {
+				if (competitor.category.getIntensityLevel() > c.getOwner().category.getIntensityLevel()) {
 					return Math.max(Math.min(2 * fractionOfNeighbors(
 							neighbor -> neighbor.category.getIntensityLevel() > competitor.category.getIntensityLevel())
 							- Critical_mass, 1), -1);
@@ -85,7 +85,7 @@ public class CellBehaviour {
 		Collection<Aft> neighbors = CellsSubSets.detectExtendedNeighboringAFTs(c, neighborhood_size);
 		int count = 0;
 		for (Aft neighbor : neighbors) {
-			if (neighbor.getCategory().getName().equals(c.owner.getCategory().getName())
+			if (neighbor.getCategory().getName().equals(c.getOwner().getCategory().getName())
 					&& neighborCondition.test(neighbor)) {
 				count++;
 			}
@@ -95,7 +95,7 @@ public class CellBehaviour {
 
 	private double Attitude_influence(Aft competitor) {
 		int intesificationGap = competitor.getCategory().getIntensityLevel()
-				- c.owner.getCategory().getIntensityLevel();
+				- c.getOwner().getCategory().getIntensityLevel();
 		return Math.max(Math.min(Math.signum(intesificationGap) * Attitude_intensification, 1), -1);
 	}
 
@@ -151,8 +151,8 @@ public class CellBehaviour {
 	public String toString() {
 		return "CellBehaviour [Attitude_intensification=" + Attitude_intensification + ", Weight_inertia="
 				+ Weight_inertia + ", weight_social=" + weight_social + ", Critical_mass=" + Critical_mass
-				+ ", neighborhood_size=" + neighborhood_size + ", steepness_logistic_eq=" + steepness_logistic_eq
-				+ ", maxGive_in=" + maxGive_in + "]";
+				+ ", neighborhood_size=" + neighborhood_size + ", steepness_logistic_eq="
+				+ ConfigLoader.config.steepness_logistic_eq + ", maxGive_in=" + maxGive_in + "]";
 	}
 
 }

@@ -18,29 +18,36 @@ import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
 
 /**
- * Loads and initializes time-series taxes/subsidies applied to ecosystem services.
+ * Loads and initializes time-series taxes/subsidies applied to ecosystem
+ * services.
  *
- * This loader reads per-service tax/subsidy trajectories (one value per year) from CSV inputs and assigns them
- * to each {@link de.cesr.crafty.core.crafty.Region}'s {@link de.cesr.crafty.core.crafty.Service} object via
+ * This loader reads per-service tax/subsidy trajectories (one value per year)
+ * from CSV inputs and assigns them to each
+ * {@link de.cesr.crafty.core.crafty.Region}'s
+ * {@link de.cesr.crafty.core.crafty.Service} object via
  * {@link de.cesr.crafty.core.crafty.Service#getTaxes_subsidies()}.
  *
- * These taxes/subsidies are later used in the regional model runner to compute the service-level incentive term
- * (together with demand-supply gaps and calibration factors) that influences the utility and competitiveness of AFTs.
+ * These taxes/subsidies are later used in the regional model runner to compute
+ * the service-level incentive term (together with demand-supply gaps and
+ * calibration factors) that influences the utility and competitiveness of AFTs.
  *
- * Input discovery:
- * - If {@code ConfigLoader.config.services_taxes_subsidies_path} is set and non-empty:
- * - If it points to a file, that file is used.
- * - If it points to a directory, the loader searches within it for a region-specific file containing
- *       the token "_;RegionName;_;".
- * - Otherwise, it falls back to the scenario structure and searches under
- *   {@code services_taxes_subsidies/} for a file matching the region token.
+ * Input discovery: - If
+ * {@code ConfigLoader.config.services_taxes_subsidies_path} is set and
+ * non-empty: - If it points to a file, that file is used. - If it points to a
+ * directory, the loader searches within it for a region-specific file
+ * containing the token "_;RegionName;_;". - Otherwise, it falls back to the
+ * scenario structure and searches under {@code services_taxes_subsidies/} for a
+ * file matching the region token.
  *
- * Initialization behaviour:
- * - {@link #initializeTaxes_subsidies()} iterates over all regions and calls {@link #initializeTS(Region)}.
- * - For a given region, the CSV file is parsed using {@link CsvProcessors#ReadAsaHash(Path)} where keys correspond to service names and values to the yearly vector.
- * - Only services present in {@link ServiceSet#getServicesList()} are applied; unknown columns are ignored.
- * - If no taxes/subsidies file is found for a region, {@link #useDefaultTS(Region)} assigns a constant value of
- *   {@code 0.0} for all services and all years, ensuring the model remains runnable without optional policy inputs.
+ * Initialization behaviour: - {@link #initializeTaxes_subsidies()} iterates
+ * over all regions and calls {@link #initializeTS(Region)}. - For a given
+ * region, the CSV file is parsed using {@link CsvProcessors#ReadAsaHash(Path)}
+ * where keys correspond to service names and values to the yearly vector. -
+ * Only services present in {@link ServiceSet#getServicesList()} are applied;
+ * unknown columns are ignored. - If no taxes/subsidies file is found for a
+ * region, {@link #useDefaultTS(Region)} assigns a constant value of {@code 0.0}
+ * for all services and all years, ensuring the model remains runnable without
+ * optional policy inputs.
  */
 
 /*
@@ -99,6 +106,7 @@ public class TaxesSubsidiesLoader {
 				}
 			});
 		} else {
+			ConfigLoader.config.consider_subsidies_taxes = false;
 			LOGGER.info("Taxes_subsidies file not fund for |" + R.getName()
 					+ "| default value will use: Taxes_subsidies = 0 for all services");
 			useDefaultTS(R);

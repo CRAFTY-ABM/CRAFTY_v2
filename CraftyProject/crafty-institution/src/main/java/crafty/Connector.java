@@ -21,7 +21,7 @@ import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
-import institutions.InstitutionManager;
+import institutions_Fuzzy.InstitutionManager;
 import utils.External_variables_Manager;
 import utils.InstitutionOutput;
 import utils.ModelOutputProvider;

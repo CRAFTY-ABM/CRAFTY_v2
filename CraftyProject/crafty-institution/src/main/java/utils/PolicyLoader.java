@@ -2,7 +2,7 @@ package utils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import institutions.Policy;
+import institutions_Fuzzy.Policy;
 
 import java.io.File;
 import java.util.List;

@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
+	<artifactId>crafty-institution</artifactId>
+	<packaging>jar</packaging>
 
 	<parent>
 		<groupId>de.cesr</groupId>
@@ -12,9 +13,6 @@
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
-
-	<artifactId>crafty-institution</artifactId>
-	<packaging>jar</packaging>
 
 	<properties>
 		<maven.compiler.source>17</maven.compiler.source>
@@ -79,7 +77,6 @@
 		</dependency>
 
 		<!-- core dependencies -->
-
 		<dependency>
 			<groupId>org.yaml</groupId>
 			<artifactId>snakeyaml</artifactId>
@@ -117,17 +114,45 @@
 			<version>2.20.0</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.knowm.xchart/xchart -->
-		<dependency>
-			<groupId>org.knowm.xchart</groupId>
-			<artifactId>xchart</artifactId>
-			<version>3.8.0</version>
-		</dependency>
 		<dependency>
 			<groupId>com.squareup.okhttp3</groupId>
 			<artifactId>okhttp</artifactId>
 			<version>4.12.0</version>
 		</dependency>
+
+		<dependency>
+			<groupId>net.mahdilamb</groupId>
+			<artifactId>colormap</artifactId>
+			<version>0.9.511</version>
+		</dependency>
+
+		<!-- geoTools -->
+		<!-- Core GeoTools libraries -->
+		<!--	<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-main</artifactId>
+			<version>26.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-referencing</artifactId>
+			<version>26.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-epsg-hsql</artifactId>
+			<version>26.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-coverage</artifactId>
+			<version>26.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-geotiff</artifactId>
+			<version>26.0</version>
+		</dependency>-->
 
 		<dependency>
 			<groupId>io.github.classgraph</groupId>
@@ -167,6 +192,12 @@
 			<version>5.2.0</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-junit-jupiter</artifactId>
+			<version>5.12.0</version>
+			<scope>test</scope>
+		</dependency>
 
 		<!-- Force a Byte Buddy version that supports Java 24+ -->
 		<dependency>
@@ -176,25 +207,15 @@
 			<scope>test</scope>
 		</dependency>
 
+
 	</dependencies>
 
 	<build>
 		<plugins>
-			<!-- Still useful to run via: mvn exec:java -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>exec-maven-plugin</artifactId>
-				<version>3.5.0</version>
-				<configuration>
-					<mainClass>crafty.Connector_Runner</mainClass>
-				</configuration>
-			</plugin>
-
-			<!-- Create runnable fat JAR with all dependencies -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.6.0</version>
+				<version>3.3.0</version>
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -202,17 +223,6 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
-							<!-- Keep the normal (thin) JAR AND attach a
-							separate shaded one -->
-							<shadedArtifactAttached>true</shadedArtifactAttached>
-							<shadedClassifierName>shaded</shadedClassifierName>
-
-							<!-- Don't generate a dependency-reduced POM, keeps
-							life simpler -->
-							<createDependencyReducedPom>false</createDependencyReducedPom>
-
-							<!-- Remove signatures from included JARs to avoid
-							"Invalid signature file digest" -->
 							<filters>
 								<filter>
 									<artifact>*:*</artifact>
@@ -224,17 +234,32 @@
 								</filter>
 							</filters>
 
-							<!-- Manifest: which main class to run -->
+							<finalName>crafty-llm-institutions-v2-1.1.X</finalName>
 							<transformers>
 								<transformer
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>crafty.Connector_Runner</mainClass>
+									<mainClass>
+										main.Runner</mainClass>
 								</transformer>
 							</transformers>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.2.5</version>
+				<configuration>
+					<!-- Adjust path if necessary, but for most cases this
+					works: -->
+					<argLine>
+						-javaagent:"${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.17.7/byte-buddy-agent-1.17.7.jar"
+					</argLine>
+				</configuration>
+			</plugin>
+
 		</plugins>
 	</build>
 

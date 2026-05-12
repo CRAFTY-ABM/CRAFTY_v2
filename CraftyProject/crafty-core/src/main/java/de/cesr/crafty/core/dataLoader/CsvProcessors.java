@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -23,7 +22,6 @@ import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
-import de.cesr.crafty.core.updaters.Capital_Degradation_Updater;
 import de.cesr.crafty.core.utils.general.Utils;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.AddCellToColumnException;
@@ -147,14 +145,6 @@ public class CsvProcessors {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-//		if (kind == CsvKind.CAPITALS) {
-//			System.out.println("WARN @@ number of Cells in the degradation capital file are not in the Baseline Map: "
-//					+ tmp.size());
-//
-//			tmp.forEach((k, v) -> {
-//				System.out.println(k + "-> " + v);
-//			});
-//		}
 	}
 
 	private static Map<String, Integer> buildIndex(String headerLine) {
@@ -173,29 +163,52 @@ public class CsvProcessors {
 
 //	private static ConcurrentHashMap<String, String> tmp = new ConcurrentHashMap<>();
 
+//	static void associateCapitalsToCells(Map<String, Integer> indexof, String data) {
+//
+//		List<String> immutableList = Collections.unmodifiableList(Arrays.asList(COMMA.split(data, -1)));
+//		int x = (int) Utils.sToD(immutableList.get(indexof.get("X")));
+//		int y = (int) Utils.sToD(immutableList.get(indexof.get("Y")));
+//		Cell c = CellsLoader.getCell(x, y);
+//		if (c != null) {
+//			CapitalUpdater.getCapitalsList().forEach(capital_name -> {
+//				if (indexof.get(capital_name.toUpperCase()) == null) {
+//					c.getCapitals().put(capital_name, 0.);
+//				} else if (indexof.get(capital_name.toUpperCase()) < immutableList.size()) {
+//					double capital_value = Utils.sToD(immutableList.get(indexof.get(capital_name.toUpperCase())));
+//					c.getCapitals().put(capital_name, capital_value);
+//				}
+//			});
+//		}
+//	}
+	
 	static void associateCapitalsToCells(Map<String, Integer> indexof, String data) {
 
-		List<String> immutableList = Collections.unmodifiableList(Arrays.asList(COMMA.split(data, -1)));
-		int x = (int) Utils.sToD(immutableList.get(indexof.get("X")));
-		int y = (int) Utils.sToD(immutableList.get(indexof.get("Y")));
-		Cell c = CellsLoader.getCell(x, y);
-		if (c != null) {
-			CapitalUpdater.getCapitalsList().forEach(capital_name -> {
-				if (indexof.get(capital_name.toUpperCase()) == null) {
-					c.getCapitals().put(capital_name, 0.);
-				} else if (indexof.get(capital_name.toUpperCase()) < immutableList.size()) {
-					double capital_value = Utils.sToD(immutableList.get(indexof.get(capital_name.toUpperCase())));
-					c.getCapitals().put(capital_name, capital_value);
-				}
-//				else {
-//					tmp.put("Name " + capital_name + " Index= " + indexof.get(capital_name.toUpperCase())
-//							+ "immutableList.size= " + immutableList.size() + "|=>", data);
-//				}
-			});
-		}
-//		else {
-//			tmp.put(x + "," + y, data);
-//		}
+	    String[] row = COMMA.split(data, -1);
+
+	    int x = (int) Utils.sToD(row[indexof.get("X")]);
+	    int y = (int) Utils.sToD(row[indexof.get("Y")]);
+
+	    Cell c = CellsLoader.getCell(x, y);
+	    if (c == null) {
+	        return;
+	    }
+
+	    Map<String, Double> capitals = c.getCapitals();
+
+	    for (String capitalName : CapitalUpdater.getCapitalsList()) {
+
+	        Integer col = indexof.get(capitalName.toUpperCase());
+
+	        if (col == null) {
+	            capitals.put(capitalName, 0.0);
+	            continue;
+	        }
+
+	        if (col < row.length) {
+	            double capitalValue = Utils.sToD(row[col]);
+	            capitals.put(capitalName, capitalValue);
+	        }
+	    }
 	}
 
 	static void associateCapitalsDegradationToCells(Map<String, Integer> indexof, String data) {
@@ -205,12 +218,10 @@ public class CsvProcessors {
 		int y = (int) Utils.sToD(immutableList.get(indexof.get("Y")));
 		Cell c = CellsLoader.getCell(x, y);
 		if (c != null) {
-			Capital_Degradation_Updater.cellsShocks.put(c, new ConcurrentHashMap<>());
 			CapitalUpdater.getCapitalsList().forEach(capital_name -> {
 				if (indexof.get(capital_name.toUpperCase()) != null) {
 					double degradation_value = Utils.sToD(immutableList.get(indexof.get(capital_name.toUpperCase())));
-//				shock_value = shock_value > 0 ? 1. : 0.;
-					Capital_Degradation_Updater.cellsShocks.get(c).put(capital_name, degradation_value);
+
 					try {
 						c.getCapitals().put(capital_name, c.getCapitals().get(capital_name) * (1 - degradation_value));
 					} catch (NullPointerException e) {
@@ -221,6 +232,35 @@ public class CsvProcessors {
 			});
 		}
 	}
+
+//	static void associateCapitalsDegradationToCells(Map<String, Integer> indexof, String data) {
+//
+//		String[] row = COMMA.split(data, -1);
+//		int x = (int) Utils.sToD(row[indexof.get("X")]);
+//		int y = (int) Utils.sToD(row[indexof.get("Y")]);
+//
+//		Cell c = CellsLoader.getCell(x, y);
+//		if (c == null) {
+//			return;
+//		}
+//
+//		Map<String, Double> capitals = c.getCapitals();
+//		for (String capitalName : CapitalUpdater.getCapitalsList()) {
+//			Integer col = indexof.get(capitalName.toUpperCase());
+//			if (col == null) {
+//				continue;
+//			}
+//			Double currentValue = capitals.get(capitalName);
+//			if (currentValue == null) {
+//				LOGGER.warn("Problem in Capitals for cell (" + c.getX() + " , " + c.getY() + "): missing capital "
+//						+ capitalName + ", capitals values = " + capitals);
+//				continue;
+//			}
+//
+//			double degradationValue = Utils.sToD(row[col]);
+//			capitals.put(capitalName, currentValue * (1.0 - degradationValue));
+//		}
+//	}
 
 	static void createCells(Map<String, Integer> indexof, String data) {
 		List<String> immutableList = Collections.unmodifiableList(Arrays.asList(COMMA.split(data, -1)));

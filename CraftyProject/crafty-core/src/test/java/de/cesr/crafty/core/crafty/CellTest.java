@@ -201,41 +201,41 @@ class CellTest {
 		});
 	}
 
-	@Test
-	void giveUp_givesUpDeterministically_whenBelowThresholdAndProbabilityOne() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Cell c = new Cell(0, 0);
-
-			Aft owner = mock(Aft.class);
-			when(owner.isInteract()).thenReturn(true);
-			when(owner.getGiveUpMean()).thenReturn(1.0); // threshold factor
-			when(owner.getGiveUpSD()).thenReturn(0.0); // remove gaussian randomness
-			when(owner.getGiveUpProbabilty()).thenReturn(1.0); // Math.random always < 1 => true
-
-			setOwner(c, owner);
-
-			// utility < averageUtility * 1.0 => triggers
-			setCurrentUtility(c, 5.0);
-
-			ConcurrentHashMap<Aft, Double> mean = new ConcurrentHashMap<>();
-			mean.put(owner, 10.0);
-
-			Region region = mock(Region.class);
-			Set<Cell> unmanaged = ConcurrentHashMap.newKeySet();
-			when(region.getUnmanageCellsR()).thenReturn(unmanaged);
-
-			RegionalModelRunner runner = mock(RegionalModelRunner.class);
-			setField(runner, "R", region);
-			when(owner.getLabel()).thenReturn(""); // Math.random always < 1 => true
-			Tracker.sankeydata.put("Abandoned", new ConcurrentHashMap<>() );
-			Tracker.sankeydata.get("Abandoned").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
-			c.giveUp(runner, mean);
-
-			assertNull(getOwner(c), "Owner should be cleared after giveUp");
-			assertTrue(unmanaged.contains(c), "Cell should be added to unmanaged set");
-			assertEquals(1, Listener.landUseChangeCounter.get(), "Counter should increment");
-		});
-	}
+//	@Test
+//	void giveUp_givesUpDeterministically_whenBelowThresholdAndProbabilityOne() throws Throwable {
+//		withServices(List.of("S1"), () -> {
+//			Cell c = new Cell(0, 0);
+//
+//			Aft owner = mock(Aft.class);
+//			when(owner.isInteract()).thenReturn(true);
+//			when(owner.getGiveUpMean()).thenReturn(1.0); // threshold factor
+//			when(owner.getGiveUpSD()).thenReturn(0.0); // remove gaussian randomness
+//			when(owner.getGiveUpProbabilty()).thenReturn(1.0); // Math.random always < 1 => true
+//
+//			setOwner(c, owner);
+//
+//			// utility < averageUtility * 1.0 => triggers
+//			setCurrentUtility(c, 5.0);
+//
+//			ConcurrentHashMap<Aft, Double> mean = new ConcurrentHashMap<>();
+//			mean.put(owner, 10.0);
+//
+//			Region region = mock(Region.class);
+//			Set<Cell> unmanaged = ConcurrentHashMap.newKeySet();
+//			when(region.getUnmanageCellsR()).thenReturn(unmanaged);
+//
+//			RegionalModelRunner runner = mock(RegionalModelRunner.class);
+//			setField(runner, "R", region);
+//			when(owner.getLabel()).thenReturn(""); // Math.random always < 1 => true
+//			Tracker.sankeydata.put("Abandoned", new ConcurrentHashMap<>() );
+//			Tracker.sankeydata.get("Abandoned").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
+//			c.giveUp(runner, mean);
+//
+//			assertNull(getOwner(c), "Owner should be cleared after giveUp");
+//			assertTrue(unmanaged.contains(c), "Cell should be added to unmanaged set");
+//			assertEquals(1, Listener.landUseChangeCounter.get(), "Counter should increment");
+//		});
+//	}
 
 	// =========================================================
 	// Helpers

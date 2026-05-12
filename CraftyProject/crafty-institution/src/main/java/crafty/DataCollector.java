@@ -36,7 +36,7 @@ public class DataCollector {
 		DataCollector.connector = connector;
 		int l = Timestep.getSize() + 1;
 		serviceTxSu = new String[l][ServiceSet.getServicesList().size() + 1];
-		aftTxSu     = new String[l][AFTsLoader.getActivateAFTsHash().size() + 1];
+		aftTxSu = new String[l][AFTsLoader.getActivateAFTsHash().size() + 1];
 		policies = new String[l][connector.policyListener.size() + 1];
 		policiesEffect = new String[l][connector.policyEffectsListner.size() + 1];
 		targets = new String[l][2 * connector.prepModelOutput().size() + 1];
@@ -88,7 +88,7 @@ public class DataCollector {
 		int iteration = Timestep.getTick();
 		aftTxSu[iteration][0] = String.valueOf(Timestep.getCurrentYear() - 1);
 		for (Aft aft : AFTsLoader.getActivateAFTsHash().values()) {
-			Double t = aft.getLand_taxes_subsidies().get(Timestep.getCurrentYear() - 1);
+			Double t = aft.getLand_taxes_subsidies().getOrDefault(Timestep.getCurrentYear() - 1, 0d);
 			aftTxSu[iteration][Utils.indexof(aft.getLabel(), aftTxSu[0])] = String.valueOf(t);
 		}
 		Path csv = Paths.get(instititeDirectory + "land-taxes_subsidies.csv");
@@ -126,7 +126,7 @@ public class DataCollector {
 			index.getAndIncrement();
 		});
 		Path csv = Paths.get(instititeDirectory + "targets.csv");
-	    LOGGER.info("Target writer: "+Timestep.getCurrentYear()+"->"+Arrays.toString(targets[iteration]));
+		LOGGER.info("Target writer: " + Timestep.getCurrentYear() + "->" + Arrays.toString(targets[iteration]));
 		CsvTools.writeCSVfile(targets, csv);
 	}
 

@@ -29,8 +29,8 @@ import de.cesr.crafty.core.updaters.SupplyUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.CsvTools;
 import de.cesr.crafty.core.utils.file.PathTools;
-import de.cesr.crafty.core.utils.general.MapPngExporter;
 import de.cesr.crafty.core.utils.general.Utils;
+import de.cesr.crafty.core.utils.graphics.MapPngExporter;
 
 /**
  * Central output listener for headless CRAFTY runs.
@@ -255,18 +255,18 @@ public class Listener extends AbstractUpdater {
 	public void writOutPutMap() {
 		if (yearsMapExporting.contains(Timestep.getCurrentYear())) {
 			writeMap();
-			MapPngExporter.exportOwnerMapAsPng(CellsLoader.hashCell, "map");
+			PngGenerator.generatePNGs();
 		}
 	}
 
 	public static void initializeListExportingYearsMap() {
+		int y = 0;
 		for (int year = Timestep.getStartYear(); year < Timestep.getEndtYear() + 1; year++) {
 			if (ConfigLoader.config.generate_map_output_files) {
 				if (ConfigLoader.config.map_output_years instanceof Integer) {
 					ConfigLoader.config.map_output_frequency = (int) ConfigLoader.config.map_output_years;
 					if (ConfigLoader.config.map_output_frequency != 0) {
-						if ((Timestep.getTick()) % ConfigLoader.config.map_output_frequency == 0
-								|| Timestep.getTick() == 0) {
+						if (y % ConfigLoader.config.map_output_frequency == 0 || year == Timestep.getEndtYear()) {
 							yearsMapExporting.add(year);
 						}
 					}
@@ -282,6 +282,7 @@ public class Listener extends AbstractUpdater {
 					}
 				}
 			}
+			y++;
 		}
 	}
 
@@ -299,8 +300,12 @@ public class Listener extends AbstractUpdater {
 							LandMaskUpdater.cellsForecedToChange.get(maskType));
 					LOGGER.info("number of cells forced  to change by mask (" + maskType + "):  "
 							+ LandMaskUpdater.cellsForecedToChange.get(maskType).size());
-					MapPngExporter.exportOwnerMapAsPng(LandMaskUpdater.cellsForecedToChange.get(maskType),
-							"forced_" + maskType);
+
+					String outDir = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator
+							+ "MapsPlots" + File.separator + maskType + "_" + Timestep.getCurrentYear() + ".png");
+
+					MapPngExporter.exportOwnerMapAsPng(new File(outDir),
+							LandMaskUpdater.cellsForecedToChange.get(maskType), "forced_" + maskType);
 					LandMaskUpdater.cellsForecedToChange.get(maskType).clear();
 				}
 			});

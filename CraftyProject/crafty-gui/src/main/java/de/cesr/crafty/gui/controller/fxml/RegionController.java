@@ -182,16 +182,15 @@ public class RegionController {
 		return hashAgentNbr;
 	}
 
-	static Map<String, Double> productivityCalculator(Cell c) {
+	private static Map<String, Double> productivityCalculator(Cell c) {
 		ConcurrentHashMap<String, Double> services = new ConcurrentHashMap<>();
 		for (Aft manager : AFTsLoader.getActivateAFTsHash().values()) {
 
 			if (manager.getType() != ManagerTypes.Abandoned && manager.getSensByService() != null) {
 				ServiceSet.getServicesList().forEach(s -> {
-					double product = c.getCapitals().entrySet().stream()
-							.mapToDouble(e -> (manager.getSensByService().get(s).get(e.getKey()) != null
-									? Math.pow(e.getValue(), manager.getSensByService().get(s).get(e.getKey()))
-									: 0))
+					double product = c.getCapitals().entrySet().stream().mapToDouble(
+							capital -> (manager.getSensByService().get(s).get(capital.getKey()) != null ? Math.pow(
+									capital.getValue(), manager.getSensByService().get(s).get(capital.getKey())) : 0))
 							.reduce(1.0, (x, y) -> x * y);
 					services.put(s, product * manager.getProductivityLevel().get(s));
 				});
@@ -200,7 +199,7 @@ public class RegionController {
 		return services;
 	}
 
-	static Map<String, Double> regionServiceCalculation() {
+	private static Map<String, Double> regionServiceCalculation() {
 		ConcurrentHashMap<String, Double> supply = new ConcurrentHashMap<>();
 
 		RegionCells.values().forEach(c -> {

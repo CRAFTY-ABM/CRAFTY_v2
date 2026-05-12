@@ -44,6 +44,7 @@ class LandMaskUpdaterTest {
         } else {
             CellsLoader.hashCell.clear();
         }
+        AFTsLoader.getAftHash().put("Abandoned",new Aft("Abandoned"));
     }
 
     @Test
@@ -90,6 +91,9 @@ class LandMaskUpdaterTest {
             Tracker.sankeydata.get("Abandoned").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
             Tracker.sankeydata.get("Urban").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
             LandMaskUpdater.cellsForecedToChange.put(maskType, new ConcurrentHashMap<>());
+//            CellsUpdater.decesionsNewOwner = new ConcurrentHashMap<>();
+            AFTsLoader.getAftHash().put("Abandoned", new Aft("Abandoned"));
+           
             LandMaskUpdater.cellOneMaskUpdater(maskType, year);
 
             // (1,2) should be masked + owned

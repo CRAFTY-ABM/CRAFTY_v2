@@ -4,11 +4,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
-import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.CsvKind;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
@@ -52,7 +50,7 @@ import de.cesr.crafty.core.utils.file.PathTools;
 public class Capital_Degradation_Updater extends AbstractUpdater {
 
 	private static final CustomLogger LOGGER = new CustomLogger(Capital_Degradation_Updater.class);
-	public static ConcurrentHashMap<Cell, ConcurrentHashMap<String, Double>> cellsShocks = new ConcurrentHashMap<>();
+//	public static ConcurrentHashMap<Cell, ConcurrentHashMap<String, Double>> cellsShocks = new ConcurrentHashMap<>();
 
 	// This updater is responsible for associating shocks to cells based on the
 	// current year and scenario.

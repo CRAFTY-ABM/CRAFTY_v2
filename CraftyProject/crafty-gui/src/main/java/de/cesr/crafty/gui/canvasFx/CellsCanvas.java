@@ -30,7 +30,6 @@ import de.cesr.crafty.core.dataLoader.land.GisLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
-import de.cesr.crafty.core.updaters.Capital_Degradation_Updater;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.SubScene;
@@ -177,15 +176,15 @@ public class CellsCanvas {
 						ColorP(c, AftCategorised.categoriesColor.get(c.getOwner().getCategory().getName()));
 				});
 			}
-		} else if (colortype.equalsIgnoreCase("Shocks")) {
-			System.out.println(Capital_Degradation_Updater.cellsShocks.size());
-			CellsLoader.hashCell.values().forEach(c -> {
-				if (c != null) {
-					ColorP(c, ColorsTools
-							.getColorForValue(Capital_Degradation_Updater.cellsShocks.get(c).get("ExtConifer")));
-				}
-
-			});
+//		} else if (colortype.equalsIgnoreCase("Shocks")) {
+//			System.out.println(Capital_Degradation_Updater.cellsShocks.size());
+//			CellsLoader.hashCell.values().forEach(c -> {
+//				if (c != null) {
+//					ColorP(c, ColorsTools
+//							.getColorForValue(Capital_Degradation_Updater.cellsShocks.get(c).get("ExtConifer")));
+//				}
+//
+//			});
 
 		} else if (colortype.equalsIgnoreCase("Mock")) {
 			// loop

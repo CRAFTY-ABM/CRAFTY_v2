@@ -49,6 +49,7 @@ public class CellsLoader {
 	private static final CustomLogger LOGGER = new CustomLogger(CellsLoader.class);
 	public static Set<String> regionsNamesSet = new HashSet<>();
 	public static ConcurrentHashMap<String, Cell> hashCell = new ConcurrentHashMap<>();
+
 	public static ConcurrentHashMap<String, Region> regions = new ConcurrentHashMap<>();
 	public static int maxX, maxY, minX, minY;
 
@@ -75,8 +76,7 @@ public class CellsLoader {
 		System.out.println("hashCell.size() = " + nbrOfCells);
 		initialMaxMinXY();
 	}
-	
-	
+
 	private static void initialMaxMinXY() {
 		ArrayList<Integer> X = new ArrayList<>();
 		ArrayList<Integer> Y = new ArrayList<>();
@@ -90,7 +90,6 @@ public class CellsLoader {
 		minX = Collections.min(X);
 		minY = Collections.min(Y);
 	}
-
 
 	public static Cell getCell(int i, int j) {
 		return hashCell.get(i + "," + j);

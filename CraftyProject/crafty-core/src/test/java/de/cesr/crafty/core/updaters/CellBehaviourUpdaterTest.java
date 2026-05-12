@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import de.cesr.crafty.core.cli.Config;
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.crafty.CellBehaviour;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
@@ -40,6 +42,9 @@ class CellBehaviourUpdaterTest {
 
         // default: categorisation off
         AftCategorised.useCategorisationGivIn = false;
+        if (ConfigLoader.config == null) {
+			ConfigLoader.config = new Config();
+		}
     }
 
     @Test

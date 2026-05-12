@@ -42,12 +42,12 @@ public class Config {
 	public String CAPITALS_directory = "";
 	public String gisPath = "";
 	public List<String> landControle_directories = null;
-	public String Behevoir_Cells_directory = "";;
-	public String SHOCKS_Maps_directory = "";;
+	public String Behevoir_Cells_directory = "";
+	public String SHOCKS_Maps_directory = "";
 	public String aft_production_directory = "";
 	public String aft_behevoir_directory = "";
 	public String service_demands_path = "";;
-	public String service_utility_weight_path = "";;
+	public String service_utility_weight_path = "";
 	public String services_taxes_subsidies_path = "";
 	public String land_taxes_subsidies_path = "";
 	public String capital_degradation_directory = "";
@@ -104,7 +104,13 @@ public class Config {
 	public Object map_output_years = null;
 	public String comments = "";;
 
-	public AtomicLong longSeedID = new AtomicLong();
+	public AtomicLong longSeedID = new AtomicLong(85697);
+
+	// cached configs
+	public boolean consider_subsidies_taxes = true;
+
+	// New section
+	public MapPngConfig map_png = new MapPngConfig();
 
 	@Override
 	public String toString() {
@@ -153,12 +159,18 @@ public class Config {
 				+ "|-> comments=" + comments + "\n" + "] \n\n";
 	}
 
+	// behevoir model
+	public String categories_givingInDistribution = "";
+	public double steepness_logistic_eq = 7;
 	// institutions
 	public String institutions_directory = "";
 	public String external_variable_values_directory = "";
+	public String LLM_model_name = "gpt-4.1-nano";
+	public String LLM_API_KEY = "";
 	public int start_year_of_policy_effect = 0;
 	public int end_year_of_policy_effect = Integer.MAX_VALUE;
-	public int institution_time_lag = 1;
+
+//	public int institution_time_lag = 1;
 //	 Only when CRAFTY coupled with PLUM
 	public boolean COUPLED_WITH_PLUM = false;
 	public String plumCalibPath = "";

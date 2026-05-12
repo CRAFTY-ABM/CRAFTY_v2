@@ -24,6 +24,7 @@ import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.main.MainHeadless;
+import de.cesr.crafty.core.modelRunner.ModelRunner;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
 import de.cesr.crafty.gui.utils.graphical.ColorsTools;
 import de.cesr.crafty.gui.utils.graphical.LineChartTools;
@@ -251,12 +252,16 @@ public class ModelRunnerController {
 	public void run() {
 		run.setDisable(true);
 		simulationFolderName();
+		
+		System.out.println("#######  "+ConfigLoader.config.output_folder_name);
+		
 		if (ConfigLoader.config.export_LOGGER) {
 			CustomLogger
 					.configureLogger(Paths.get(ConfigLoader.config.output_folder_name + File.separator + "LOGGER.txt"));
 		}
 		if (startRunin || !ConfigLoader.config.generate_output_files) {
-			MainHeadless.runner.initialzeRun();
+//			MainHeadless.runner.initialzeRun();
+			ModelRunner.demandEquilibrium();
 			worker = Executors.newSingleThreadScheduledExecutor(r -> {
 				Thread t = new Thread(r, "simulation-worker");
 				t.setDaemon(true);
