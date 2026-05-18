@@ -4,7 +4,6 @@ import java.io.File;
 import java.nio.file.Paths;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
-import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.main.MainHeadless;
 import de.cesr.crafty.core.modelRunner.ModelRunner;
@@ -58,10 +57,6 @@ public class MainCoupling {
 	private static void initialzeRun() {
 		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.Output_path);
 		Listener.outputfolderPath(generatedPath, ConfigLoader.config.output_folder_name);
-		if (ConfigLoader.config.export_LOGGER) {
-			CustomLogger
-					.configureLogger(Paths.get(ConfigLoader.config.output_folder_name + File.separator + "LOGGER.txt"));
-		}
 		PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
 				Listener.exportConfigurationFile(), false);
 	}

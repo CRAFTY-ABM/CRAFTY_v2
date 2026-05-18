@@ -33,7 +33,7 @@ public class ToyData {
 //	}
 
 	public void resetStaticState(Path projectDir) {
-		
+
 		// Clear category-related static state before each test
 		AftCategorised.aftCategories.clear();
 		AftCategorised.CategoriesIntestisy.clear();
@@ -132,7 +132,9 @@ public class ToyData {
 		CapitalUpdater.getCapitalsList().clear();
 		CapitalUpdater.getCapitalsList().addAll(List.of("capi1", "capi2", "capi3"));
 
-		ProjectLoader.pathInitialisation(projectDir);
+		ConfigLoader.config.scenario = "TestScenario";
+		ConfigLoader.config.output_folder_name = "";
+		ProjectLoader.pathInitialisation(projectDir.resolve("output"));
 		ProjectLoader.setScenario("TestScenario");
 	}
 

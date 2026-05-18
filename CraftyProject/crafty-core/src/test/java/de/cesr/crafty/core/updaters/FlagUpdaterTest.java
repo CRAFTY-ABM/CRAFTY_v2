@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,6 +16,7 @@ import org.mockito.Mockito;
 
 import de.cesr.crafty.core.ToyData;
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.utils.file.DirectoryWatcher;
 import de.cesr.crafty.core.utils.file.PathTools;
@@ -30,6 +32,10 @@ class FlagUpdaterTest {
 		Path flag = tempDir.resolve("flag.csv");
 		ConfigLoader.config.waitingFlag_directories_path = flag.toString();
 	}
+    @AfterEach
+    void tearDown() {
+    	CustomLogger.shutdownRunFileLoggers();
+    }
 
 	@Test
 	void constructor_doesNotThrow_whenWaitingFlagsCsvMissing_orEmptyList() {

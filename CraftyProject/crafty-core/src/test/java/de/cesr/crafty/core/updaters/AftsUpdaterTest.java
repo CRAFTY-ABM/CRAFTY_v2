@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import de.cesr.crafty.core.ToyData;
 import de.cesr.crafty.core.cli.Config;
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.Region;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
@@ -55,6 +57,11 @@ class AftsUpdaterTest {
 		}
 		AFTsLoader.getActivateAFTsHash().clear();
 	}
+	
+    @AfterEach
+    void tearDown() {
+    	CustomLogger.shutdownRunFileLoggers();
+    }
 
 //	@Test
 //	void updateAFTProduction_updatesProductivityAndSensitivityFromCsv() throws IOException {

@@ -17,6 +17,7 @@ import org.mockito.Mockito;
 
 import de.cesr.crafty.core.ToyData;
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
@@ -79,6 +80,11 @@ class RegionalModelRunnerTest {
 		hField.setAccessible(true);
 		hField.set(null, hashAgentNbrRegionsBackup);
 	}
+	
+    @AfterEach
+    void tearDown() {
+    	CustomLogger.shutdownRunFileLoggers();
+    }
 
 	@Test
 	void constructor_initialisesDistributionMeanForAllYears() throws Exception {
@@ -308,8 +314,8 @@ class RegionalModelRunnerTest {
 
 			invokePrivate(r, "computeDistributionMean");
 
-			double meanOwner = r.getDistributionMean().get(2001).get(owner);
-			double meanOther = r.getDistributionMean().get(2001).get(other);
+			double meanOwner = r.getDistributionMean().get(2001).get(owner.getLabel());
+			double meanOther = r.getDistributionMean().get(2001).get(other.getLabel());
 
 			// 10/2 + 6/2 = 8
 			assertEquals(8.0, meanOwner, 1e-12);

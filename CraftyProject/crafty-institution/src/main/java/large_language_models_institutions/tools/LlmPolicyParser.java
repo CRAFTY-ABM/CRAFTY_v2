@@ -1,4 +1,4 @@
-package large_language_models_institutions;
+package large_language_models_institutions.tools;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -227,6 +227,7 @@ public final class LlmPolicyParser {
 				+ "Now re-emit corrected JSON using the SAME intended decisions as before.\r\n" + "\r\n"
 				+ "Previous unparseable output:\r\n" + "<<<\r\n" + unparseableOutput + ">>>\r\n" + "";
 	}
+	
 	
 	public static String promptModefierToForceFormat(String originalPrompt, Collection<String> expectedPolicyKeys) {
 	    if (originalPrompt == null) return null;

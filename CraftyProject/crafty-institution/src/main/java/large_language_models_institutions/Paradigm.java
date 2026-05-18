@@ -4,18 +4,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import cli.InstituteYamlLoader;
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.utils.file.PathTools;
+import large_language_models_institutions.cli.InstituteYamlLoader;
 
 public class Paradigm {
 
@@ -24,8 +23,8 @@ public class Paradigm {
 	private Set<Cell> cells = ConcurrentHashMap.newKeySet();
 
 	private Map<String, Set<Cell>> subRegions = new ConcurrentHashMap<>();// <region,cells>
-	private Map<String, Integer> delay = new HashMap<>();// <region,delay>
-	private Map<String, Institute> institutes = new HashMap<>();// <name,institute>
+	private Map<String, Integer> delay = new ConcurrentHashMap<>();// <region,delay>
+	private Map<String, Institute> institutes = new ConcurrentHashMap<>();// <name,institute>
 
 	public Paradigm(String name) {
 		this.name = name;
@@ -42,11 +41,17 @@ public class Paradigm {
 //		});
 	}
 
-	public void step() {
-		institutes.values().forEach(institute -> {
-			institute.step();
-		});
+	public void step1_preparePrompts() {
+		getInstitutes().values().forEach(institute -> institute.step_preparePrompt());
 	}
+	
+	public void step2_connectLLMs() {
+		getInstitutes().values().forEach(institute -> institute.step_connectLLMs());// this should be in parallel
+	}
+	public void step3_appliedPolicies() {
+		getInstitutes().values().forEach(institute -> institute.step_appliedPolicies());
+	}
+	
 
 	private void setup_instutites() {
 
@@ -59,7 +64,7 @@ public class Paradigm {
 		List<Institute> instituteList = InstituteYamlLoader.loadInstitutes(path.getFirst(), Targets_Set.getTargets(),
 				this);
 		instituteList.forEach(inst -> {
-			institutes.put(inst.getName(), inst);
+			getInstitutes().put(inst.getName(), inst);
 		});
 
 //List<File> instututionsFiles = PathTools
@@ -117,5 +122,10 @@ public class Paradigm {
 	public void setCells(Set<Cell> cells) {
 		this.cells = cells;
 	}
+
+	public Map<String, Institute> getInstitutes() {
+		return institutes;
+	}
+
 
 }

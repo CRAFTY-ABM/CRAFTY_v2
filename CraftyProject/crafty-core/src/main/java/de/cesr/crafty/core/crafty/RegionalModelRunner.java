@@ -3,6 +3,7 @@ package de.cesr.crafty.core.crafty;
 import java.util.Collection;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,7 +74,10 @@ public class RegionalModelRunner {
 	private ConcurrentHashMap<String, Double> regionalSupply;
 	private ConcurrentHashMap<String, Double> marginal = new ConcurrentHashMap<>();
 	private ConcurrentHashMap<String, Double> serviceTax = new ConcurrentHashMap<>();
-	private ConcurrentHashMap<Integer, ConcurrentHashMap<Aft, Double>> distributionMean = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<Integer, ConcurrentHashMap<String, Double>> distributionMean = new ConcurrentHashMap<>();
+
+	Map<String, Double> initial_service_gaps = new ConcurrentHashMap<>();
+	Map<String, Double> initialutilityAverage = new ConcurrentHashMap<>();
 
 	double score;
 	private double maxUtility, minUtility;
@@ -109,7 +113,8 @@ public class RegionalModelRunner {
 			landTS();
 		}
 		try (var t = profiler.section("associet Taxes To Cells")) {
-			taxesToCells.run();
+			associetTaxesToCells();
+			intializeForTaxesUse();
 		}
 		try (var t = profiler.section("utilitytyForAll")) {
 			utilitytyForAll();
@@ -138,7 +143,6 @@ public class RegionalModelRunner {
 
 		LOGGER.info(profiler
 				.report("RegionalModelRunner (year=" + Timestep.getCurrentYear() + ", region=" + R.getName() + ")"));
-
 	}
 
 	private void computeRegionsSupply() {
@@ -165,16 +169,6 @@ public class RegionalModelRunner {
 		});
 	}
 
-	private Runnable taxesToCells = this::associetTaxesToCells;
-
-	public void setCellsUtilities(Runnable taxesToCells) {
-		this.taxesToCells = (taxesToCells != null) ? taxesToCells : this::associetTaxesToCells;
-	}
-
-	public void resetCellsUtilities() {
-		this.taxesToCells = this::associetTaxesToCells;
-	}
-
 	private void associetTaxesToCells() {
 		if (!ConfigLoader.config.consider_subsidies_taxes)
 			return;
@@ -197,7 +191,7 @@ public class RegionalModelRunner {
 			if (Timestep.getTick() == 0) {
 				aft.setCachedLandTax(0.);
 			} else {
-				double initialAverageUtility = distributionMean.get(Timestep.getStartYear()).get(aft);
+				double initialAverageUtility = distributionMean.get(Timestep.getStartYear()).get(aft.getLabel());
 				double calib = initialAverageUtility != 0 ? Math.abs(initialAverageUtility) : 1;
 				double tx = aft.getLand_taxes_subsidies().getOrDefault(Timestep.getCurrentYear() + 1, 0d);
 				aft.setCachedLandTax(100 * calib * tx);
@@ -210,16 +204,25 @@ public class RegionalModelRunner {
 		// Cache everything locally (cheaper than repeated virtual calls)
 		final var cells = R.getCells(); // ConcurrentHashMap<?, Cell>
 
-		// Snapshot services once
-		final List<String> servicesList = ServiceSet.getServicesList();
-		final String[] services = servicesList.toArray(new String[0]);
+		if (!ConfigLoader.config.use_cell_level_taxes) {
+			// Snapshot services once
+			final List<String> servicesList = ServiceSet.getServicesList();
+			final String[] services = servicesList.toArray(new String[0]);
+			final double[] coeff = buildUtilityCoeff(services);
+			cells.forEach(100_000, (k, c) -> c.setCurrentUtility(computeCellUtility(c, services, coeff)));
+		} else {
+			cells.forEach(100_000, (k, c) -> c.setCurrentUtility(ownerUtility(c)));
+		}
+	}
 
-		// Precompute coeff[s] = serviceTax + marginal ONCE (per step/year/region)
-		final double[] coeff = buildUtilityCoeff(services);
-
-		// Faster than values().parallelStream() in many cases for CHM:
-		// parallelismThreshold: tune (e.g. 50_000 or 100_000)
-		cells.forEach(100_000, (k, c) -> c.setCurrentUtility(computeCellUtility(c, services, coeff)));
+	private double ownerUtility(Cell c) {
+		return ServiceSet.getServicesList().stream()
+				.mapToDouble(serviceName -> (c.getServicesTax().getOrDefault(serviceName, 1d)
+						* (initial_service_gaps.get(serviceName)) + getMarginal().get(serviceName))
+						* c.productivity(c.getOwner(), serviceName))
+				.sum()
+				+ c.getLandTax().getOrDefault(c.getOwnerName(), 0d)
+						* (initialutilityAverage.getOrDefault(c.getOwnerName(), 1d));
 	}
 
 	private double[] buildUtilityCoeff(String[] services) {
@@ -247,23 +250,39 @@ public class RegionalModelRunner {
 		return u;
 	}
 
+	private void intializeForTaxesUse() {
+		if (Timestep.getCurrentYear() < Timestep.getStartYear() + 2) {
+			ServiceSet.getServicesList().forEach(serviceName -> {
+				initial_service_gaps.put(serviceName, Math.abs(ServicesUpdater.getGaps().get(R.getName())
+						.get(serviceName).getOrDefault(Timestep.getStartYear() + 1, 1d)));
+			});
+
+			AFTsLoader.getAftHash().keySet().forEach(aftName -> {
+				initialutilityAverage.put(aftName,
+						Math.abs(distributionMean.getOrDefault(Timestep.getStartYear() + 1, new ConcurrentHashMap<>())
+								.getOrDefault(aftName, 1d)));
+			});
+		}
+	}
+
 	private void computeDistributionMean() {
 		// Calculate the mean distribution
 		R.getCells().values()/**/.parallelStream().forEach(c -> {
 			if (c.getOwner() != null) {
-				distributionMean.get(Timestep.getCurrentYear()).merge(c.getOwner(),
+				distributionMean.get(Timestep.getCurrentYear()).merge(c.getOwner().getLabel(),
 						c.getCurrentUtility()
 								/ AFTsLoader.hashAgentNbrRegions.get(R.getName()).get(c.getOwner().getLabel()),
 						Double::sum);
 			}
 		});
-		AFTsLoader.getActivateAFTsHash().values()
+		AFTsLoader.getActivateAFTsHash().keySet()
 				.forEach(a -> distributionMean.get(Timestep.getCurrentYear()).computeIfAbsent(a, key -> 0.));
 
 		StringJoiner joiner = new StringJoiner(", ", "Region: [" + R.getName() + "]: Distribution Mean: {", "}");
-		for (Aft a : distributionMean.get(Timestep.getCurrentYear()).keySet()) {
-			joiner.add(a.getLabel() + "= " + distributionMean.get(Timestep.getCurrentYear()).get(a));
+		for (String a : distributionMean.get(Timestep.getCurrentYear()).keySet()) {
+			joiner.add(a + "= " + distributionMean.get(Timestep.getCurrentYear()).get(a));
 		}
+
 		LOGGER.info(joiner.toString());
 	}
 
@@ -453,11 +472,11 @@ public class RegionalModelRunner {
 
 	}
 
-	public ConcurrentHashMap<Aft, Double> getDistributionMeanY() {
+	public ConcurrentHashMap<String, Double> getDistributionMeanY() {
 		return distributionMean.get(Timestep.getCurrentYear());
 	}
 
-	public ConcurrentHashMap<Integer, ConcurrentHashMap<Aft, Double>> getDistributionMean() {
+	public ConcurrentHashMap<Integer, ConcurrentHashMap<String, Double>> getDistributionMean() {
 		return distributionMean;
 	}
 

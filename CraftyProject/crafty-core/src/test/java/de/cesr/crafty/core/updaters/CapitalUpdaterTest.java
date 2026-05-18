@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import de.cesr.crafty.core.ToyData;
 import de.cesr.crafty.core.cli.Config;
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.utils.file.CsvTools;
 
 /**
@@ -58,6 +60,11 @@ class CapitalUpdaterTest {
 //		System.out.println("@@@    ");
 //		PathTools.findAllFilePaths(scenario);
 	}
+	
+    @AfterEach
+    void tearDown() {
+    	CustomLogger.shutdownRunFileLoggers();
+    }
 
 	@Test
 	void constructor_readsCapitalsListFromMetadata() throws Exception {

@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import de.cesr.crafty.core.ToyData;
 import de.cesr.crafty.core.cli.Config;
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Region;
 import de.cesr.crafty.core.crafty.Service;
 import de.cesr.crafty.core.crafty.RegionalModelRunner;
@@ -149,6 +151,11 @@ class ModelRunnerTest {
 		RegionsModelRunnerUpdater.regionsModelRunner.put("R1", runner1);
 		RegionsModelRunnerUpdater.regionsModelRunner.put("R2", runner2);
 	}
+	
+    @AfterEach
+    void tearDown() {
+    	CustomLogger.shutdownRunFileLoggers();
+    }
 
 	@Test
 	void demandEquilibrium_doesNothingWhenFlagFalse() {

@@ -1,19 +1,21 @@
 package large_language_models_institutions;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
 
 public class Policy {
-
+	private static final CustomLogger LOGGER = new CustomLogger(Policy.class);
 	private String name;
 	private double value;
-	private Map<String, Map<String, Double>> craftyElem = new HashMap<>();// <type,<craftyElem,weight>>
+	private double sensitivity = 1;
+	private Map<String, Map<String, Double>> craftyElem = new ConcurrentHashMap<>();// <type,<craftyElem,weight>>
 
 	private Paradigm paradigm;
 	private double accumulatedValue;
@@ -33,7 +35,7 @@ public class Policy {
 	private void applyPolicy() {
 		craftyElem.forEach((type, hash) -> {
 			hash.forEach((element, weight) -> {
-//				System.out.println(name+" , "+type+" .. "+element+" = "+weight);
+				LOGGER.trace(type + " .. " + element + " = " + weight);
 				switch (type.toLowerCase()) {
 				case "aft":
 					applyAftAdjustment(element, weight);
@@ -52,11 +54,10 @@ public class Policy {
 	}
 
 	private void applyAftAdjustment(String element, double weight) {
-
 		paradigm.getSubRegions().forEach((subRegion_name, cells) -> {
 			cells.forEach(c -> {
 				if (c.getOwner() != null && c.getOwnerName().equals(element)) {
-					c.getLandTax().merge(element, weight * findpolicyValue(c) / 100.0, Double::sum);
+					c.getLandTax().merge(element, sensitivity*weight * findpolicyValue(c), Double::sum);
 				}
 			});
 		});
@@ -66,7 +67,7 @@ public class Policy {
 
 		paradigm.getSubRegions().forEach((subRegion_name, cells) -> {
 			cells.forEach(c -> {
-				c.getServicesTax().put(element, weight * findpolicyValue(c) / 100.0);
+				c.getServicesTax().put(element, sensitivity*weight * findpolicyValue(c));
 			});
 		});
 	}
@@ -85,7 +86,7 @@ public class Policy {
 			paradigm.getSubRegions().forEach((subRegion_name, cells) -> {
 				cells.forEach(c -> {
 					if (c.getOwnerName().equals(aftName)) {
-						c.getCapitalsAdjusment().merge(capital, weight * findpolicyValue(c) / 100.0, Double::sum);
+						c.getCapitalsAdjusment().merge(capital, sensitivity*weight * findpolicyValue(c) / 100, Double::sum);
 					}
 				});
 			});

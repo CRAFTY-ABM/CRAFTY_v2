@@ -230,8 +230,8 @@ class CompetitivenessTest {
 			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
 			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
 
-			ConcurrentHashMap<Aft, Double> meanY = new ConcurrentHashMap<>();
-			meanY.put(competitor, 5.0);
+			ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
+			meanY.put(competitor.getLabel(), 5.0);
 			when(r.getDistributionMeanY()).thenReturn(meanY);
 
 			try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class)) {
@@ -276,8 +276,8 @@ class CompetitivenessTest {
 
 			doReturn(100.0).when(c).productivity(competitor, "S1");
 
-			ConcurrentHashMap<Aft, Double> meanY = new ConcurrentHashMap<>();
-			meanY.put(competitor, 0.0);
+			ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
+			meanY.put(competitor.getLabel(), 0.0);
 			when(r.getDistributionMeanY()).thenReturn(meanY);
 
 			try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class)) {

@@ -2,6 +2,7 @@ package de.cesr.crafty.core.dataLoader;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
+import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
@@ -89,6 +90,14 @@ public final class ProjectLoader {
 		fillefAllMetaDataFilesAreFound();
 		allfilePathsInDataDirectory = PathTools.findAllFilePaths(projectPath);
 		initialSenarios();
+		ProjectLoader.setScenario(ConfigLoader.config.scenario);
+		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.Output_path);
+		Listener.outputfolderPath(generatedPath, ConfigLoader.config.output_folder_name);
+		if (ConfigLoader.config.export_LOGGER) {
+			CustomLogger.configureLoggers(Path.of(ConfigLoader.config.output_folder_name));
+		}
+		LOGGER.info("Output Path =" + ConfigLoader.config.output_folder_name);
+		
 	}
 
 	static void initialSenarios() {

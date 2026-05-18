@@ -1,4 +1,4 @@
-package cli;
+package large_language_models_institutions.cli;
 
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.updaters.Timestep;

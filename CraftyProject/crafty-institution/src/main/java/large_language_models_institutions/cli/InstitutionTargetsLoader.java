@@ -1,4 +1,4 @@
-package cli;
+package large_language_models_institutions.cli;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -92,10 +92,142 @@ public final class InstitutionTargetsLoader {
 
 		Map<String, Double> craftyElements = parseWeights(weightsObj, name, type);
 
+		Map<String, Map<Integer, Double>> goals = parseGoals(map.get("goals"), name);
+
 		Target target = new Target(name);
 		target.setType(type);
 		target.setCraftyElem(craftyElements);
+
+		target.setOptimistGoals(goals.get("optimist"));
+		target.setRealistGoals(goals.get("realist"));
+		target.setPessimistGoals(goals.get("pessimist"));
+		target.fillGoals();
+
 		return target;
+	}
+	
+	private static Map<String, Map<Integer, Double>> parseGoals(Object goalsObj, String targetName) {
+		Map<String, Map<Integer, Double>> result = new LinkedHashMap<>();
+
+		result.put("optimist", new LinkedHashMap<>());
+		result.put("realist", new LinkedHashMap<>());
+		result.put("pessimist", new LinkedHashMap<>());
+
+		if (goalsObj == null) {
+			return result;
+		}
+
+		if (!(goalsObj instanceof Map<?, ?> rawGoals)) {
+			throw new IllegalArgumentException("Target '" + targetName + "': 'goals' must be a map.");
+		}
+
+		for (Map.Entry<?, ?> entry : rawGoals.entrySet()) {
+			if (entry.getKey() == null) {
+				throw new IllegalArgumentException("Target '" + targetName + "': goal name cannot be null.");
+			}
+
+			String goalName = entry.getKey().toString().trim().toLowerCase();
+
+			if (!result.containsKey(goalName)) {
+				throw new IllegalArgumentException("Target '" + targetName + "': unknown goal type '" + goalName
+						+ "'. Allowed goal types are: optimist, realist, pessimist.");
+			}
+
+			Map<Integer, Double> goalValues = parseGoalValues(entry.getValue(), targetName, goalName);
+			result.put(goalName, goalValues);
+		}
+
+		return result;
+	}
+
+	private static Map<Integer, Double> parseGoalValues(Object goalObj, String targetName, String goalName) {
+		if (goalObj == null) {
+			return new LinkedHashMap<>();
+		}
+
+		if (!(goalObj instanceof Map<?, ?> rawValues)) {
+			throw new IllegalArgumentException("Target '" + targetName + "', goal '" + goalName
+					+ "': goal values must be a map like {2030: 10, 2050: 25}.");
+		}
+
+		Map<Integer, Double> values = new LinkedHashMap<>();
+
+		for (Map.Entry<?, ?> entry : rawValues.entrySet()) {
+			Integer year = parseYear(entry.getKey(), targetName, goalName);
+			double value = parseGoalDouble(entry.getValue(), targetName, goalName, year);
+
+			if (values.containsKey(year)) {
+				throw new IllegalArgumentException("Target '" + targetName + "', goal '" + goalName
+						+ "': duplicate year " + year + ".");
+			}
+
+			values.put(year, value);
+		}
+
+		return sortByYear(values);
+	}
+
+	private static Integer parseYear(Object yearObj, String targetName, String goalName) {
+		if (yearObj == null) {
+			throw new IllegalArgumentException(
+					"Target '" + targetName + "', goal '" + goalName + "': year cannot be null.");
+		}
+
+		if (yearObj instanceof Number number) {
+			int year = number.intValue();
+
+			if (number.doubleValue() != year) {
+				throw new IllegalArgumentException("Target '" + targetName + "', goal '" + goalName
+						+ "': year must be an integer, found: " + number);
+			}
+
+			return year;
+		}
+
+		if (yearObj instanceof String str) {
+			try {
+				return Integer.parseInt(str.trim());
+			} catch (NumberFormatException e) {
+				throw new IllegalArgumentException("Target '" + targetName + "', goal '" + goalName
+						+ "': year is not a valid integer: " + str, e);
+			}
+		}
+
+		throw new IllegalArgumentException(
+				"Target '" + targetName + "', goal '" + goalName + "': year must be numeric.");
+	}
+
+	private static double parseGoalDouble(Object valueObj, String targetName, String goalName, int year) {
+		if (valueObj == null) {
+			throw new IllegalArgumentException("Target '" + targetName + "', goal '" + goalName
+					+ "', year '" + year + "': value is null.");
+		}
+
+		if (valueObj instanceof Number number) {
+			return number.doubleValue();
+		}
+
+		if (valueObj instanceof String str) {
+			try {
+				return Double.parseDouble(str.trim());
+			} catch (NumberFormatException e) {
+				throw new IllegalArgumentException("Target '" + targetName + "', goal '" + goalName
+						+ "', year '" + year + "': value is not a valid number: " + str, e);
+			}
+		}
+
+		throw new IllegalArgumentException("Target '" + targetName + "', goal '" + goalName
+				+ "', year '" + year + "': value must be numeric.");
+	}
+
+	private static Map<Integer, Double> sortByYear(Map<Integer, Double> values) {
+		Map<Integer, Double> sorted = new LinkedHashMap<>();
+
+		values.entrySet().stream()
+				.sorted(Map.Entry.comparingByKey())
+				.forEach(entry -> sorted.put(entry.getKey(), entry.getValue()));
+
+		return sorted;
 	}
 
 	private static String readRequiredString(Map<?, ?> map, String key, int index) {

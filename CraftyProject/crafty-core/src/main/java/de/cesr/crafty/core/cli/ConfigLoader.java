@@ -3,30 +3,38 @@ package de.cesr.crafty.core.cli;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+import de.cesr.crafty.core.utils.non_java_code_controller.RScriptRunnerConfig;
+
 import org.yaml.snakeyaml.LoaderOptions;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
-	/**
-	 * Loads the CRAFTY configuration from a YAML file and exposes it as a global {@link Config}.
-	 *
-	 * The loader first tries to read a user-provided YAML path (typically set by the CLI flag:
-	 * --config-file "C:\\path\\to\\config.yaml"). If the path is missing or the file does not exist,
-	 * it falls back to a bundled classpath resource at "/config.yaml".
-	 *
-	 * If the file cannot be found, is empty, or cannot be parsed, the loader returns a default
-	 * {@code new Config()} to keep the application runnable.
-	 *
-	 * Typical usage: set {@link #configPath}  and call {@link #init()} once at startup.
-	 * {@link #init()} loads the config and then calls {@link Config#inialize()} to perform any
-	 * post-load initialization of derived/default values.
-	 *
-	 * Note: this class uses SnakeYAML with a {@link org.yaml.snakeyaml.constructor.Constructor}
-	 * bound to {@link Config} to map YAML keys to Java fields.
-	 */
+/**
+ * Loads the CRAFTY configuration from a YAML file and exposes it as a global
+ * {@link Config}.
+ *
+ * The loader first tries to read a user-provided YAML path (typically set by
+ * the CLI flag: --config-file "C:\\path\\to\\config.yaml"). If the path is
+ * missing or the file does not exist, it falls back to a bundled classpath
+ * resource at "/config.yaml".
+ *
+ * If the file cannot be found, is empty, or cannot be parsed, the loader
+ * returns a default {@code new Config()} to keep the application runnable.
+ *
+ * Typical usage: set {@link #configPath} and call {@link #init()} once at
+ * startup. {@link #init()} loads the config and then calls
+ * {@link Config#inialize()} to perform any post-load initialization of
+ * derived/default values.
+ *
+ * Note: this class uses SnakeYAML with a
+ * {@link org.yaml.snakeyaml.constructor.Constructor} bound to {@link Config} to
+ * map YAML keys to Java fields.
+ */
 /*
  * @author Mohamed Byari
  *
@@ -37,9 +45,13 @@ public class ConfigLoader {
 
 	public static void init() {
 		config = loadConfig();
+		try {
+			loadExternalRScriptRunnerConfig();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
-//--config-file "C:\Users\byari-m\Desktop\config.yaml"
 	private static Config loadConfig() {
 		InputStream inputStream = null;
 		try {
@@ -62,7 +74,7 @@ public class ConfigLoader {
 			Constructor constructor = new Constructor(Config.class, new LoaderOptions());
 			Yaml yaml = new Yaml(constructor);
 			Config loadedConfig = yaml.load(inputStream);
-			System.out.println("loadedConfig: "+loadedConfig);
+			System.out.println("loadedConfig: " + loadedConfig);
 			if (loadedConfig == null) {
 				System.out.println("Config file is empty or invalid. Using default config values.");
 				return new Config();
@@ -75,4 +87,65 @@ public class ConfigLoader {
 		}
 	}
 
+//	for external Yaml
+	private static void loadExternalRScriptRunnerConfig() throws IOException {
+
+		if (config == null || config.r_script_runner == null) {
+			return;
+		}
+
+		String externalPathText = config.r_script_runner.config_path;
+
+		if (externalPathText == null || externalPathText.isBlank()) {
+			return;
+		}
+
+		externalPathText = resolveBasicConfigTemplateRScript(externalPathText);
+
+		Path externalPath = Path.of(externalPathText);
+
+		if (!externalPath.isAbsolute()) {
+			externalPath = Path.of(config.project_path).resolve(externalPath).normalize();
+		}
+
+		if (!Files.exists(externalPath)) {
+			throw new IOException("R script runner config file does not exist: " + externalPath.toAbsolutePath());
+		}
+
+		LoaderOptions loaderOptions = new LoaderOptions();
+		Constructor constructor = new Constructor(RScriptRunnerConfig.class, loaderOptions);
+		Yaml yaml = new Yaml(constructor);
+
+		RScriptRunnerConfig externalConfig;
+
+		try (InputStream input = Files.newInputStream(externalPath)) {
+			externalConfig = yaml.load(input);
+		}
+
+		if (externalConfig == null) {
+			throw new IOException("R script runner config file is empty: " + externalPath.toAbsolutePath());
+		}
+
+		// Keep the path for logging/debugging
+		externalConfig.config_path = externalPath.toString();
+
+		config.r_script_runner = externalConfig;
+
+		System.out.println("[Config] Loaded external R script runner config: " + externalPath.toAbsolutePath());
+	}
+
+	private static String resolveBasicConfigTemplateRScript(String value) {
+
+		if (value == null) {
+			return null;
+		}
+
+		return value.replace("{project_path}", safe(config.project_path))
+				.replace("{output_folder_name}", safe(config.output_folder_name))
+				.replace("{scenario}", safe(config.scenario));
+	}
+
+	private static String safe(Object value) {
+		return value == null ? "" : String.valueOf(value);
+	}
 }

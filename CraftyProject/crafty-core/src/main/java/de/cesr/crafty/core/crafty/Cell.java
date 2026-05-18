@@ -114,14 +114,14 @@ public class Cell extends AbstractCell {
 //		}
 //	}
 
-	void giveUp(RegionalModelRunner r, ConcurrentHashMap<Aft, Double> distributionMean) {
+	void giveUp(RegionalModelRunner r, ConcurrentHashMap<String, Double> distributionMean) {
 
 		Aft owner = getOwner();
 		if (owner == null || !owner.isInteract()) {
 			return;
 		}
 
-		Double averageUtilityObj = distributionMean.get(owner);
+		Double averageUtilityObj = distributionMean.get(owner.getLabel());
 		if (averageUtilityObj == null) {
 			return;
 		}

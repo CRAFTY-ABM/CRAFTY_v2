@@ -42,7 +42,7 @@ public class PngGenerator {
 
 		@Override
 		public ToDoubleFunction<Cell> serviceTaxExtractor(String serviceName) {
-			return c -> c.getServicesTax().getOrDefault(serviceName, 0.0);
+			return c -> c.getServicesTax().getOrDefault(serviceName, Double.NaN);
 		}
 
 		@Override

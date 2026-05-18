@@ -2,7 +2,6 @@ package de.cesr.crafty.gui.controller.fxml;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -255,10 +254,7 @@ public class ModelRunnerController {
 		
 		System.out.println("#######  "+ConfigLoader.config.output_folder_name);
 		
-		if (ConfigLoader.config.export_LOGGER) {
-			CustomLogger
-					.configureLogger(Paths.get(ConfigLoader.config.output_folder_name + File.separator + "LOGGER.txt"));
-		}
+
 		if (startRunin || !ConfigLoader.config.generate_output_files) {
 //			MainHeadless.runner.initialzeRun();
 			ModelRunner.demandEquilibrium();

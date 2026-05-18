@@ -1,4 +1,4 @@
-package main;
+package large_language_models_institutions.main;
 
 import java.nio.file.Paths;
 
@@ -17,18 +17,18 @@ public class Runner {
 		System.out.println("this is LLM ");
 		MainHeadless.initializeConfig(args);
 		ProjectLoader.pathInitialisation(Paths.get(ConfigLoader.config.project_path));
-		
+		ConfigLoader.config.use_cell_level_taxes = true;
 		MainHeadless.runner = new ModelRunner();
 		MainHeadless.runner.start();
 		MainHeadless.runner.initialzeRun();
 		External_variables_Manager.Initializer();
 		ConfigLoader.config.consider_subsidies_taxes = false;
+
 		Connector llm = new Connector();
 		llm.setup();
-		
+
 		for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
 			llm.step();
-			System.out.println("!! "+ConfigLoader.config.consider_subsidies_taxes );
 		}
 		ModelRunner.exportChartsPlots();
 	}

@@ -78,10 +78,6 @@ public class Connector_Runner {
 	public void initialRunner() {
 		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.Output_path);
 		Listener.outputfolderPath(generatedPath, ConfigLoader.config.output_folder_name);
-		if (ConfigLoader.config.export_LOGGER) {
-			CustomLogger
-					.configureLogger(Paths.get(ConfigLoader.config.output_folder_name + File.separator + "LOGGER.txt"));
-		}
 		PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
 				Listener.exportConfigurationFile(), false);
 		ModelRunner.demandEquilibrium();

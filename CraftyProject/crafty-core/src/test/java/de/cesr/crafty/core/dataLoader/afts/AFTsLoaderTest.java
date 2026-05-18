@@ -6,11 +6,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import de.cesr.crafty.core.ToyData;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.ManagerTypes;
 
@@ -24,6 +26,11 @@ class AFTsLoaderTest {
         // Prepare fake project + metadata in a fresh temp directory
         ToyData toyData = new ToyData();
         toyData.resetStaticState(tempDir);
+    }
+    
+    @AfterEach
+    void tearDown() {
+    	CustomLogger.shutdownRunFileLoggers();
     }
 
     @Test

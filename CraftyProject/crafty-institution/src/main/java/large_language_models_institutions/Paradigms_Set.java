@@ -2,22 +2,33 @@ package large_language_models_institutions;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
-import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
-import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
-import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
 
-public class Paradigms_Set {
-
+public class Paradigms_Set implements AutoCloseable {
+	private static final CustomLogger LOGGER = new CustomLogger(Paradigms_Set.class);
 	public static ConcurrentHashMap<String, Paradigm> paradigms = new ConcurrentHashMap<>();
+
+	private ExecutorService llmExecutor;
+
+	@Override
+	public void close() throws Exception {
+		llmExecutor.shutdown();
+	}
 
 	public void setup() {
 		List<Path> instututionsFiles = PathTools
@@ -31,28 +42,55 @@ public class Paradigms_Set {
 			paradigms.get(paradimName).getSubRegions().put(code, ConcurrentHashMap.newKeySet());
 			paradigms.get(paradimName).getDelay().put(code, Utils.sToI(csv.get("Delay").get(i)));
 		}
+
 		cellsToParadigm();
-//		paradigms.forEach((k, v) -> {
-//			v.getSubRegions().forEach((kk, vv) -> {
-//				System.out.println(k + ", " + kk + ":  " + vv.size());
-//			});
-//		});
+		int size = 0;
+		for (Paradigm paradigm : paradigms.values()) {
+			size += paradigm.getInstitutes().size();
+		}
+		llmExecutor = Executors.newFixedThreadPool(size);
 	}
 
 	public void step() {
-		clearOldTaxes();
-		paradigms.values().forEach(p -> {
-			p.step();
+//		clearOldTaxes();
+
+		// Take a stable snapshot of the paradigms for this step
+		List<Paradigm> currentParadigms = new ArrayList<>(paradigms.values());
+
+		// Step 1: fast, sequential
+		currentParadigms.forEach(p -> {
+			p.step1_preparePrompts();
+		});
+
+		// Step 2: slow LLM calls, parallel
+		List<CompletableFuture<Void>> llmTasks = currentParadigms.stream().map(p -> CompletableFuture.runAsync(() -> {
+			try {
+				p.step2_connectLLMs();
+			} catch (Exception e) {
+				throw new CompletionException("LLM  call failed for paradigm: " + p.getName(), e);
+			}
+		}, llmExecutor).orTimeout(5, TimeUnit.MINUTES)).toList();
+
+		// Barrier: wait until all LLM responses are finished
+		try {
+			CompletableFuture.allOf(llmTasks.toArray(new CompletableFuture[0])).join();
+		} catch (CompletionException e) {
+			LOGGER.error("At least one LLM call failed. Policies were not applied..." + e);
+		}
+
+		// Step 3: fast, sequential, only after all LLMs responded
+		currentParadigms.forEach(p -> {
+			p.step3_appliedPolicies();
 		});
 	}
 
 	private void clearOldTaxes() {
+		LOGGER.info("Clear Old Policies..");
 		CellsLoader.hashCell.values().forEach(c -> {
-			ServiceSet.getServicesList().forEach(serviceName -> c.getServicesTax().put(serviceName, 0.));
-			AFTsLoader.getAftHash().keySet().forEach(aftName -> c.getLandTax().put(aftName, 0.));
-			CapitalUpdater.getCapitalsList().forEach(capitalName -> c.getCapitalsAdjusment().put(capitalName, 0.));
+			c.getServicesTax().clear();
+			c.getLandTax().clear();
+			c.getCapitalsAdjusment().clear();
 		});
-
 	}
 
 	private void cellsToParadigm() {

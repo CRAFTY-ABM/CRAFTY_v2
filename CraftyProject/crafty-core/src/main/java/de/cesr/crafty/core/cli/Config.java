@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import de.cesr.crafty.core.main.MainHeadless;
+import de.cesr.crafty.core.utils.non_java_code_controller.RScriptRunnerConfig;
 
 /**
  * Holds all user-configurable settings for a CRAFTY run.
@@ -104,13 +105,15 @@ public class Config {
 	public Object map_output_years = null;
 	public String comments = "";;
 
-	public AtomicLong longSeedID = new AtomicLong(85697);
+	public AtomicLong longSeedID = new AtomicLong(1);
 
 	// cached configs
 	public boolean consider_subsidies_taxes = true;
 
 	// New section
 	public MapPngConfig map_png = new MapPngConfig();
+	
+	public RScriptRunnerConfig r_script_runner = new RScriptRunnerConfig();
 
 	@Override
 	public String toString() {
@@ -169,6 +172,8 @@ public class Config {
 	public String LLM_API_KEY = "";
 	public int start_year_of_policy_effect = 0;
 	public int end_year_of_policy_effect = Integer.MAX_VALUE;
+	public String LLM_provider = "";
+	public boolean use_cell_level_taxes = false;
 
 //	public int institution_time_lag = 1;
 //	 Only when CRAFTY coupled with PLUM

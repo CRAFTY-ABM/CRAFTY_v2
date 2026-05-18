@@ -1,7 +1,6 @@
 package de.cesr.crafty.core.modelRunner;
 
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,7 +8,6 @@ import java.util.Map;
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Service;
-import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceDemandLoader;
@@ -96,7 +94,7 @@ public class ModelRunner extends AbstractModelRunner {
 	public RegionsModelRunnerUpdater regionsModelRunnerUpdater;
 
 	public void start() {
-		ProjectLoader.setScenario(ConfigLoader.config.scenario);
+		
 
 		ServiceSet.loadServiceList();
 		capitalUpdater = new CapitalUpdater();
@@ -121,14 +119,7 @@ public class ModelRunner extends AbstractModelRunner {
 	} 
 
 	public void initialzeRun() {
-		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.Output_path);
-		Listener.outputfolderPath(generatedPath, ConfigLoader.config.output_folder_name);
-//		System.out.println(ConfigLoader.config.Output_path+"===>  "+ ConfigLoader.config.output_folder_name);
-
-		if (ConfigLoader.config.export_LOGGER) {
-			CustomLogger
-					.configureLogger(Paths.get(ConfigLoader.config.output_folder_name + File.separator + "LOGGER.txt"));
-		}
+		
 		PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
 				Listener.exportConfigurationFile(), false);
 		demandEquilibrium();
@@ -139,6 +130,7 @@ public class ModelRunner extends AbstractModelRunner {
 			step();
 		}
 		exportChartsPlots();
+		CustomLogger.shutdownLogger();
 	}
 
 	public static void demandEquilibrium() {

@@ -12,6 +12,7 @@ import de.cesr.crafty.core.main.MainHeadless;
 import de.cesr.crafty.core.utils.file.DirectoryWatcher;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
+import de.cesr.crafty.core.utils.non_java_code_controller.RScriptRunnerController;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -79,7 +80,6 @@ public class FlagUpdater extends AbstractUpdater {
 		LOGGER.info(
 				"CRAFTY will wait for these flag files  before starting a new iteration for the corresponding years."
 						+ flags);
-
 	}
 
 	private void checkCLIforAnnualFlags() {
@@ -94,8 +94,8 @@ public class FlagUpdater extends AbstractUpdater {
 			flags.put(i, Paths.get(waitingPath).resolve("done_" + i));
 		}
 	}
-	
-	public void addNewWaitingFlags(HashMap<Integer, Path> f ) {
+
+	public void addNewWaitingFlags(HashMap<Integer, Path> f) {
 		flags.clear();
 		flags.putAll(f);
 	}
@@ -108,11 +108,14 @@ public class FlagUpdater extends AbstractUpdater {
 	@Override
 	public void step() {
 //		wait For a flag
-		if (flags == null || flags.isEmpty())
-			return;
-		Path p = flags.get(Timestep.getCurrentYear());
-		if (p != null) {
-			DirectoryWatcher.waitForYearFolder(p);
+		if (flags != null && !flags.isEmpty()) {
+			Path p = flags.get(Timestep.getCurrentYear());
+			if (p != null) {
+				DirectoryWatcher.waitForYearFolder(p);
+			}
+		}
+		if (ConfigLoader.config.r_script_runner.enabled) {
+			RScriptRunnerController.runScriptsForCurrentYear();
 		}
 
 	}

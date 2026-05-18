@@ -46,6 +46,7 @@ public class MainHeadless {
 		ConfigLoader.configPath = options.getConfigFilePath();
 		ConfigLoader.init();
 		SeedUpdater.inialize();
+
 		// If the user specified a project directory and scenario name, override the
 		// ones in the YAML
 		String projectDirectoryPath = options.getProjectDirectoryPath();
@@ -68,6 +69,8 @@ public class MainHeadless {
 		if (output_folder_name != null) {
 			ConfigLoader.config.output_folder_name = output_folder_name;
 		}
+		
 	}
+
 
 }

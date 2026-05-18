@@ -8,7 +8,9 @@ import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.main.MainHeadless;
 import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
-import main.Runner;
+import de.cesr.crafty.core.updaters.Timestep;
+import de.cesr.crafty.core.utils.analysis.StepProfiler;
+import large_language_models_institutions.main.Runner;
 import utils.External_variables_Manager;
 
 public class Connector {
@@ -30,11 +32,20 @@ public class Connector {
 		}
 	}
 
+	private final StepProfiler profiler = new StepProfiler(true);
+
 	public void step() {
-		MainHeadless.runner.step();
+		try (var t = profiler.section("CRAFTY Step")) {
+			MainHeadless.runner.step();
+		}
 		External_variables_Manager.valuesInjector();
-		targets_set.step();
-		paradingms.step();
+		try (var t = profiler.section("Targets set Listeners")) {
+			targets_set.step();
+		}
+		try (var t = profiler.section("Institutions Step")) {
+			paradingms.step();
+		}
+		LOGGER.info(profiler.report("Coupling step (year=" + Timestep.getCurrentYear() + ")"));
 	}
 
 }

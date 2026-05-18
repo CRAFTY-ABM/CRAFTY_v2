@@ -3,16 +3,23 @@ package large_language_models_institutions;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
+import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.CsvTools;
 import de.cesr.crafty.core.utils.file.PathTools;
+import large_language_models_institutions.llmModels.LlmClient;
+import large_language_models_institutions.llmModels.LlmClientFactory;
+import large_language_models_institutions.tools.LlmPolicyParser;
 
 public class Institute {
 	private static final CustomLogger LOGGER = new CustomLogger(Institute.class);
@@ -23,8 +30,8 @@ public class Institute {
 	private int startYear;
 	private int endYear;
 
-	private Map<String, Policy> policies = new HashMap<>();
-	private HashMap<String, Target> targets = new HashMap<>();
+	private Map<String, Policy> policies = new ConcurrentHashMap<>();
+	private Map<String, Target> targets = new ConcurrentHashMap<>();
 	private String base_prompts;
 	private String comletePrompte;
 	private String outputLLM;
@@ -34,21 +41,25 @@ public class Institute {
 		this.paradigm = paradigm;
 	}
 
-	public void step() {
+	public void step_preparePrompt() {
+//		System.out.println("prepare Prompts  " + getName());
 		outputLLM = "";
 		modeloutputToPromptStyle();
 		comletePrompte = base_prompts + "\n" + modeloutputToPromptStyle() + "\n"
 				+ historicalPolicyEffectsToPromptStyle();
+	}
+
+	public void step_connectLLMs() {
 		fromLLMtoPoliciesValue();
-		policies.values().forEach(policy -> {
+	}
+
+	public void step_appliedPolicies() {
+		LOGGER.info("Institute (applied policies)= " + getName() + ": ");
+		policies.values().forEach(policy -> { // this no need to be in parallel
+			LOGGER.info("Policy= " + policy.getName());
 			policy.step();
 		});
 		writeOutput();
-		
-//		policies.values().forEach(p -> {
-//			System.out.println(
-//					":: " + name + "=> " + p.getName() + ": " + p.getRecorder().size() + ": " + p.getRecorder());
-//		});
 	}
 
 	private String modeloutputToPromptStyle() {
@@ -60,7 +71,10 @@ public class Institute {
 				use.get(targetName).add(v);
 			});
 		});
-		String out = "Historical land use and/or ecosystem services supply relative to baseline values (annual time series):\n {";
+		String out = messagetToForceFormat(policies.keySet());
+
+		out = out + "\n \""
+				+ "Historical land use and/or ecosystem services supply relative to baseline values (annual time series starting from 2020).:\n {";
 		for (String targetName : targets.keySet()) {
 			out = out + "\n \"" + targetName + "\":" + use.get(targetName);
 		}
@@ -71,7 +85,7 @@ public class Institute {
 
 	private String historicalPolicyEffectsToPromptStyle() {
 		String out = "\n" + "Historical policy decisions on subsidy changes (time series, every " + timeLag
-				+ " years): \n  \"policy_decisions\":{";
+				+ " years starting from " + startYear + "): \n  \"policy_decisions\":{";
 
 		for (Policy policy : policies.values()) {
 			out = out + "\n \"" + policy.getName() + "\":" + policy.getDesicions_history();
@@ -87,25 +101,25 @@ public class Institute {
 				&& tick % timeLag == 0;
 
 		if (llmConection) {
-
-			System.out.println("Connect to LLM (" + name + ") Paradigm= " + paradigm.getName());
+			String message = "Connected to LLM = (" + name + ")_(" + paradigm.getName() + ")";
 			String inputLLM = comletePrompte;
 			if (inputLLM == null) {
 				LOGGER.fatal("Input to LLM is null: institute " + name + " year: " + Timestep.getCurrentYear());
 				return;
 			}
-			outputLLM = Gpt_model.askLLM(inputLLM);
+			LlmClient llm = LlmClientFactory.createFromConfig();
+			outputLLM = llm.askLLM(inputLLM);
 
 			HashMap<String, Double> LLMpolicies = LlmPolicyParser.extractPolicyDecisionsOrNull(outputLLM);
 			if (LLMpolicies == null) {
 				// 2nd try: reformat/salvage using the broken output + expected keys
 				String secondTry = LlmPolicyParser.onlyWhenUnparseableOutput(outputLLM);
-				outputLLM = Gpt_model.askLLM(secondTry);
+				outputLLM = llm.askLLM(secondTry);
 				LLMpolicies = LlmPolicyParser.extractPolicyDecisionsOrNull(outputLLM);
 				if (LLMpolicies == null) {
 					// 3rd try: rerun original prompt but with strict-format header
 					inputLLM = LlmPolicyParser.promptModefierToForceFormat(inputLLM, policies.keySet());
-					outputLLM = Gpt_model.askLLM(inputLLM);
+					outputLLM = llm.askLLM(inputLLM);
 					LLMpolicies = LlmPolicyParser.extractPolicyDecisionsOrNull(outputLLM);
 				}
 			}
@@ -116,14 +130,15 @@ public class Institute {
 				return;
 			}
 			if (LLMpolicies.keySet().equals(policies.keySet())) {
-				System.out.println(".... ALL POLICIES ARE RECORDED CORRECTLY !  ");
+				LOGGER.info(message + ".... (ALL POLICIES ARE RECORDED CORRECTLY !)");
+				System.out.println(message + ".... (ALL POLICIES ARE RECORDED CORRECTLY !)");
 			} else {
 				// 4rd try: rerun original prompt but with strict-format header
 				inputLLM = LlmPolicyParser.promptModefierToForceFormat(inputLLM, policies.keySet());
-				outputLLM = Gpt_model.askLLM(inputLLM);
+				outputLLM = llm.askLLM(inputLLM);
 				LLMpolicies = LlmPolicyParser.extractPolicyDecisionsOrNull(outputLLM);
 				if (LLMpolicies.keySet().equals(policies.keySet())) {
-					System.out.println(".... ALL POLICIES ARE RECORDED CORRECTLY !  (4rd try)");
+					System.out.println(message + ".... (ALL POLICIES ARE RECORDED CORRECTLY !)  (4rd try)");
 				} else {
 					LOGGER.error("institute: (" + name + ")" + "paradigm =(" + paradigm.getName() + ") year= ("
 							+ Timestep.getCurrentYear() + ") NOT ALL POLICIES ARE RECORDED CORRECTLY ");
@@ -201,7 +216,7 @@ public class Institute {
 		return policies;
 	}
 
-	public HashMap<String, Target> getTargets() {
+	public Map<String, Target> getTargets() {
 		return targets;
 	}
 
@@ -251,5 +266,19 @@ public class Institute {
 
 	public void setEndYear(int endYear) {
 		this.endYear = endYear;
+	}
+
+	private String messagetToForceFormat(Collection<String> keys) {
+		return "[ \n AUTOMATION NOTICE (Java JSON parser; no human supervision):\n"
+				+ "Your response will be parsed automatically. If you output anything except valid JSON, it will fail.\n\n"
+				+ "You MUST reply with EITHER:\n" + "  (A) exactly ONE valid JSON object, OR\n"
+				+ "  (B) exactly the literal: null\n\n" + "If you cannot comply with the schema below, output: null\n\n"
+				+ "Schema requirements:\n"
+				+ "- Output must be STRICT valid JSON (no markdown, no code fences, no extra text).\n"
+				+ "- Required top-level keys: \"reasoning\", \"policy_decisions\".\n"
+				+ "- \"reasoning\" must be a SINGLE LINE string (no raw newlines; if needed use \\\\n inside the string).\n"
+				+ "- \"policy_decisions\" must be an object with ONLY numeric values (no quotes) .\n"
+				+ "- \"policy_decisions\" MUST contain EXACTLY these keys (no more, no less):\n" + keys.toString()
+				+ "\n ]\n";
 	}
 }

@@ -63,10 +63,15 @@ import de.cesr.crafty.core.utils.general.DeterministicRandom;
 public class Competitiveness {
 
 	private static final boolean COUPLED_WITH_PLUM = ConfigLoader.config.COUPLED_WITH_PLUM;
+	private static final boolean use_cell_level_taxes = ConfigLoader.config.use_cell_level_taxes;
+	
 
 	static double utility(Cell c, Aft a, RegionalModelRunner r) {
 		if (COUPLED_WITH_PLUM) {
 			return utilityUseOnlyPrice(c, a, r);
+		}
+		if (use_cell_level_taxes) {
+			utilityUseMarginalWithTexes(c, a, r);
 		}
 		return utilityUseMarginal(c, a, r);
 	}
@@ -80,6 +85,20 @@ public class Competitiveness {
 				.mapToDouble(serviceName -> (c.getServicesTax().getOrDefault(serviceName, 0d)
 						+ r.getMarginal().get(serviceName)) * c.productivity(a, serviceName))
 				.sum() + c.getLandTax().getOrDefault(a.getLabel(), 0d);
+	}
+
+	private static double utilityUseMarginalWithTexes(Cell c, Aft a, RegionalModelRunner r) {
+		if (a == null || !a.isInteract()) {
+			return 0;
+		}
+		// u= sum_s[ (ms+ts*d0)ps]+ land_ts*abs(u1)
+		return ServiceSet.getServicesList().stream()
+				.mapToDouble(serviceName -> (c.getServicesTax().getOrDefault(serviceName, 1d)
+						* (r.initial_service_gaps.get(serviceName)) + r.getMarginal().get(serviceName))
+						* c.productivity(a, serviceName))
+				.sum()
+				+ c.getLandTax().getOrDefault(a.getLabel(), 0d)
+						* (r.initialutilityAverage.getOrDefault(a.getLabel(), 1d));
 	}
 
 //	## only in coupling withPlum
@@ -184,7 +203,7 @@ public class Competitiveness {
 			return;
 		}
 		if (c.getOwner() == null || c.getOwner().isAbandoned()) {
-			if (uC >= r.getDistributionMeanY().get(competitor)) {
+			if (uC >= r.getDistributionMeanY().get(competitor.getLabel())) {
 				takeOverAcell(c, competitor);
 			}
 			return;
@@ -192,7 +211,7 @@ public class Competitiveness {
 		double uO = c.getCurrentUtility();
 
 		double nbr = r.getDistributionMeanY() != null
-				? (r.getDistributionMeanY().get(c.getOwner()) * (giveInThreshold(c, competitor)))
+				? (r.getDistributionMeanY().get(c.getOwner().getLabel()) * (giveInThreshold(c, competitor)))
 				: 0;
 
 		if ((uC - uO > nbr) && uC > 0) {

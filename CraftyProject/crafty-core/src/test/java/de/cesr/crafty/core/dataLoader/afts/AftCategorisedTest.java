@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.AftCategory;
 import de.cesr.crafty.core.ToyData;
+import de.cesr.crafty.core.cli.CustomLogger;
 
 public class AftCategorisedTest {
 
@@ -27,6 +29,10 @@ public class AftCategorisedTest {
 		ToyData toy = new ToyData();
 		toy.resetStaticState(projectDir);
 	}
+    @AfterEach
+    void tearDown() {
+    	CustomLogger.shutdownRunFileLoggers();
+    }
 
 	@Test
 	void categoriesLoader_populatesCategoriesFromMetadata() throws IOException {
