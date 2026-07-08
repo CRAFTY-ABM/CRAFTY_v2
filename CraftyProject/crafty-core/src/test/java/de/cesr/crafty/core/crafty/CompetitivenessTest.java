@@ -226,7 +226,7 @@ class CompetitivenessTest {
 			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
 
 			// competitor utility = 1 * 6 = 6
-			doReturn(6.0).when(c).productivity(competitor, "S1");
+			doReturn(6.0).when(c).competitiveness(competitor, "S1");
 			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
 			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
 
@@ -274,7 +274,7 @@ class CompetitivenessTest {
 			when(r.getServiceTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
 			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
 
-			doReturn(100.0).when(c).productivity(competitor, "S1");
+			doReturn(100.0).when(c).competitiveness(competitor, "S1");
 
 			ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
 			meanY.put(competitor.getLabel(), 0.0);

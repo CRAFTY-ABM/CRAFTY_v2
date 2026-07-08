@@ -9,6 +9,7 @@ initial_demand_supply_equilibrium: true       # Ensure balanced eco-service supp
 remove_negative_marginal_utility: false       # Set marginal utility of production to 0 if negative
 use_abandonment_threshold: true               # Abandon cell if agent competitiveness falls below threshold
 mutate_on_competition_win: false              # Create new agent with mutations if competitor wins competition
+separate_production_competitiveness: false     # When true, productivity returns raw yield; competitiveness uses capital-adjusted Cobb-Douglas
 mutation_interval: 0.01                       # Interval for mutation in child agent parameters
 MostCompetitorAFTProbability: 0.8             # Probability of selecting the highest-utility AFT for cell
 averaged_residual_demand_per_cell: false      # Averaged residual demand for each cell

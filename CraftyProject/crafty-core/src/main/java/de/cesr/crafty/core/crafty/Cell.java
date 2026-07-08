@@ -51,6 +51,14 @@ public class Cell extends AbstractCell {
 	public double productivity(Aft a, String serviceName) {
 		if (a == null || !a.isInteract())
 			return 0.0;
+		if (ConfigLoader.config.separate_production_competitiveness)
+			return a.getProductivityLevel().get(serviceName);
+		return competitiveness(a, serviceName);
+	}
+
+	public double competitiveness(Aft a, String serviceName) {
+		if (a == null || !a.isInteract())
+			return 0.0;
 
 		final Map<String, Double> exps = a.getSensByService().get(serviceName);
 		if (exps == null || exps.isEmpty())
@@ -63,7 +71,7 @@ public class Cell extends AbstractCell {
 			if (p == 0.0)
 				continue;
 			final double capVal = (getCapitals().getOrDefault(e.getKey(), 0.)
-					* (1 + getCapitalsAdjusment().getOrDefault(e.getKey(), 0.))); // assumes present
+					* (1 + getCapitalsAdjusment().getOrDefault(e.getKey(), 0.)));
 			if (p == 1.0)
 				product *= capVal;
 			else

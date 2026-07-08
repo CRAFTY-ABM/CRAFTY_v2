@@ -13,6 +13,7 @@ import org.junit.jupiter.api.function.Executable;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
@@ -98,6 +99,120 @@ class CellTest {
 
 			// expected: (2 * sqrt(9)) * 10 = (2 * 3) * 10 = 60
 			assertEquals(60.0, c.productivity(a, "S1"), 1e-12);
+		});
+	}
+
+	// -----------------------------
+	// competitiveness(...)
+	// -----------------------------
+
+	@Test
+	void competitiveness_computesExpectedProduct() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Cell c = new Cell(1, 2);
+
+			Map<String, Double> caps = new ConcurrentHashMap<>();
+			caps.put("capA", 2.0);
+			caps.put("capB", 9.0);
+			caps.put("capC", 100.0);
+			setField(c, "capitals", caps);
+
+			Map<String, Double> exps = new LinkedHashMap<>();
+			exps.put("capA", 1.0);
+			exps.put("capB", 0.5);
+			exps.put("capC", 0.0);
+
+			Map<String, Map<String, Double>> sensByService = new ConcurrentHashMap<>();
+			sensByService.put("S1", exps);
+
+			ConcurrentHashMap<String, Double> levels = new ConcurrentHashMap<>();
+			levels.put("S1", 10.0);
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getSensByService()).thenReturn(sensByService);
+			when(a.getProductivityLevel()).thenReturn(levels);
+
+			assertEquals(60.0, c.competitiveness(a, "S1"), 1e-12);
+		});
+	}
+
+	@Test
+	void competitiveness_isLessThanOrEqualToProductivity_whenCapitalsInUnitRange() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setField(cfg, "separate_production_competitiveness", true);
+
+			try {
+				Cell c = new Cell(3, 4);
+
+				Map<String, Double> caps = new ConcurrentHashMap<>();
+				caps.put("capA", 0.5);
+				caps.put("capB", 0.8);
+				setField(c, "capitals", caps);
+
+				Map<String, Double> exps = new LinkedHashMap<>();
+				exps.put("capA", 1.0);
+				exps.put("capB", 2.0);
+
+				Map<String, Map<String, Double>> sensByService = new ConcurrentHashMap<>();
+				sensByService.put("S1", exps);
+
+				ConcurrentHashMap<String, Double> levels = new ConcurrentHashMap<>();
+				levels.put("S1", 10.0);
+
+				Aft a = mock(Aft.class);
+				when(a.isInteract()).thenReturn(true);
+				when(a.getSensByService()).thenReturn(sensByService);
+				when(a.getProductivityLevel()).thenReturn(levels);
+
+				double prod = c.productivity(a, "S1");
+				double comp = c.competitiveness(a, "S1");
+
+				assertTrue(comp <= prod,
+						"Competitiveness (" + comp + ") should be <= production (" + prod + ") when capitals in [0,1]");
+			} finally {
+				setField(cfg, "separate_production_competitiveness", false);
+			}
+		});
+	}
+
+	@Test
+	void competitiveness_invertedByCapitalExponent_recoversProductivity() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setField(cfg, "separate_production_competitiveness", true);
+
+			try {
+				Cell c = new Cell(5, 6);
+
+				Map<String, Double> caps = new ConcurrentHashMap<>();
+				caps.put("capA", 4.0);
+				setField(c, "capitals", caps);
+
+				Map<String, Double> exps = new LinkedHashMap<>();
+				exps.put("capA", 2.0);
+
+				Map<String, Map<String, Double>> sensByService = new ConcurrentHashMap<>();
+				sensByService.put("S1", exps);
+
+				ConcurrentHashMap<String, Double> levels = new ConcurrentHashMap<>();
+				levels.put("S1", 5.0);
+
+				Aft a = mock(Aft.class);
+				when(a.isInteract()).thenReturn(true);
+				when(a.getSensByService()).thenReturn(sensByService);
+				when(a.getProductivityLevel()).thenReturn(levels);
+
+				double prod = c.productivity(a, "S1");
+				double comp = c.competitiveness(a, "S1");
+
+				double capitalProduct = Math.pow(4.0, 2.0);
+				double recovered = comp / capitalProduct;
+				assertEquals(prod, recovered, 1e-9, "Inverting competitiveness by capital exponents should recover production");
+			} finally {
+				setField(cfg, "separate_production_competitiveness", false);
+			}
 		});
 	}
 
@@ -240,6 +355,21 @@ class CellTest {
 	// =========================================================
 	// Helpers
 	// =========================================================
+
+	private Object ensureConfigInstance() {
+		try {
+			Field cfgField = findField(ConfigLoader.class, "config");
+			cfgField.setAccessible(true);
+			Object cfg = cfgField.get(null);
+			if (cfg == null) {
+				cfg = cfgField.getType().getDeclaredConstructor().newInstance();
+				cfgField.set(null, cfg);
+			}
+			return cfg;
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to ensure config instance", e);
+		}
+	}
 
 	/**
 	 * Runs a test body with ServiceSet.getServicesList() returning the provided

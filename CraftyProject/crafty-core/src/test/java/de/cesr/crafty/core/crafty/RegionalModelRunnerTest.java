@@ -168,8 +168,8 @@ class RegionalModelRunnerTest {
 			setField(c, "owner", owner);
 			setField(cNull, "owner", null);
 
-			// productivity(owner,"S1") = 10
-			doReturn(10.0).when(c).productivity(owner, "S1");
+			// competitiveness(owner,"S1") = 10
+			doReturn(10.0).when(c).competitiveness(owner, "S1");
 
 			ConcurrentHashMap<String, Cell> cells = new ConcurrentHashMap<>();
 			cells.put("0,0", c);

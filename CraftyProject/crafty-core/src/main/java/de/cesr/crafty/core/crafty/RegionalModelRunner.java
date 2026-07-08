@@ -219,7 +219,7 @@ public class RegionalModelRunner {
 		return ServiceSet.getServicesList().stream()
 				.mapToDouble(serviceName -> (c.getServicesTax().getOrDefault(serviceName, 1d)
 						* (initial_service_gaps.get(serviceName)) + getMarginal().get(serviceName))
-						* c.productivity(c.getOwner(), serviceName))
+						* c.competitiveness(c.getOwner(), serviceName))
 				.sum()
 				+ c.getLandTax().getOrDefault(c.getOwnerName(), 0d)
 						* (initialutilityAverage.getOrDefault(c.getOwnerName(), 1d));
@@ -245,7 +245,7 @@ public class RegionalModelRunner {
 
 		double u = owner.getCachedLandTax();
 		for (int i = 0; i < services.length; i++) {
-			u += coeff[i] * c.productivity(owner, services[i]);
+			u += coeff[i] * c.competitiveness(owner, services[i]);
 		}
 		return u;
 	}

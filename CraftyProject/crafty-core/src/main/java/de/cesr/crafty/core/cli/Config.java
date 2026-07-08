@@ -62,6 +62,7 @@ public class Config {
 	public boolean remove_negative_marginal_utility = false;
 	public boolean use_abandonment_threshold = true;
 	public boolean mutate_on_competition_win = false;
+	public boolean separate_production_competitiveness = false;
 	public double mutation_interval = 0.01;
 	public double MostCompetitorAFTProbability = 0.8;
 	public boolean averaged_residual_demand_per_cell = false;

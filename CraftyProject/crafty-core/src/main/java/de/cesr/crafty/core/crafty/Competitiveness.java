@@ -83,7 +83,7 @@ public class Competitiveness {
 		// u= sum_s[ (ms+ts*d0)ps]+ land_ts*abs(u1)
 		return ServiceSet.getServicesList().stream()
 				.mapToDouble(serviceName -> (c.getServicesTax().getOrDefault(serviceName, 0d)
-						+ r.getMarginal().get(serviceName)) * c.productivity(a, serviceName))
+						+ r.getMarginal().get(serviceName)) * c.competitiveness(a, serviceName))
 				.sum() + c.getLandTax().getOrDefault(a.getLabel(), 0d);
 	}
 
@@ -95,7 +95,7 @@ public class Competitiveness {
 		return ServiceSet.getServicesList().stream()
 				.mapToDouble(serviceName -> (c.getServicesTax().getOrDefault(serviceName, 1d)
 						* (r.initial_service_gaps.get(serviceName)) + r.getMarginal().get(serviceName))
-						* c.productivity(a, serviceName))
+						* c.competitiveness(a, serviceName))
 				.sum()
 				+ c.getLandTax().getOrDefault(a.getLabel(), 0d)
 						* (r.initialutilityAverage.getOrDefault(a.getLabel(), 1d));
@@ -113,7 +113,7 @@ public class Competitiveness {
 			double currentWeight = service.getWeights().get(Timestep.getCurrentYear());
 			double initialWeight = service.getWeights().get(Timestep.getStartYear());
 
-			double result = (currentWeight / initialWeight) * c.productivity(a, serviceName);
+			double result = (currentWeight / initialWeight) * c.competitiveness(a, serviceName);
 			if (Double.isNaN(result) || Double.isInfinite(result)) {
 				return 0.0;
 			}
