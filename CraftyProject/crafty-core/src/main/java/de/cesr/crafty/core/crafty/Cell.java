@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
+import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.updaters.Timestep;
@@ -51,8 +52,26 @@ public class Cell extends AbstractCell {
 	public double productivity(Aft a, String serviceName) {
 		if (a == null || !a.isInteract())
 			return 0.0;
-		if (ConfigLoader.config.separate_production_competitiveness)
-			return a.getProductivityLevel().get(serviceName);
+		if (ConfigLoader.config.separate_production_competitiveness) {
+			final Map<String, Double> exps = a.getSensByService().get(serviceName);
+			if (exps == null || exps.isEmpty())
+				return a.getProductivityLevel().get(serviceName);
+			double product = 1.0;
+			for (var e : exps.entrySet()) {
+				if (!CapitalUpdater.isSuitability(e.getKey()))
+					continue;
+				final double p = e.getValue();
+				if (p == 0.0)
+					continue;
+				final double capVal = (getCapitals().getOrDefault(e.getKey(), 0.)
+						* (1 + getCapitalsAdjusment().getOrDefault(e.getKey(), 0.)));
+				if (p == 1.0)
+					product *= capVal;
+				else
+					product *= Math.pow(capVal, p);
+			}
+			return product * a.getProductivityLevel().get(serviceName);
+		}
 		return competitiveness(a, serviceName);
 	}
 

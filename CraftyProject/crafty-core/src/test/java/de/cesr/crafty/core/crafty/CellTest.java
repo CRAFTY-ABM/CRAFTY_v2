@@ -17,6 +17,7 @@ import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
+import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 
 class CellTest {
@@ -144,6 +145,10 @@ class CellTest {
 			setField(cfg, "separate_production_competitiveness", true);
 
 			try {
+				CapitalUpdater.getCapitalTypes().clear();
+				CapitalUpdater.getCapitalTypes().put("capA", "Suitability");
+				CapitalUpdater.getCapitalTypes().put("capB", "Capital");
+
 				Cell c = new Cell(3, 4);
 
 				Map<String, Double> caps = new ConcurrentHashMap<>();
@@ -169,10 +174,14 @@ class CellTest {
 				double prod = c.productivity(a, "S1");
 				double comp = c.competitiveness(a, "S1");
 
-				assertTrue(comp <= prod,
-						"Competitiveness (" + comp + ") should be <= production (" + prod + ") when capitals in [0,1]");
+				// prod uses only capA (Suitability): 0.5^1 * 10 = 5.0
+				// comp uses both: 0.5^1 * 0.8^2 * 10 = 3.2
+				assertEquals(5.0, prod, 1e-12);
+				assertEquals(3.2, comp, 1e-12);
+				assertTrue(comp <= prod);
 			} finally {
 				setField(cfg, "separate_production_competitiveness", false);
+				CapitalUpdater.getCapitalTypes().clear();
 			}
 		});
 	}
@@ -184,6 +193,9 @@ class CellTest {
 			setField(cfg, "separate_production_competitiveness", true);
 
 			try {
+				CapitalUpdater.getCapitalTypes().clear();
+				CapitalUpdater.getCapitalTypes().put("capA", "Suitability");
+
 				Cell c = new Cell(5, 6);
 
 				Map<String, Double> caps = new ConcurrentHashMap<>();
@@ -207,11 +219,62 @@ class CellTest {
 				double prod = c.productivity(a, "S1");
 				double comp = c.competitiveness(a, "S1");
 
-				double capitalProduct = Math.pow(4.0, 2.0);
-				double recovered = comp / capitalProduct;
-				assertEquals(prod, recovered, 1e-9, "Inverting competitiveness by capital exponents should recover production");
+				// capA is Suitability, so both methods include it — prod == comp
+				assertEquals(prod, comp, 1e-9);
 			} finally {
 				setField(cfg, "separate_production_competitiveness", false);
+				CapitalUpdater.getCapitalTypes().clear();
+			}
+		});
+	}
+
+	@Test
+	void productivity_includesSuitabilities_excludesCapitals() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setField(cfg, "separate_production_competitiveness", true);
+
+			try {
+				CapitalUpdater.getCapitalTypes().clear();
+				CapitalUpdater.getCapitalTypes().put("yield_potential", "Suitability");
+				CapitalUpdater.getCapitalTypes().put("infrastructure", "Capital");
+
+				Cell c = new Cell(7, 8);
+
+				Map<String, Double> caps = new ConcurrentHashMap<>();
+				caps.put("yield_potential", 0.6);
+				caps.put("infrastructure", 0.9);
+				setField(c, "capitals", caps);
+
+				Map<String, Double> exps = new LinkedHashMap<>();
+				exps.put("yield_potential", 1.0);
+				exps.put("infrastructure", 0.5);
+
+				Map<String, Map<String, Double>> sensByService = new ConcurrentHashMap<>();
+				sensByService.put("S1", exps);
+
+				ConcurrentHashMap<String, Double> levels = new ConcurrentHashMap<>();
+				levels.put("S1", 10.0);
+
+				Aft a = mock(Aft.class);
+				when(a.isInteract()).thenReturn(true);
+				when(a.getSensByService()).thenReturn(sensByService);
+				when(a.getProductivityLevel()).thenReturn(levels);
+
+				double prod = c.productivity(a, "S1");
+				double comp = c.competitiveness(a, "S1");
+
+				// prod: only yield_potential (Suitability): 0.6^1 * 10 = 6.0
+				assertEquals(6.0, prod, 1e-12);
+
+				// comp: both capitals: 0.6^1 * 0.9^0.5 * 10
+				assertEquals(0.6 * Math.pow(0.9, 0.5) * 10.0, comp, 1e-9);
+
+				assertTrue(comp < prod,
+						"Competitiveness should be less than production when a true Capital < 1");
+			} finally {
+				setField(cfg, "separate_production_competitiveness", false);
+				CapitalUpdater.getCapitalTypes().clear();
 			}
 		});
 	}

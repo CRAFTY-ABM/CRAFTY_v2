@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.cli.ConfigLoader;
@@ -52,14 +53,17 @@ public class CapitalUpdater extends AbstractUpdater {
 	// define the list of path will be use dusring the simulation HashMap<year,path>
 
 	private static List<String> capitalsList= new ArrayList<>();
+	private static Map<String, String> capitalTypes = new ConcurrentHashMap<>();
 	private static Map<Integer, Path> CAPITALS_directory = new TreeMap<>();
 
 	public CapitalUpdater() {
 		capitalsList = Collections.synchronizedList(new ArrayList<>());
+		capitalTypes = new ConcurrentHashMap<>();
 		Map<String, List<String>> capitalsFile = CsvProcessors
 				.ReadAsaHash(ProjectLoader.getCapitalsMetadata());
 		String label = capitalsFile.keySet().contains("Label") ? "Label" : "Name";
 		setCapitalsList(capitalsFile.get(label));
+		loadCapitalTypes(capitalsFile);
 		LOGGER.info("Capitals size=" + getCapitalsList().size() + " : " + getCapitalsList());
 		// fill the path any way
 		// <year,csv file>
@@ -99,6 +103,38 @@ public class CapitalUpdater extends AbstractUpdater {
 		LOGGER.info("Cells.updateCapitals" + path);
 		CsvProcessors.processCSV(path, CsvKind.CAPITALS);
 
+	}
+
+	private void loadCapitalTypes(Map<String, List<String>> capitalsFile) {
+		List<String> types = capitalsFile.get("Type");
+		if (types == null) {
+			if (ConfigLoader.config.separate_production_competitiveness) {
+				LOGGER.fatal("Separate production and competitiveness requires "
+						+ "the capital type to be specified in meta-data");
+			}
+			return;
+		}
+		List<String> names = getCapitalsList();
+		for (int i = 0; i < names.size() && i < types.size(); i++) {
+			String raw = types.get(i).trim();
+			if (raw.equalsIgnoreCase("Capital")) {
+				capitalTypes.put(names.get(i), "Capital");
+			} else if (raw.equalsIgnoreCase("Suitability")) {
+				capitalTypes.put(names.get(i), "Suitability");
+			} else {
+				LOGGER.warn("Unknown capital type '" + raw + "' for capital '"
+						+ names.get(i) + "', defaulting to Suitability");
+				capitalTypes.put(names.get(i), "Suitability");
+			}
+		}
+	}
+
+	public static Map<String, String> getCapitalTypes() {
+		return capitalTypes;
+	}
+
+	public static boolean isSuitability(String capitalName) {
+		return !"Capital".equals(capitalTypes.get(capitalName));
 	}
 
 	public static List<String> getCapitalsList() {
