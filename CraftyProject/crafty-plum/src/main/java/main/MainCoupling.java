@@ -40,6 +40,7 @@ public class MainCoupling {
 
 		MainHeadless.initializeConfig(args);
 		ConfigLoader.config.COUPLED_WITH_PLUM = true;
+		ConfigLoader.config.use_price_only_competition = true;
 		PathTools.makeDirectory(ConfigLoader.config.plumOutPutPath + File.separator + "crafty");
 		ProjectLoader.pathInitialisation(Paths.get(ConfigLoader.config.project_path));
 		MainHeadless.runner = new ModelRunner();

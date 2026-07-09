@@ -62,12 +62,12 @@ import de.cesr.crafty.core.utils.general.DeterministicRandom;
 
 public class Competitiveness {
 
-	private static final boolean COUPLED_WITH_PLUM = ConfigLoader.config.COUPLED_WITH_PLUM;
+	private static final boolean use_price_only = ConfigLoader.config.use_price_only_competition;
 	private static final boolean use_cell_level_taxes = ConfigLoader.config.use_cell_level_taxes;
 	
 
 	static double utility(Cell c, Aft a, RegionalModelRunner r) {
-		if (COUPLED_WITH_PLUM) {
+		if (use_price_only) {
 			return utilityUseOnlyPrice(c, a, r);
 		}
 		if (use_cell_level_taxes) {
@@ -101,7 +101,6 @@ public class Competitiveness {
 						* (r.initialutilityAverage.getOrDefault(a.getLabel(), 1d));
 	}
 
-//	## only in coupling withPlum
 	private static double utilityUseOnlyPrice(Cell c, Aft a, RegionalModelRunner r) {
 		if (a == null || !a.isInteract()) {
 			return 0;
