@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
@@ -62,15 +61,11 @@ import de.cesr.crafty.core.utils.general.DeterministicRandom;
 
 public class Competitiveness {
 
-	private static final boolean use_price_only = ConfigLoader.config.use_price_only_competition;
-	private static final boolean use_cell_level_taxes = ConfigLoader.config.use_cell_level_taxes;
-	
-
 	static double utility(Cell c, Aft a, RegionalModelRunner r) {
-		if (use_price_only) {
+		if (ConfigLoader.config.use_price_only_utility) {
 			return utilityUseOnlyPrice(c, a, r);
 		}
-		if (use_cell_level_taxes) {
+		if (ConfigLoader.config.use_cell_level_taxes) {
 			utilityUseMarginalWithTexes(c, a, r);
 		}
 		return utilityUseMarginal(c, a, r);
@@ -105,21 +100,15 @@ public class Competitiveness {
 		if (a == null || !a.isInteract()) {
 			return 0;
 		}
-
-		double sum = ServiceSet.getServicesList().stream().mapToDouble(serviceName -> {
+		return ServiceSet.getServicesList().stream().mapToDouble(serviceName -> {
 			Service service = r.R.getServicesHash().get(serviceName);
-
 			double currentWeight = service.getWeights().get(Timestep.getCurrentYear());
-			double initialWeight = service.getWeights().get(Timestep.getStartYear());
-
-			double result = (currentWeight / initialWeight) * c.competitiveness(a, serviceName);
+			double result = currentWeight * c.competitiveness(a, serviceName);
 			if (Double.isNaN(result) || Double.isInfinite(result)) {
 				return 0.0;
 			}
 			return result;
 		}).sum();
-
-		return sum;
 	}
 
 //	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
@@ -143,8 +132,9 @@ public class Competitiveness {
 			return;
 		}
 		if (makeCompetition(c, competitor)) {
-
-			if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
+			if (ConfigLoader.config.use_normalised_price_competition) {
+				landUsechangeNormalisedPriceUtility(c, competitor, r);
+			} else if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
 				landUsechangeNormalisedUtility(c, competitor, r);
 			} else {
 				landUsechange(c, competitor, r);
@@ -203,7 +193,7 @@ public class Competitiveness {
 		}
 		if (c.getOwner() == null || c.getOwner().isAbandoned()) {
 			if (uC >= r.getDistributionMeanY().get(competitor.getLabel())) {
-				takeOverAcell(c, competitor);
+				takeOverAcell(c, competitor, r);
 			}
 			return;
 		}
@@ -214,7 +204,7 @@ public class Competitiveness {
 				: 0;
 
 		if ((uC - uO > nbr) && uC > 0) {
-			takeOverAcell(c, competitor);
+			takeOverAcell(c, competitor, r);
 		}
 	}
 
@@ -229,34 +219,67 @@ public class Competitiveness {
 
 		if (c.getOwner() == null || c.getOwner().isAbandoned()) {
 			if (uC > 0) {
-				takeOverAcell(c, competitor);
+				takeOverAcell(c, competitor, r);
 			}
 			return;
 		}
 
 		double uO = (c.getCurrentUtility() - r.getMinUtility()) / (r.getMaxUtility() - r.getMinUtility());
 
-		double giveIn = 0;
-		boolean sameCategories = c.getOwner().category.getName().equals(competitor.category.getName());
-		boolean sameIntesity = c.getOwner().category.getIntensityLevel() == (competitor.category.getIntensityLevel());
-
-		if (!sameCategories || (sameCategories && sameIntesity)) {
-			giveIn = giveInThreshold(c, competitor);
-		} else {
-			if (CellBehaviourUpdater.cellsBehevoir.get(c) != null) {
-				giveIn = CellBehaviourUpdater.cellsBehevoir.get(c).give_In(competitor);
-			}
-		}
+		double giveIn = effectiveGiveIn(c, competitor);
 		if ((uC > uO + giveIn) && uC > 0) {
 
-			takeOverAcell(c, competitor);
+			takeOverAcell(c, competitor, r);
 		}
 	}
 
-	private static void takeOverAcell(Cell c, Aft newOwner) {
+	private static double effectiveGiveIn(Cell c, Aft competitor) {
+		boolean sameCategories = c.getOwner().category.getName()
+				.equals(competitor.category.getName());
+		boolean sameIntensity = c.getOwner().category.getIntensityLevel()
+				== competitor.category.getIntensityLevel();
+
+		if (!sameCategories || sameIntensity) {
+			return giveInThreshold(c, competitor);
+		}
+		CellBehaviour behaviour = CellBehaviourUpdater.cellsBehevoir.get(c);
+		if (behaviour != null) {
+			return behaviour.give_In(competitor);
+		}
+		return 0;
+	}
+
+	private static void landUsechangeNormalisedPriceUtility(Cell c, Aft competitor, RegionalModelRunner r) {
+		if (c.getOwner() == competitor) {
+			return;
+		}
+		double uC = utility(c, competitor, r);
+		if (uC <= 0) {
+			return;
+		}
+		if (c.getOwner() == null || c.getOwner().isAbandoned()) {
+			takeOverAcell(c, competitor, r);
+			return;
+		}
+		double uO = c.getCurrentUtility();
+		double normDiff = (uC - uO) / (Math.abs(uC) + Math.abs(uO));
+
+		double giveIn;
+		if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
+			giveIn = effectiveGiveIn(c, competitor);
+		} else {
+			giveIn = giveInThreshold(c, competitor);
+		}
+		if (normDiff > giveIn) {
+			takeOverAcell(c, competitor, r);
+		}
+	}
+
+	private static void takeOverAcell(Cell c, Aft newOwner, RegionalModelRunner r) {
 		String oldOwner = c.getOwner() != null ? c.getOwner().getLabel() : "Abandoned";
 
 		c.setOwner(ConfigLoader.config.mutate_on_competition_win ? new Aft(newOwner) : newOwner);//
+		c.setCurrentUtility(utility(c, c.getOwner(), r));
 //		CellsUpdater.decesionsNewOwner.put(c, newOwner);
 		c.setOwnerLifeCounter(1);
 		Listener.landUseChangeCounter.getAndIncrement();

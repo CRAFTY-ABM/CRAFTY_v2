@@ -204,6 +204,13 @@ public class RegionalModelRunner {
 		// Cache everything locally (cheaper than repeated virtual calls)
 		final var cells = R.getCells(); // ConcurrentHashMap<?, Cell>
 
+		if (ConfigLoader.config.use_price_only_utility) {
+			RegionalModelRunner self = this;
+			cells.forEach(100_000, (k, c) ->
+				c.setCurrentUtility(Competitiveness.utility(c, c.getOwner(), self)));
+			return;
+		}
+
 		if (!ConfigLoader.config.use_cell_level_taxes) {
 			// Snapshot services once
 			final List<String> servicesList = ServiceSet.getServicesList();
