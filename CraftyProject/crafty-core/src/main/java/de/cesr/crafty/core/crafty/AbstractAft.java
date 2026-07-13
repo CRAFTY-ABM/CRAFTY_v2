@@ -50,6 +50,12 @@ public abstract class AbstractAft {
 	protected Map<String, Map<String, Double>> sensitivity = new ConcurrentHashMap<>(); // <service,capital,exponent>
 	private int min_life_cycle = 0, max_life_cycle = Integer.MAX_VALUE;
 
+	// Production cost fields
+	private double nfertRate = 0.0;
+	private boolean irrigated = false;
+	private double nfertCostPerHa = 0.0;
+	private double intensityCostPerHa = 0.0;
+
 	
 	
 	public long getId() {
@@ -218,6 +224,38 @@ public abstract class AbstractAft {
 
 	public ConcurrentHashMap<String, Double> getCapital_adjustments() {
 		return capital_adjustments;
+	}
+
+	public double getNfertRate() {
+		return nfertRate;
+	}
+
+	public void setNfertRate(double nfertRate) {
+		this.nfertRate = nfertRate;
+	}
+
+	public boolean isIrrigated() {
+		return irrigated;
+	}
+
+	public void setIrrigated(boolean irrigated) {
+		this.irrigated = irrigated;
+	}
+
+	public double getNfertCostPerHa() {
+		return nfertCostPerHa;
+	}
+
+	public void setNfertCostPerHa(double nfertCostPerHa) {
+		this.nfertCostPerHa = nfertCostPerHa;
+	}
+
+	public double getIntensityCostPerHa() {
+		return intensityCostPerHa;
+	}
+
+	public void setIntensityCostPerHa(double intensityCostPerHa) {
+		this.intensityCostPerHa = intensityCostPerHa;
 	}
 
 }

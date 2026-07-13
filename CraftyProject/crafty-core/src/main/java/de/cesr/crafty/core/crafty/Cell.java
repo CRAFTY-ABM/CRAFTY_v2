@@ -100,6 +100,20 @@ public class Cell extends AbstractCell {
 		return product * a.getProductivityLevel().get(serviceName);
 	}
 
+	public double productionCost(Aft a) {
+		if (a == null || !a.isInteract() || !ConfigLoader.isUseProductionCosts()) {
+			return 0.0;
+		}
+		double cost = getIrrigationCosts().getOrDefault(a.getLabel(), 0.0);
+		if (ConfigLoader.isSpatialProductionCosts()) {
+			cost += getNfertCosts().getOrDefault(a.getLabel(), 0.0)
+					+ getIntensityCosts().getOrDefault(a.getLabel(), 0.0);
+		} else {
+			cost += a.getNfertCostPerHa() + a.getIntensityCostPerHa();
+		}
+		return cost;
+	}
+
 	public void calculateCurrentProductivity() {
 		for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
 			getCurrentProd()[i] = productivity(getOwner(), ServiceSet.getServicesList().get(i));

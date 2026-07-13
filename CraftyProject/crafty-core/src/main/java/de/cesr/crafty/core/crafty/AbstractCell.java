@@ -36,6 +36,11 @@ public abstract class AbstractCell {
 	private ConcurrentHashMap<String, Double> landTax = new ConcurrentHashMap<>();
 	private ConcurrentHashMap<String, Double> capitalsAdjusment = new ConcurrentHashMap<>();
 
+	// Production cost storage (AFT label -> $/ha)
+	private ConcurrentHashMap<String, Double> nfertCosts = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String, Double> irrigationCosts = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String, Double> intensityCosts = new ConcurrentHashMap<>();
+
 	private double[] currentProd;
 	private double currentUtility;
 	String CurrentRegion;
@@ -205,6 +210,18 @@ public abstract class AbstractCell {
 
 	public ConcurrentHashMap<String, Double> getCapitalsAdjusment() {
 		return capitalsAdjusment;
+	}
+
+	public ConcurrentHashMap<String, Double> getNfertCosts() {
+		return nfertCosts;
+	}
+
+	public ConcurrentHashMap<String, Double> getIrrigationCosts() {
+		return irrigationCosts;
+	}
+
+	public ConcurrentHashMap<String, Double> getIntensityCosts() {
+		return intensityCosts;
 	}
 
 }

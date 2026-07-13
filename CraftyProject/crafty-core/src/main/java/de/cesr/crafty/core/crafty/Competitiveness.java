@@ -66,7 +66,7 @@ public class Competitiveness {
 			return utilityUseOnlyPrice(c, a, r);
 		}
 		if (ConfigLoader.config.use_cell_level_taxes) {
-			utilityUseMarginalWithTexes(c, a, r);
+			return utilityUseMarginalWithTexes(c, a, r);
 		}
 		return utilityUseMarginal(c, a, r);
 	}
@@ -100,7 +100,7 @@ public class Competitiveness {
 		if (a == null || !a.isInteract()) {
 			return 0;
 		}
-		return ServiceSet.getServicesList().stream().mapToDouble(serviceName -> {
+		double revenue = ServiceSet.getServicesList().stream().mapToDouble(serviceName -> {
 			Service service = r.R.getServicesHash().get(serviceName);
 			double currentWeight = service.getWeights().get(Timestep.getCurrentYear());
 			double result = currentWeight * c.competitiveness(a, serviceName);
@@ -109,6 +109,7 @@ public class Competitiveness {
 			}
 			return result;
 		}).sum();
+		return revenue - c.productionCost(a);
 	}
 
 //	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {

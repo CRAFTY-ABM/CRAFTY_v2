@@ -20,6 +20,7 @@ import de.cesr.crafty.core.updaters.Capital_Degradation_Updater;
 import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.updaters.FlagUpdater;
 import de.cesr.crafty.core.updaters.LandMaskUpdater;
+import de.cesr.crafty.core.updaters.ProductionCostUpdater;
 import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
 import de.cesr.crafty.core.updaters.ServicesUpdater;
 import de.cesr.crafty.core.updaters.SupplyUpdater;
@@ -90,6 +91,7 @@ public class ModelRunner extends AbstractModelRunner {
 	public static CellsLoader cellsSet;
 	public static CapitalUpdater capitalUpdater;
 	public static AftsUpdater aftsUpdater;
+	public static ProductionCostUpdater productionCostUpdater;
 	private static Capital_Degradation_Updater capital_Degradation_Updater;
 	public RegionsModelRunnerUpdater regionsModelRunnerUpdater;
 
@@ -101,12 +103,14 @@ public class ModelRunner extends AbstractModelRunner {
 		aftsUpdater = new AftsUpdater();
 		cellsSet = new CellsLoader();
 		capitalUpdater.step();
+		productionCostUpdater = new ProductionCostUpdater();
 		capital_Degradation_Updater = new Capital_Degradation_Updater();
 		regionsModelRunnerUpdater=new RegionsModelRunnerUpdater();
 		getScheduled().clear();
 		getScheduled().add(new FlagUpdater());
 		getScheduled().add(new ServicesUpdater());
 		getScheduled().add(capitalUpdater);
+		getScheduled().add(productionCostUpdater);
 		getScheduled().add(aftsUpdater);
 		getScheduled().add(new CellBehaviourUpdater());
 		getScheduled().add(new LandMaskUpdater());

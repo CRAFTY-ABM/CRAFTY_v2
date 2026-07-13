@@ -326,6 +326,19 @@ public class AFTsLoader extends HashSet<Aft> {
 					int max = Utils.sToI(csv.get("max_life_cycle").get(i));
 					a.setMax_life_cycle(max > 0 ? max : Integer.MAX_VALUE);
 				}
+				if (csv.containsKey("Nfert_rate")) {
+					a.setNfertRate(Utils.sToD(csv.get("Nfert_rate").get(i)));
+				}
+				if (csv.containsKey("Irrigated")) {
+					String val = csv.get("Irrigated").get(i).trim();
+					try {
+						a.setIrrigated(Integer.parseInt(val) == 1);
+					} catch (NumberFormatException e) {
+						LOGGER.warn("Unrecognised Irrigated value '" + val
+								+ "' for AFT " + label + ", defaulting to false (rainfed)");
+						a.setIrrigated(false);
+					}
+				}
 			}
 		}
 	}

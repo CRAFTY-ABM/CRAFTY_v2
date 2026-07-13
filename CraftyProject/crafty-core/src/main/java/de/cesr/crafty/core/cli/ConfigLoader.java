@@ -42,14 +42,31 @@ import java.nio.file.Paths;
 public class ConfigLoader {
 	public static String configPath;
 	public static Config config;
+	private static final CustomLogger LOGGER = new CustomLogger(ConfigLoader.class);
 
 	public static void init() {
 		config = loadConfig();
+		validateProductionCostConfig();
 		try {
 			loadExternalRScriptRunnerConfig();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	static void validateProductionCostConfig() {
+		if (config == null) return;
+		if (!config.use_production_costs && config.spatial_production_costs) {
+			LOGGER.fatal("Cannot use spatial production costs when use_production_costs is false");
+		}
+	}
+
+	public static boolean isUseProductionCosts() {
+		return config != null && config.use_production_costs;
+	}
+
+	public static boolean isSpatialProductionCosts() {
+		return config != null && config.spatial_production_costs;
 	}
 
 	private static Config loadConfig() {

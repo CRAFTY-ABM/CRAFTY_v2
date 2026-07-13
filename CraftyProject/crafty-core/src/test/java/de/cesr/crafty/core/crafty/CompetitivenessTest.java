@@ -114,6 +114,177 @@ class CompetitivenessTest {
 		});
 	}
 
+	// -------------------------------------------------------
+	// utility(...) — production cost subtraction (price-only path)
+	// -------------------------------------------------------
+
+	@Test
+	void priceOnlyUtility_subtractsGlobalModeCosts_whenProductionCostsEnabled() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_production_costs", true,
+					"spatial_production_costs", false));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+			when(a.getNfertCostPerHa()).thenReturn(10.0);
+			when(a.getIntensityCostPerHa()).thenReturn(5.0);
+
+			doReturn(2.0).when(c).competitiveness(a, "S1");
+
+			Service s1 = mock(Service.class);
+			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
+			Region region = mock(Region.class);
+			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			r.R = region;
+
+			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+				ts.when(Timestep::getCurrentYear).thenReturn(2020);
+
+				// revenue = 10 * 2 = 20; costs = nfertCostPerHa(10) + intensityCostPerHa(5) = 15
+				assertEquals(5.0, callUtility(c, a, r), 1e-12);
+			}
+		});
+	}
+
+	@Test
+	void priceOnlyUtility_subtractsSpatialModeCosts_fromCellMaps() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_production_costs", true,
+					"spatial_production_costs", true));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+			c.getNfertCosts().put("AFT1", 8.0);
+			c.getIntensityCosts().put("AFT1", 3.0);
+			c.getIrrigationCosts().put("AFT1", 2.0);
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+
+			doReturn(2.0).when(c).competitiveness(a, "S1");
+
+			Service s1 = mock(Service.class);
+			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
+			Region region = mock(Region.class);
+			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			r.R = region;
+
+			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+				ts.when(Timestep::getCurrentYear).thenReturn(2020);
+
+				// revenue = 10 * 2 = 20; costs = nfert(8) + intensity(3) + irrigation(2) = 13
+				assertEquals(7.0, callUtility(c, a, r), 1e-12);
+			}
+		});
+	}
+
+	@Test
+	void priceOnlyUtility_noCostSubtraction_whenProductionCostsDisabled() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_production_costs", false));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+			// costs present on the AFT/cell but must be ignored while the feature flag is off
+			c.getNfertCosts().put("AFT1", 8.0);
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+			when(a.getNfertCostPerHa()).thenReturn(10.0);
+			when(a.getIntensityCostPerHa()).thenReturn(5.0);
+
+			doReturn(2.0).when(c).competitiveness(a, "S1");
+
+			Service s1 = mock(Service.class);
+			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
+			Region region = mock(Region.class);
+			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			r.R = region;
+
+			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+				ts.when(Timestep::getCurrentYear).thenReturn(2020);
+
+				// revenue = 10 * 2 = 20; no cost subtraction since use_production_costs=false
+				assertEquals(20.0, callUtility(c, a, r), 1e-12);
+			}
+		});
+	}
+
+	@Test
+	void marginalUtility_isUnaffectedByProductionCosts() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			// use_price_only_utility left false (default) so the marginal formula is used
+			setConfig(cfg, Map.of("use_production_costs", true, "spatial_production_costs", false));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+			when(a.getNfertCostPerHa()).thenReturn(10.0);
+			when(a.getIntensityCostPerHa()).thenReturn(5.0);
+
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
+
+			doReturn(6.0).when(c).competitiveness(a, "S1");
+			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+
+			// marginal formula: (0+1)*6 + 0 = 6, unchanged despite use_production_costs=true
+			assertEquals(6.0, callUtility(c, a, r), 1e-12);
+		});
+	}
+
+	@Test
+	void dispatcher_useCellLevelTaxes_returnsMarginalWithTexesFormula() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", false));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+
+			doReturn(4.0).when(c).competitiveness(a, "S1");
+			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 2.0)));
+			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>(Map.of("AFT1", 3.0)));
+
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			r.initial_service_gaps = new ConcurrentHashMap<>(Map.of("S1", 5.0));
+			r.initialutilityAverage = new ConcurrentHashMap<>(Map.of("AFT1", 2.0));
+			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
+
+			// ConfigLoader.config is shared, mutable static state: ensureConfigInstance() reuses
+			// the existing instance rather than replacing it, so @AfterEach's reference-swap
+			// restore doesn't undo field mutations made via setConfig/direct assignment here.
+			// Flip the flag directly and always revert it, matching the convention used by the
+			// other tests in this class that mutate ConfigLoader.config fields.
+			ConfigLoader.config.use_cell_level_taxes = true;
+			try {
+				// utilityUseMarginalWithTexes: (2*5 + 1)*4 + 3*2 = 44 + 6 = 50
+				// Regression guard for the dispatcher bug where this branch's return value
+				// was discarded and utilityUseMarginal's result (6*4=24, no land-tax-average
+				// scaling) was returned instead.
+				assertEquals(50.0, callUtility(c, a, r), 1e-12);
+			} finally {
+				ConfigLoader.config.use_cell_level_taxes = false;
+			}
+		});
+	}
+
 //    @Test
 //    void utility_sumsTaxPlusMarginal_timesProductivity_plusLandTax() throws Throwable {
 //        withServices(List.of("S1", "S2"), () -> {

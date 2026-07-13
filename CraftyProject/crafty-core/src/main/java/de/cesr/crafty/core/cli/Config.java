@@ -55,6 +55,11 @@ public class Config {
 	public String waitingFlag_directories_path = "";
 	public String AFT_capital_adjustments = "";
 
+	// Production costs
+	public boolean use_production_costs = false;
+	public boolean spatial_production_costs = false;
+	public String costs_directory = "";
+
 	// Regionalisation
 	public boolean regionalization = false;
 	// CRAFTY Mechanisms
@@ -162,7 +167,11 @@ public class Config {
 				+ "|-> track_changes=" + track_changes + "\n" + "|-> export_LOGGER=" + export_LOGGER + "\n"
 				+ "|-> LOGGER_info=" + LOGGER_info + "\n" + "|-> LOGGER_warn=" + LOGGER_warn + "\n"
 				+ "|-> LOGGER_trace=" + LOGGER_trace + "\n" + "|-> map_output_years=" + map_output_years + "\n"
-				+ "|-> comments=" + comments + "\n" + "] \n\n";
+				+ "|-> comments=" + comments + "\n"
+				+ "|-> use_production_costs=" + use_production_costs + "\n"
+				+ "|-> spatial_production_costs=" + spatial_production_costs + "\n"
+				+ "|-> costs_directory=" + costs_directory + "\n"
+				+ "] \n\n";
 	}
 
 	// behevoir model
