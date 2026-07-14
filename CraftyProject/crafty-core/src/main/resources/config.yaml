@@ -27,6 +27,13 @@ participating_cells_percentage: 0.03         # Percentage of cells participating
 takeOverUnmanageCells_percentage: 0.8
 marginal_utility_calculations_per_tick: 10     # Number of times the marginal utility calculated per tick
 
+# Twinned AFTs
+# Allows a pair of AFTs (e.g. irrigated/rainfed) to compete at a separate, higher frequency.
+# Twin relationships are declared via "Twin" and "Twin_cost" columns in AFTsMetaData CSV.
+use_twinned_AFTs: false                        # Enable twinned AFT competition pass (additive to standard competition)
+use_twinned_cost: false                        # Use cost-based takeover rule instead of standard give-in dispatch
+twinned_competition_rate: 1.0                  # Fraction of eligible twin-owned cells checked per tick [0,1]
+
 # ConsiderLandControle : true/false;
 # List of landcontrole cosiderd  names    # all for all the mask will be considerd 
 # landControle directory path example [urban ; C:\Users\byari-m\Desktop\CRAFTY_DATA\CRAFTY-EU-1km_upscaled_20.0\worlds\LandUseControl\Urban] 

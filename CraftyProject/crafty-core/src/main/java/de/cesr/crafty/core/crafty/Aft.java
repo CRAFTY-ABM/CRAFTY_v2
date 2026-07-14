@@ -52,6 +52,9 @@ public class Aft extends AbstractAft {
 					* (1 + ConfigLoader.config.mutation_interval * (2 * new Random().nextDouble() - 1));
 			this.giveUpProbabilty = other.giveUpProbabilty
 					* (1 + ConfigLoader.config.mutation_interval * (2 * new Random().nextDouble() - 1));
+
+			setTwinLabel(other.getTwinLabel());
+			setTwinCost(other.getTwinCost());
 		}
 
 	}

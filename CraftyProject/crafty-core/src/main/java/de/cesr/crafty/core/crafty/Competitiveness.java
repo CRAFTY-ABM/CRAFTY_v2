@@ -133,13 +133,34 @@ public class Competitiveness {
 			return;
 		}
 		if (makeCompetition(c, competitor)) {
-			if (ConfigLoader.config.use_normalised_price_competition) {
-				landUsechangeNormalisedPriceUtility(c, competitor, r);
-			} else if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
-				landUsechangeNormalisedUtility(c, competitor, r);
-			} else {
-				landUsechange(c, competitor, r);
+			dispatchLandUseChange(c, competitor, r);
+		}
+	}
+
+	private static void dispatchLandUseChange(Cell c, Aft competitor, RegionalModelRunner r) {
+		if (ConfigLoader.config.use_normalised_price_competition) {
+			landUsechangeNormalisedPriceUtility(c, competitor, r);
+		} else if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
+			landUsechangeNormalisedUtility(c, competitor, r);
+		} else {
+			landUsechange(c, competitor, r);
+		}
+	}
+
+	static void twinCompetition(Cell c, RegionalModelRunner r) {
+		Aft owner = c.getOwner();
+		if (owner == null || !owner.isInteract() || !owner.hasTwin()) return;
+		Aft twin = AFTsLoader.getAftHash().get(owner.getTwinLabel());
+		if (twin == null || !twin.isInteract() || !makeCompetition(c, twin)) return;
+
+		if (ConfigLoader.config.use_twinned_cost) {
+			double uTwin = utility(c, twin, r);
+			double uOwner = c.getCurrentUtility();
+			if (uTwin > 0 && uTwin > uOwner + twin.getTwinCost()) {
+				takeOverAcell(c, twin, r);
 			}
+		} else {
+			dispatchLandUseChange(c, twin, r);
 		}
 	}
 

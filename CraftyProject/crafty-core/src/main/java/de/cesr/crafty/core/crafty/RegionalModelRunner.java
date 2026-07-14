@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
@@ -127,6 +128,9 @@ public class RegionalModelRunner {
 		}
 		try (var t = profiler.section("takeOverMaskedCellByCategories")) {
 			takeOverMaskedCellByCategories();
+		}
+		try (var t = profiler.section("twinnedCompetition")) {
+			twinnedCompetition();
 		}
 		try (var t = profiler.section("giveUp")) {
 			giveUp();
@@ -435,6 +439,48 @@ public class RegionalModelRunner {
 						for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
 							after.merge(ServiceSet.getServicesList().get(i), c.getCurrentProd()[i], Double::sum);
 						}
+					}
+				});
+			}
+			after.forEach((key, value) -> getRegionalSupply().merge(key, value - before.get(key), Double::sum));
+			computeMarginal();
+		});
+	}
+
+	private void twinnedCompetition() {
+		if (!ConfigLoader.config.use_twinned_AFTs) return;
+
+		long runSeed = ConfigLoader.config.longSeedID.get();
+		int year = Timestep.getCurrentYear();
+
+		List<Cell> seed = R.getCells().values().stream()
+				.filter(c -> {
+					Aft owner = c.getOwner();
+					return owner != null && owner.isInteract() && owner.hasTwin()
+							&& DeterministicRandom.randomBoolean(runSeed, year,
+									DeterministicRandom.Process.CELL_SELECTION_TWIN_COMPETITION,
+									DeterministicRandom.stableCellKey(c), 0L, 0,
+									ConfigLoader.config.twinned_competition_rate);
+				})
+				.collect(Collectors.toList());
+
+		if (seed.isEmpty()) return;
+
+		List<ConcurrentHashMap<String, Cell>> subsubsets = Utils.splitIntoSubsets(seed,
+				ConfigLoader.config.marginal_utility_calculations_per_tick);
+
+		subsubsets.forEach(subsubset -> {
+			ConcurrentHashMap<String, Double> before = new ConcurrentHashMap<>();
+			ConcurrentHashMap<String, Double> after = new ConcurrentHashMap<>();
+			if (subsubset != null) {
+				subsubset.values().parallelStream().forEach(c -> {
+					for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
+						before.merge(ServiceSet.getServicesList().get(i), c.getCurrentProd()[i], Double::sum);
+					}
+					Competitiveness.twinCompetition(c, this);
+					c.calculateCurrentProductivity();
+					for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
+						after.merge(ServiceSet.getServicesList().get(i), c.getCurrentProd()[i], Double::sum);
 					}
 				});
 			}

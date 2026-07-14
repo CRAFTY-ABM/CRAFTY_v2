@@ -56,8 +56,10 @@ public abstract class AbstractAft {
 	private double nfertCostPerHa = 0.0;
 	private double intensityCostPerHa = 0.0;
 
-	
-	
+	// Twinned AFT fields
+	private String twinLabel = null;
+	private double twinCost = 0.0;
+
 	public long getId() {
 		return id;
 	}
@@ -256,6 +258,26 @@ public abstract class AbstractAft {
 
 	public void setIntensityCostPerHa(double intensityCostPerHa) {
 		this.intensityCostPerHa = intensityCostPerHa;
+	}
+
+	public String getTwinLabel() {
+		return twinLabel;
+	}
+
+	public void setTwinLabel(String twinLabel) {
+		this.twinLabel = twinLabel;
+	}
+
+	public double getTwinCost() {
+		return twinCost;
+	}
+
+	public void setTwinCost(double twinCost) {
+		this.twinCost = twinCost;
+	}
+
+	public boolean hasTwin() {
+		return twinLabel != null && !twinLabel.isBlank();
 	}
 
 }

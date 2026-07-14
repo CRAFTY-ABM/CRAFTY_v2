@@ -60,6 +60,11 @@ public class Config {
 	public boolean spatial_production_costs = false;
 	public String costs_directory = "";
 
+	// Twinned AFTs
+	public boolean use_twinned_AFTs = false;
+	public boolean use_twinned_cost = false;
+	public double twinned_competition_rate = 1.0;
+
 	// Regionalisation
 	public boolean regionalization = false;
 	// CRAFTY Mechanisms

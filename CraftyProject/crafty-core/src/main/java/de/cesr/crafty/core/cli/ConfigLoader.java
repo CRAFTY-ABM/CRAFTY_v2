@@ -47,6 +47,7 @@ public class ConfigLoader {
 	public static void init() {
 		config = loadConfig();
 		validateProductionCostConfig();
+		validateTwinnedAftConfig();
 		try {
 			loadExternalRScriptRunnerConfig();
 		} catch (IOException e) {
@@ -59,6 +60,24 @@ public class ConfigLoader {
 		if (!config.use_production_costs && config.spatial_production_costs) {
 			LOGGER.fatal("Cannot use spatial production costs when use_production_costs is false");
 		}
+	}
+
+	static void validateTwinnedAftConfig() {
+		if (config == null) return;
+		if (config.use_twinned_cost && !config.use_twinned_AFTs) {
+			LOGGER.fatal("Cannot use twinned cost when use_twinned_AFTs is false");
+		}
+		if (config.twinned_competition_rate < 0.0 || config.twinned_competition_rate > 1.0) {
+			LOGGER.fatal("twinned_competition_rate must be in [0, 1], got: " + config.twinned_competition_rate);
+		}
+	}
+
+	public static boolean isUseTwinnedAFTs() {
+		return config != null && config.use_twinned_AFTs;
+	}
+
+	public static boolean isUseTwinnedCost() {
+		return config != null && config.use_twinned_cost;
 	}
 
 	public static boolean isUseProductionCosts() {

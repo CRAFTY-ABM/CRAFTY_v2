@@ -339,6 +339,42 @@ public class AFTsLoader extends HashSet<Aft> {
 						a.setIrrigated(false);
 					}
 				}
+			if (csv.containsKey("Twin")) {
+				String twin = csv.get("Twin").get(i).trim();
+				a.setTwinLabel(twin.isEmpty() ? null : twin);
+			}
+			if (csv.containsKey("Twin_cost")) {
+				a.setTwinCost(Utils.sToD(csv.get("Twin_cost").get(i)));
+			}
+			}
+		}
+
+		if (ConfigLoader.config.use_twinned_AFTs && !csv.containsKey("Twin")) {
+			LOGGER.fatal("use_twinned_AFTs is true but 'Twin' column is missing from AFTsMetaData");
+		}
+		if (ConfigLoader.config.use_twinned_cost && !csv.containsKey("Twin_cost")) {
+			LOGGER.fatal("use_twinned_cost is true but 'Twin_cost' column is missing from AFTsMetaData");
+		}
+
+		for (Aft a : hashAFTs.values()) {
+			if (!a.hasTwin()) continue;
+			String label = a.getLabel();
+			String twin = a.getTwinLabel();
+
+			if (twin.equals(label)) {
+				LOGGER.warn("AFT '" + label + "' names itself as its own twin — clearing twin");
+				a.setTwinLabel(null);
+				continue;
+			}
+
+			Aft resolved = hashAFTs.get(twin);
+			if (resolved == null) {
+				LOGGER.warn("AFT '" + label + "' names twin '" + twin + "' which does not exist — clearing twin");
+				a.setTwinLabel(null);
+			} else if (!resolved.isInteract()) {
+				LOGGER.warn("AFT '" + label + "' names twin '" + twin
+						+ "' which is not an interacting AFT (type=" + resolved.getType() + ") — clearing twin");
+				a.setTwinLabel(null);
 			}
 		}
 	}
