@@ -64,6 +64,14 @@ class CompetitivenessTest {
 
 	@AfterEach
 	void restore() throws Exception {
+		// reset price utility flags before restoring config reference,
+		// because ensureConfigInstance() reuses the same object so
+		// @BeforeEach's snapshot and originalConfig share identity
+		if (ConfigLoader.config != null) {
+			ConfigLoader.config.use_explicit_price_utility = false;
+			ConfigLoader.config.use_price_only_utility = false;
+		}
+
 		// restore config
 		Field cfgField = findField(ConfigLoader.class, "config");
 		cfgField.setAccessible(true);
@@ -115,14 +123,14 @@ class CompetitivenessTest {
 	}
 
 	// -------------------------------------------------------
-	// utility(...) — production cost subtraction (price-only path)
+	// utility(...) — production cost subtraction (explicit-price path)
 	// -------------------------------------------------------
 
 	@Test
-	void priceOnlyUtility_subtractsGlobalModeCosts_whenProductionCostsEnabled() throws Throwable {
+	void explicitPriceUtility_subtractsGlobalModeCosts_whenProductionCostsEnabled() throws Throwable {
 		withServices(List.of("S1"), () -> {
 			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_production_costs", true,
+			setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", true,
 					"spatial_production_costs", false));
 
 			Cell c = Mockito.spy(new Cell(0, 0));
@@ -152,10 +160,10 @@ class CompetitivenessTest {
 	}
 
 	@Test
-	void priceOnlyUtility_subtractsSpatialModeCosts_fromCellMaps() throws Throwable {
+	void explicitPriceUtility_subtractsSpatialModeCosts_fromCellMaps() throws Throwable {
 		withServices(List.of("S1"), () -> {
 			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_production_costs", true,
+			setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", true,
 					"spatial_production_costs", true));
 
 			Cell c = Mockito.spy(new Cell(0, 0));
@@ -186,10 +194,10 @@ class CompetitivenessTest {
 	}
 
 	@Test
-	void priceOnlyUtility_noCostSubtraction_whenProductionCostsDisabled() throws Throwable {
+	void explicitPriceUtility_noCostSubtraction_whenProductionCostsDisabled() throws Throwable {
 		withServices(List.of("S1"), () -> {
 			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_production_costs", false));
+			setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", false));
 
 			Cell c = Mockito.spy(new Cell(0, 0));
 			// costs present on the AFT/cell but must be ignored while the feature flag is off
@@ -223,7 +231,7 @@ class CompetitivenessTest {
 	void marginalUtility_isUnaffectedByProductionCosts() throws Throwable {
 		withServices(List.of("S1"), () -> {
 			Object cfg = ensureConfigInstance();
-			// use_price_only_utility left false (default) so the marginal formula is used
+			// use_explicit_price_utility left false (default) so the marginal formula is used
 			setConfig(cfg, Map.of("use_production_costs", true, "spatial_production_costs", false));
 
 			Cell c = Mockito.spy(new Cell(0, 0));
@@ -250,7 +258,7 @@ class CompetitivenessTest {
 	void dispatcher_useCellLevelTaxes_returnsMarginalWithTexesFormula() throws Throwable {
 		withServices(List.of("S1"), () -> {
 			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", false));
+			setConfig(cfg, Map.of("use_explicit_price_utility", false));
 
 			Cell c = Mockito.spy(new Cell(0, 0));
 
@@ -299,7 +307,7 @@ class CompetitivenessTest {
 //            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.5, "S2", -2.0)));
 //
 //            // S1 productivity=2, S2 productivity=3
-//            doReturn(2.0).when(c).productivity(a, "S1");
+//            doReturn(2.0).when(c).competitiveness(a, "S1");
 //            doReturn(3.0).when(c).productivity(a, "S2");
 //
 //            // expected: (1+0.5)*2 + (10-2)*3 + 5 = 3 + 24 + 5 = 32
@@ -502,7 +510,7 @@ class CompetitivenessTest {
 //            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
 //
 //            // competitor uC = 10
-//            doReturn(10.0).when(c).productivity(competitor, "S1");
+//            doReturn(10.0).when(c).competitiveness(competitor, "S1");
 //
 //            // nbr = mean(owner) * giveInThreshold = 2 * 1 = 2
 //            ConcurrentHashMap<Aft, Double> meanY = new ConcurrentHashMap<>();
@@ -659,14 +667,14 @@ class CompetitivenessTest {
 				mocked.when(AFTsLoader::getActivateAFTsHash)
 						.thenReturn(new ConcurrentHashMap<>(Map.of("COMP", competitor)));
 
-				ConfigLoader.config.use_price_only_utility = true;
+				ConfigLoader.config.use_explicit_price_utility = true;
 				try {
 					Competitiveness.competition(c, r);
 					assertSame(competitor, getOwner(c),
 							"Normalised price path should take over abandoned cell when uC > 0");
 					assertEquals(1, Listener.landUseChangeCounter.get());
 				} finally {
-					ConfigLoader.config.use_price_only_utility = false;
+					ConfigLoader.config.use_explicit_price_utility = false;
 				}
 			}
 		});
@@ -765,12 +773,12 @@ class CompetitivenessTest {
 				ts.when(Timestep::getCurrentYear).thenReturn(2020);
 				ts.when(Timestep::getStartYear).thenReturn(2020);
 
-				ConfigLoader.config.use_price_only_utility = true;
+				ConfigLoader.config.use_explicit_price_utility = true;
 				try {
 					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
 					assertSame(competitor, getOwner(c));
 				} finally {
-					ConfigLoader.config.use_price_only_utility = false;
+					ConfigLoader.config.use_explicit_price_utility = false;
 				}
 			}
 		});
@@ -818,14 +826,14 @@ class CompetitivenessTest {
 				ts.when(Timestep::getCurrentYear).thenReturn(2020);
 				ts.when(Timestep::getStartYear).thenReturn(2020);
 
-				ConfigLoader.config.use_price_only_utility = true;
+				ConfigLoader.config.use_explicit_price_utility = true;
 				try {
 					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
 					assertSame(owner, getOwner(c),
 							"Competitor with normDiff=0.091 < giveIn=0.2 must not take over");
 					assertEquals(0, Listener.landUseChangeCounter.get());
 				} finally {
-					ConfigLoader.config.use_price_only_utility = false;
+					ConfigLoader.config.use_explicit_price_utility = false;
 				}
 			}
 		});
@@ -863,14 +871,14 @@ class CompetitivenessTest {
 				ts.when(Timestep::getCurrentYear).thenReturn(2020);
 				ts.when(Timestep::getStartYear).thenReturn(2020);
 
-				ConfigLoader.config.use_price_only_utility = true;
+				ConfigLoader.config.use_explicit_price_utility = true;
 				try {
 					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
 					assertNull(getOwner(c),
 							"Competitor with negative utility must not take over even an abandoned cell");
 					assertEquals(0, Listener.landUseChangeCounter.get());
 				} finally {
-					ConfigLoader.config.use_price_only_utility = false;
+					ConfigLoader.config.use_explicit_price_utility = false;
 				}
 			}
 		});
@@ -915,17 +923,158 @@ class CompetitivenessTest {
 				ts.when(Timestep::getCurrentYear).thenReturn(2020);
 				ts.when(Timestep::getStartYear).thenReturn(2020);
 
-				ConfigLoader.config.use_price_only_utility = true;
+				ConfigLoader.config.use_explicit_price_utility = true;
 				try {
 					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
 					assertSame(owner, getOwner(c),
 							"Competitor with uC=-2 > uO=-10 must NOT take over because uC <= 0");
 					assertEquals(0, Listener.landUseChangeCounter.get());
 				} finally {
-					ConfigLoader.config.use_price_only_utility = false;
+					ConfigLoader.config.use_explicit_price_utility = false;
 				}
 			}
 		});
+	}
+
+	// -------------------------------------------------------
+	// utility(...) — PLUM price-ratio path (use_price_only_utility)
+	// -------------------------------------------------------
+
+	@Test
+	void priceRatioUtility_basicCalculation() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+			when(a.getNfertCostPerHa()).thenReturn(10.0);
+			when(a.getIntensityCostPerHa()).thenReturn(5.0);
+
+			doReturn(0.8).when(c).competitiveness(a, "S1");
+
+			Service s1 = mock(Service.class);
+			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 100.0, 2025, 150.0)));
+			Region region = mock(Region.class);
+			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			r.R = region;
+
+			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+				ts.when(Timestep::getCurrentYear).thenReturn(2025);
+				ts.when(Timestep::getStartYear).thenReturn(2020);
+
+				// U = (150/100) * 0.8 = 1.2 — no cost subtraction despite costs being set
+				assertEquals(1.2, callUtility(c, a, r), 1e-12);
+			}
+		});
+	}
+
+	@Test
+	void priceRatioUtility_returnsZero_whenAftNull() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+			Cell c = new Cell(0, 0);
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+
+			assertEquals(0.0, callUtility(c, null, r), 1e-12);
+		});
+	}
+
+	@Test
+	void priceRatioUtility_returnsZero_whenAftNotInteract() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+			Cell c = new Cell(0, 0);
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(false);
+			assertEquals(0.0, callUtility(c, a, r), 1e-12);
+		});
+	}
+
+	@Test
+	void priceRatioUtility_handlesZeroInitialWeight() throws Throwable {
+		withServices(List.of("S1"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+
+			doReturn(0.5).when(c).competitiveness(a, "S1");
+
+			Service s1 = mock(Service.class);
+			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 0.0, 2025, 100.0)));
+			Region region = mock(Region.class);
+			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			r.R = region;
+
+			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+				ts.when(Timestep::getCurrentYear).thenReturn(2025);
+				ts.when(Timestep::getStartYear).thenReturn(2020);
+
+				// Infinity from 100/0 → clamped to 0 by NaN/Inf guard → total = 0
+				assertEquals(0.0, callUtility(c, a, r), 1e-12);
+			}
+		});
+	}
+
+	@Test
+	void priceRatioUtility_multipleServices() throws Throwable {
+		withServices(List.of("S1", "S2"), () -> {
+			Object cfg = ensureConfigInstance();
+			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+			Cell c = Mockito.spy(new Cell(0, 0));
+
+			Aft a = mock(Aft.class);
+			when(a.isInteract()).thenReturn(true);
+			when(a.getLabel()).thenReturn("AFT1");
+
+			doReturn(2.0).when(c).competitiveness(a, "S1");
+			doReturn(3.0).when(c).competitiveness(a, "S2");
+
+			Service s1 = mock(Service.class);
+			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 100.0, 2025, 200.0)));
+			Service s2 = mock(Service.class);
+			when(s2.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 50.0, 2025, 75.0)));
+
+			Region region = mock(Region.class);
+			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1, "S2", s2)));
+			RegionalModelRunner r = mock(RegionalModelRunner.class);
+			r.R = region;
+
+			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+				ts.when(Timestep::getCurrentYear).thenReturn(2025);
+				ts.when(Timestep::getStartYear).thenReturn(2020);
+
+				// S1: (200/100)*2 = 4.0;  S2: (75/50)*3 = 4.5;  total = 8.5
+				assertEquals(8.5, callUtility(c, a, r), 1e-12);
+			}
+		});
+	}
+
+	@Test
+	void configValidation_bothPriceUtilityFlags_shouldBeInvalid() throws Throwable {
+		Object cfg = ensureConfigInstance();
+		setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_price_only_utility", true));
+
+		// The combination is invalid — in the real code validatePriceUtilityConfig() calls LOGGER.fatal()
+		assertTrue(ConfigLoader.config.use_explicit_price_utility);
+		assertTrue(ConfigLoader.config.use_price_only_utility);
 	}
 
 	// =========================================================

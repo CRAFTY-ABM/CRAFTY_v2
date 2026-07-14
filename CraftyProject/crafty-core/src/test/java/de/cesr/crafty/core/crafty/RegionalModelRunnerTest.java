@@ -60,6 +60,12 @@ class RegionalModelRunnerTest {
 
 	@AfterEach
 	void restoreStatics() throws Exception {
+		// reset price utility flags before restoring config reference
+		if (ConfigLoader.config != null) {
+			ConfigLoader.config.use_explicit_price_utility = false;
+			ConfigLoader.config.use_price_only_utility = false;
+		}
+
 		// restore ConfigLoader.config
 		Field cfgField = findField(ConfigLoader.class, "config");
 		cfgField.setAccessible(true);

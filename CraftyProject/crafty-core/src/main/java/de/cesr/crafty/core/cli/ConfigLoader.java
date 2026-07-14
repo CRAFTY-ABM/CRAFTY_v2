@@ -48,6 +48,7 @@ public class ConfigLoader {
 		config = loadConfig();
 		validateProductionCostConfig();
 		validateTwinnedAftConfig();
+		validatePriceUtilityConfig();
 		try {
 			loadExternalRScriptRunnerConfig();
 		} catch (IOException e) {
@@ -69,6 +70,13 @@ public class ConfigLoader {
 		}
 		if (config.twinned_competition_rate < 0.0 || config.twinned_competition_rate > 1.0) {
 			LOGGER.fatal("twinned_competition_rate must be in [0, 1], got: " + config.twinned_competition_rate);
+		}
+	}
+
+	static void validatePriceUtilityConfig() {
+		if (config == null) return;
+		if (config.use_explicit_price_utility && config.use_price_only_utility) {
+			LOGGER.fatal("use_explicit_price_utility and use_price_only_utility are mutually exclusive");
 		}
 	}
 

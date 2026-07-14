@@ -62,6 +62,9 @@ import de.cesr.crafty.core.utils.general.DeterministicRandom;
 public class Competitiveness {
 
 	static double utility(Cell c, Aft a, RegionalModelRunner r) {
+		if (ConfigLoader.config.use_explicit_price_utility) {
+			return utilityUseExplicitPrice(c, a, r);
+		}
 		if (ConfigLoader.config.use_price_only_utility) {
 			return utilityUseOnlyPrice(c, a, r);
 		}
@@ -96,20 +99,32 @@ public class Competitiveness {
 						* (r.initialutilityAverage.getOrDefault(a.getLabel(), 1d));
 	}
 
-	private static double utilityUseOnlyPrice(Cell c, Aft a, RegionalModelRunner r) {
+	private static double priceBasedUtility(Cell c, Aft a, RegionalModelRunner r,
+			boolean normaliseToBaseline, boolean subtractCosts) {
 		if (a == null || !a.isInteract()) {
 			return 0;
 		}
 		double revenue = ServiceSet.getServicesList().stream().mapToDouble(serviceName -> {
 			Service service = r.R.getServicesHash().get(serviceName);
-			double currentWeight = service.getWeights().get(Timestep.getCurrentYear());
-			double result = currentWeight * c.competitiveness(a, serviceName);
+			double weight = service.getWeights().get(Timestep.getCurrentYear());
+			if (normaliseToBaseline) {
+				weight = weight / service.getWeights().get(Timestep.getStartYear());
+			}
+			double result = weight * c.competitiveness(a, serviceName);
 			if (Double.isNaN(result) || Double.isInfinite(result)) {
 				return 0.0;
 			}
 			return result;
 		}).sum();
-		return revenue - c.productionCost(a);
+		return subtractCosts ? revenue - c.productionCost(a) : revenue;
+	}
+
+	private static double utilityUseExplicitPrice(Cell c, Aft a, RegionalModelRunner r) {
+		return priceBasedUtility(c, a, r, false, true);
+	}
+
+	private static double utilityUseOnlyPrice(Cell c, Aft a, RegionalModelRunner r) {
+		return priceBasedUtility(c, a, r, true, false);
 	}
 
 //	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {

@@ -10,7 +10,8 @@ remove_negative_marginal_utility: false       # Set marginal utility of producti
 use_abandonment_threshold: true               # Abandon cell if agent competitiveness falls below threshold
 mutate_on_competition_win: false              # Create new agent with mutations if competitor wins competition
 separate_production_competitiveness: false     # When true, productivity returns raw yield; competitiveness uses capital-adjusted Cobb-Douglas
-use_price_only_utility: false                  # Use price-based utility (price * production) without requiring PLUM coupling
+use_explicit_price_utility: false              # Utility = price * productivity - costs (standalone explicit-price model)
+use_price_only_utility: false                  # Utility = (price_t / price_t0) * productivity (PLUM coupling price-ratio mode)
 use_normalised_price_competition: false        # Use normalised difference competition: (uC-uO)/(|uC|+|uO|) with uC<=0 guard
 mutation_interval: 0.01                       # Interval for mutation in child agent parameters
 MostCompetitorAFTProbability: 0.8             # Probability of selecting the highest-utility AFT for cell

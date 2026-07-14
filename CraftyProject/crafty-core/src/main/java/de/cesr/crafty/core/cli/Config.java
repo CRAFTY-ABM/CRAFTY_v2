@@ -73,6 +73,7 @@ public class Config {
 	public boolean use_abandonment_threshold = true;
 	public boolean mutate_on_competition_win = false;
 	public boolean separate_production_competitiveness = false;
+	public boolean use_explicit_price_utility = false;
 	public boolean use_price_only_utility = false;
 	public boolean use_normalised_price_competition = false;
 	public double mutation_interval = 0.01;
