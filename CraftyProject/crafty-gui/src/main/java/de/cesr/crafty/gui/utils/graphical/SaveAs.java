@@ -99,7 +99,7 @@ public class SaveAs {
 
 	private static FileChooser openDirectory(String title, String type, ExtensionFilter extensionFilter) {
 		FileChooser fileChooser = new FileChooser();
-		fileChooser.setTitle("Save As");
+		fileChooser.setTitle("Save as");
 		fileChooser.setInitialFileName(title + "." + type); // set initial file name
 		File initialDirectory = ProjectLoader.getProjectPath().toFile();// new File(PathsLoader.getProjectPath());
 		fileChooser.setInitialDirectory(initialDirectory);

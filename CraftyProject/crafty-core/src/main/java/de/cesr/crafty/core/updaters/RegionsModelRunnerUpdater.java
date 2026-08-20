@@ -1,5 +1,6 @@
 package de.cesr.crafty.core.updaters;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.CustomLogger;
@@ -55,14 +56,20 @@ public class RegionsModelRunnerUpdater extends AbstractUpdater {
 
 	@Override
 	public void step() {
-		LOGGER.info("Use Behevoir Model= " + (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed));
+		boolean behaviourModelActive = AftCategorised.useCategorisationGivIn
+				&& CellBehaviourUpdater.behaviourUsed;
+		String parameterYear = CellBehaviourUpdater.getLoadedParameterYear() == null ? "none"
+				: CellBehaviourUpdater.getLoadedParameterYear().toString();
+		LOGGER.info("Behaviour model active: " + behaviourModelActive + " (simulation year "
+				+ Timestep.getCurrentYear() + ", parameter year " + parameterYear + ").");
 		step.run();
 		AFTsLoader.hashAgentNbrRegions();
 		AFTsLoader.hashAgentNbr();
 	}
 
 	private void doStep() {
-		regionsModelRunner.values().forEach(RegionalRunner -> {
+		regionsModelRunner.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Map.Entry::getValue)
+				.forEach(RegionalRunner -> {
 			RegionalRunner.step();
 		});
 	}

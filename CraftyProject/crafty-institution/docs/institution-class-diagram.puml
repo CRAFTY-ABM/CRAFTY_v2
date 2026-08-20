@@ -1,0 +1,288 @@
+@startuml
+
+title CRAFTY Institution Architecture
+left to right direction
+hide empty fields
+hide empty methods
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+legend left
+  |= Arrow |= Meaning |
+  | *-- | owns / contains |
+  | o-- | optional configuration |
+  | --> | uses |
+  | ..|> | implements |
+endlegend
+
+package "config" #E8F1FF {
+  class CanonicalInstitutionYamlLoader
+  class Identifiers
+  class ConfigurationException
+}
+
+package "model" #EAF7EA {
+  class InstitutionConfiguration <<record>> {
+    schemaVersion: int
+    targets: Map<String, TargetDefinition>
+    institutions: Map<String, InstitutionDefinition>
+  }
+  class InstitutionDefinition <<record>> {
+    id: String
+    schedule: ActivationSchedule
+    scope: SpatialScope
+    budget: BudgetDefinition
+    targets: List<TargetReference>
+    policies: Map<String, PolicyDefinition>
+    decisionEngine: DecisionEngineDefinition
+  }
+  class TargetDefinition <<record>>
+  class TargetReference <<record>>
+  class PolicyDefinition <<record>>
+  class PolicyCost <<record>>
+  class PolicyConstraints <<record>>
+  class NumericRange <<record>>
+  class CraftyElementRef <<record>>
+  class ActivationSchedule <<record>>
+  class SpatialScope <<record>>
+  class BudgetDefinition <<record>>
+  class DecisionEngineDefinition <<record>>
+  enum DecisionEngineType
+  enum EffectType
+  enum NormalizationType
+}
+
+package "orchestration" #FFF2CC {
+  interface InstitutionDecisionEngine {
+    decide(context): InstitutionDecision
+  }
+  class InstitutionOrchestrator
+  class DecisionSchedule
+  class InstitutionContext <<record>> {
+    institutionId: String
+    year: int
+    decisionDue: boolean
+    targetHistories: Map
+    estimatedQuantities: Map
+    availableBudget: double
+    engineInput: String
+  }
+  class InstitutionDecision <<record>>
+  class OrchestrationResult <<record>> {
+    decisionRecorded: boolean
+    decisionValues: Map
+    effectiveValues: Map
+    rawOutput: String
+  }
+  class PolicyStateSnapshot <<record>>
+  class TargetStateSnapshot <<record>>
+  enum DecisionMode
+}
+
+package "runtime" #FCE4D6 {
+  class TargetObserver
+  class TargetObservation <<record>>
+  class ObservationBaselines
+  class PolicyEffectApplier
+  class PolicyApplicationResult <<record>>
+  class CellPolicyState
+  interface CellScopeResolver
+  interface CellServiceValueProvider
+  class CraftyCellServiceValueProvider
+  interface ExternalValueProvider
+}
+
+package "decision.fuzzy" #E1F0FF {
+	class FuzzyEngineConfig <<record>>
+	class FuzzyPolicySettings <<record>>
+	class FuzzyTargetSettings <<record>>
+  class FuzzyInstitutionRuntimeSet
+  class FuzzyInstitutionRuntime
+  class FuzzyDecisionEngine
+  class FuzzyPolicyState
+  interface FuzzyEvaluator
+  class JFuzzyLogicEvaluator
+  class PidErrorCalculator
+  class QuadraticBudgetAllocator
+}
+
+package "decision.llm" #FFE6F0 {
+	class LlmEngineConfig <<record>>
+  class LlmDecisionEngine
+  interface LlmClient
+  class LlmClientFactory
+  class GeminiLlmClient
+  class GptLlmClient
+  class KitLlmClient
+  class LlmPromptBuilder
+  class LlmPolicyParser
+  interface LlmOutputWriter
+  class CsvLlmOutputWriter
+  class LlmOutputSnapshot <<record>>
+}
+
+package "decision.llm.runtime" #F9E1EC {
+  class ParadigmRuntimeSet
+  class ParadigmRuntime
+  class LlmInstitutionRuntime
+  class LlmPolicyState
+  class LlmTargetRuntimeSet
+  class LlmTargetState
+  class LlmConnector
+  class LlmRunner
+}
+
+package "decision.fuzzy.integration" #E2F0D9 {
+  class FuzzyInstitutionRunner
+  class FuzzyConnector
+  class DataCollector
+  class FuzzyExternalValues
+  class InstitutionOutput <<record>>
+  class TargetModelOutput <<record>>
+}
+
+package "runner" #DDEEFF {
+  class InstitutionRunner <<main>>
+}
+
+package "crafty-gui" #EEEEEE {
+  class GuiInstitutionBootstrap
+  class InstitutionViewModel
+  class PolicyViewModel
+  class TargetViewModel
+}
+
+package "crafty-core" #EEEEEE {
+  class Cell
+  class CellsLoader
+  class ModelRunner
+}
+
+' Configuration loading and validation
+CanonicalInstitutionYamlLoader --> InstitutionConfiguration : creates
+CanonicalInstitutionYamlLoader ..> ConfigurationException
+CanonicalInstitutionYamlLoader ..> Identifiers
+
+' Immutable model ownership
+InstitutionConfiguration *-- "0..*" TargetDefinition
+InstitutionConfiguration *-- "0..*" InstitutionDefinition
+InstitutionDefinition *-- ActivationSchedule
+InstitutionDefinition *-- SpatialScope
+InstitutionDefinition *-- BudgetDefinition
+InstitutionDefinition *-- "1..*" TargetReference
+InstitutionDefinition *-- "1..*" PolicyDefinition
+InstitutionDefinition *-- DecisionEngineDefinition
+TargetDefinition *-- "1..*" CraftyElementRef : observations
+TargetDefinition --> NormalizationType
+PolicyDefinition *-- "1..*" CraftyElementRef : cell effects
+PolicyDefinition *-- PolicyCost
+PolicyDefinition *-- PolicyConstraints
+PolicyConstraints *-- "1" NumericRange
+CraftyElementRef --> EffectType
+DecisionEngineDefinition --> DecisionEngineType
+DecisionEngineDefinition o-- FuzzyEngineConfig
+DecisionEngineDefinition o-- LlmEngineConfig
+FuzzyEngineConfig *-- "1..*" FuzzyPolicySettings
+FuzzyEngineConfig *-- "1..*" FuzzyTargetSettings
+
+' Engine-neutral orchestration
+InstitutionOrchestrator --> InstitutionDecisionEngine
+InstitutionOrchestrator *-- DecisionSchedule
+InstitutionOrchestrator --> InstitutionContext
+InstitutionOrchestrator --> InstitutionDecision
+InstitutionOrchestrator --> OrchestrationResult
+InstitutionOrchestrator --> PolicyStateSnapshot
+DecisionSchedule --> ActivationSchedule
+InstitutionDecision --> DecisionMode
+' Runtime bridge to CRAFTY cells
+TargetObserver --> TargetDefinition
+TargetObserver --> CellScopeResolver
+TargetObserver --> CellServiceValueProvider
+TargetObserver --> ExternalValueProvider
+TargetObserver --> ObservationBaselines
+TargetObserver --> TargetObservation
+PolicyEffectApplier --> PolicyDefinition
+PolicyEffectApplier --> CellScopeResolver
+PolicyEffectApplier --> PolicyApplicationResult
+PolicyEffectApplier --> Cell
+CellPolicyState --> Cell
+CraftyCellServiceValueProvider ..|> CellServiceValueProvider
+CellsLoader --> Cell
+
+' Fuzzy implementation
+FuzzyDecisionEngine ..|> InstitutionDecisionEngine
+FuzzyDecisionEngine --> FuzzyEvaluator
+FuzzyDecisionEngine *-- "1..*" FuzzyPolicyState
+JFuzzyLogicEvaluator ..|> FuzzyEvaluator
+FuzzyDecisionEngine --> PidErrorCalculator
+FuzzyDecisionEngine --> QuadraticBudgetAllocator
+FuzzyInstitutionRuntime *-- InstitutionOrchestrator
+FuzzyInstitutionRuntime *-- FuzzyDecisionEngine
+FuzzyInstitutionRuntime --> InstitutionDefinition
+FuzzyInstitutionRuntimeSet *-- "0..*" FuzzyInstitutionRuntime
+FuzzyInstitutionRuntimeSet --> InstitutionConfiguration
+
+' LLM implementation
+LlmDecisionEngine ..|> InstitutionDecisionEngine
+LlmDecisionEngine --> LlmClient
+LlmDecisionEngine --> LlmPolicyParser
+LlmDecisionEngine --> LlmOutputWriter
+LlmClientFactory --> LlmClient
+GeminiLlmClient ..|> LlmClient
+GptLlmClient ..|> LlmClient
+KitLlmClient ..|> LlmClient
+CsvLlmOutputWriter ..|> LlmOutputWriter
+LlmOutputWriter --> LlmOutputSnapshot
+LlmInstitutionRuntime *-- InstitutionOrchestrator
+LlmInstitutionRuntime *-- LlmDecisionEngine
+LlmInstitutionRuntime *-- "1..*" LlmPolicyState
+LlmInstitutionRuntime *-- "1..*" LlmTargetState
+LlmInstitutionRuntime --> LlmPromptBuilder
+ParadigmRuntime *-- "0..*" LlmInstitutionRuntime
+ParadigmRuntimeSet *-- "0..*" ParadigmRuntime
+ParadigmRuntimeSet --> InstitutionConfiguration
+LlmTargetRuntimeSet *-- "0..*" LlmTargetState
+LlmConnector --> ParadigmRuntimeSet
+InstitutionRunner --> CanonicalInstitutionYamlLoader : loads
+InstitutionRunner --> InstitutionConfiguration : dispatches
+InstitutionRunner --> LlmRunner : LLM
+InstitutionRunner --> FuzzyInstitutionRunner : FUZZY
+
+' Application entry points
+FuzzyInstitutionRunner --> FuzzyInstitutionRuntimeSet
+FuzzyInstitutionRunner --> FuzzyConnector
+FuzzyConnector --> InstitutionConfiguration
+FuzzyConnector --> TargetObserver
+FuzzyConnector --> PolicyEffectApplier
+FuzzyConnector --> FuzzyExternalValues
+FuzzyConnector --> DataCollector
+FuzzyConnector --> InstitutionOutput
+FuzzyConnector --> TargetModelOutput
+InstitutionRunner --> ModelRunner
+
+' GUI consumes the same configuration/runtime model
+GuiInstitutionBootstrap --> CanonicalInstitutionYamlLoader : loads
+GuiInstitutionBootstrap --> InstitutionConfiguration
+GuiInstitutionBootstrap --> InstitutionViewModel
+GuiInstitutionBootstrap --> TargetViewModel
+InstitutionViewModel --> InstitutionDefinition
+InstitutionViewModel *-- "1..*" PolicyViewModel
+InstitutionViewModel *-- "1..*" TargetViewModel
+PolicyViewModel --> PolicyDefinition
+PolicyViewModel --> PolicyEffectApplier
+TargetViewModel --> TargetDefinition
+TargetViewModel --> TargetObserver
+
+note right of DecisionEngineDefinition
+  type selects fuzzy, llm, or manual.
+  Engine-specific YAML stays isolated
+  while policies and targets are shared.
+end note
+
+note bottom of PolicyEffectApplier
+  Policy effects are cell-level only.
+  Scope chooses the affected cells.
+end note
+
+@enduml

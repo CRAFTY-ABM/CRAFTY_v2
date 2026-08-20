@@ -31,11 +31,11 @@ import de.cesr.crafty.core.utils.general.Utils;
  *   display colours per category ({@link #categoriesColor}).
  * 
  *
- * If enabled via {@code config.use_AFTs_categories_GiveIn} and the metadata contains a {@code Category} column,
+ * If enabled via {@code config.use_category_based_give_in} and the metadata contains a {@code Category} column,
  * {@link #CategoriesLoader()} assigns each AFT a category and intensity (name + numeric level). This supports
  * behaviour rules that depend on whether a competitor is in the same category and/or at a higher/lower intensity.
  *
- * Category-specific give-in thresholds can also be loaded via {@link #initializeBehevoirByCategories()}.
+ * Category-specific give-in thresholds can also be loaded via {@link #initializeBehaviourByCategories()}.
  * This searches for two matrix CSV files (mean and standard deviation) describing give-in distributions between
  * category pairs. The matrices are stored as flattened maps (keyed by {@code rowLabel|colLabel}) in {@link #mean}
  * and {@link #SD}. When both matrices are available, {@link #useCategorisationGivIn} is set to {@code true} and
@@ -66,14 +66,17 @@ public class AftCategorised {
 	public static boolean useCategorisationGivIn = false;
 
 	private static boolean useCategories() {
-		// if (ConfigLoader.config.use_AFTs_categories_GiveIn) {
+		if (!ConfigLoader.config.use_category_based_give_in) {
+			return false;
+		}
 		Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
-		return csv.keySet().contains("Category");
-		// }
-		// return false;
+		return csv != null && csv.containsKey("Category");
 	}
 
 	public static void CategoriesLoader() {
+		aftCategories.clear();
+		CategoriesIntestisy.clear();
+		categoriesColor.clear();
 
 		if (useCategories()) {
 			Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
@@ -105,36 +108,52 @@ public class AftCategorised {
 
 	}
 
-	public static void initializeBehevoirByCategories() {
-		if (aftCategories.size() > 1) {
-			ArrayList<Path> paths = null;
-			if (Paths.get(ConfigLoader.config.categories_givingInDistribution).toFile().isDirectory()) {
-				paths = PathTools.findAllFilePaths(Paths.get(ConfigLoader.config.categories_givingInDistribution));
-			} else {
-				paths = PathTools.fileFilter(PathTools.asFolder("AFTs"), PathTools.asFolder("behaviour"),
-						"categories_givingInDistribution");
-			}
-//			System.out.println("--> " + paths);
+	public static void initializeBehaviourByCategories() {
+		mean = new HashMap<>();
+		SD = new HashMap<>();
+		useCategorisationGivIn = false;
 
-			if (paths != null && !paths.isEmpty()) {
-				Path mean_path = paths.stream()
-						.filter(path -> path.toString().contains("Mean_" + ProjectLoader.getScenario())).findFirst()
-						.orElse(paths.stream().filter(path -> path.toString().contains("Mean_Default")).findFirst()
-								.orElse(null));
-				Path SD_path = paths.stream()
-						.filter(path -> path.toString().contains("SD_" + ProjectLoader.getScenario())).findFirst()
-						.orElse(paths.stream().filter(path -> path.toString().contains("SD_Default")).findFirst()
-								.orElse(null));
-				if (mean_path != null && SD_path != null) {
-					mean = CsvProcessors.readCsvToMatrixMap(mean_path);
-					SD = CsvProcessors.readCsvToMatrixMap(SD_path);
-				}
-
-				useCategorisationGivIn = mean != null && SD != null;
-			}
+		if (!ConfigLoader.config.use_category_based_give_in || aftCategories.size() <= 1) {
+			return;
 		}
 
-//		System.out.println("!! " + AftCategorised.useCategorisationGivIn + " , " + CellBehaviourUpdater.behaviourUsed);
+		ArrayList<Path> paths;
+		String configuredDirectory = ConfigLoader.config.category_give_in_distributions_directory;
+		if (configuredDirectory != null && !configuredDirectory.isBlank()
+				&& Paths.get(configuredDirectory).toFile().isDirectory()) {
+			paths = PathTools.findAllFilePaths(Paths.get(configuredDirectory));
+		} else {
+			paths = PathTools.fileFilter(PathTools.asFolder("AFTs"), PathTools.asFolder("behaviour"),
+					"categories_givingInDistribution");
+		}
+
+		if (paths == null || paths.isEmpty()) {
+			LOGGER.warn("Category-based give-in is enabled, but no category distribution files were found.");
+			return;
+		}
+
+		Path meanPath = paths.stream()
+				.filter(path -> path.toString().contains("Mean_" + ProjectLoader.getScenario())).findFirst()
+				.orElse(paths.stream().filter(path -> path.toString().contains("Mean_Default")).findFirst().orElse(null));
+		Path sdPath = paths.stream()
+				.filter(path -> path.toString().contains("SD_" + ProjectLoader.getScenario())).findFirst()
+				.orElse(paths.stream().filter(path -> path.toString().contains("SD_Default")).findFirst().orElse(null));
+
+		if (meanPath == null || sdPath == null) {
+			LOGGER.warn("Category-based give-in requires both mean and standard-deviation matrix files.");
+			return;
+		}
+
+		HashMap<String, Double> loadedMean = CsvProcessors.readCsvToMatrixMap(meanPath);
+		HashMap<String, Double> loadedSD = CsvProcessors.readCsvToMatrixMap(sdPath);
+		if (loadedMean == null || loadedMean.isEmpty() || loadedSD == null || loadedSD.isEmpty()) {
+			LOGGER.warn("Category-based give-in matrices are empty or invalid.");
+			return;
+		}
+
+		mean = loadedMean;
+		SD = loadedSD;
+		useCategorisationGivIn = true;
 	}
 
 	public static HashMap<String, Double> getMean() {

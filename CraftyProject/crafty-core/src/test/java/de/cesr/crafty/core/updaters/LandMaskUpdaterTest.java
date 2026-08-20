@@ -1,212 +1,294 @@
 package de.cesr.crafty.core.updaters;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
+import de.cesr.crafty.core.cli.Config;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.Cell;
+import de.cesr.crafty.core.crafty.Competitiveness;
+import de.cesr.crafty.core.crafty.RegionalModelRunner;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
-import de.cesr.crafty.core.output.Tracker;
+import de.cesr.crafty.core.dataLoader.land.MaskMetadata;
 import de.cesr.crafty.core.utils.file.CsvTools;
 
 class LandMaskUpdaterTest {
 
-    @TempDir Path tmp;
+	@TempDir
+	Path tmp;
+	private double originalMostCompetitiveProbability;
+	private long originalRandomSeed;
 
-    @BeforeEach
-    void resetState() {
-        LandMaskUpdater.restrictions.clear();
+	@BeforeEach
+	void resetState() {
+		if (ConfigLoader.config == null) {
+			ConfigLoader.config = new Config();
+		}
+		LandMaskUpdater.restrictions.clear();
+		LandMaskUpdater.forcedAllowedAftLabels.clear();
+		LandMaskUpdater.cellsForecedToChange.clear();
+		MaskLoader.mask_paths = new LinkedHashMap<>();
+		MaskLoader.restriction_paths = new LinkedHashMap<>();
+		MaskLoader.scenario_restriction_paths = new LinkedHashMap<>();
+		MaskLoader.default_restriction_paths = new LinkedHashMap<>();
+		MaskLoader.mask_metadata = new LinkedHashMap<>();
+		if (CellsLoader.hashCell == null) {
+			CellsLoader.hashCell = new ConcurrentHashMap<>();
+		} else {
+			CellsLoader.hashCell.clear();
+		}
+		originalMostCompetitiveProbability = ConfigLoader.config.most_competitive_aft_probability;
+		originalRandomSeed = ConfigLoader.config.random_seed;
+	}
 
-        // Reset MaskLoader maps
-        MaskLoader.mask_paths = new HashMap<>();
-        MaskLoader.restriction_paths = new HashMap<>();
+	@AfterEach
+	void restoreConfig() {
+		ConfigLoader.config.most_competitive_aft_probability = originalMostCompetitiveProbability;
+		ConfigLoader.config.random_seed = originalRandomSeed;
+	}
 
-        // Reset CellsLoader hash
-        if (CellsLoader.hashCell == null) {
-            CellsLoader.hashCell = new ConcurrentHashMap<>();
-        } else {
-            CellsLoader.hashCell.clear();
-        }
-        AFTsLoader.getAftHash().put("Abandoned",new Aft("Abandoned"));
-    }
+	@Test
+	void nonForcedMaskChangesMaskButNeverChangesOwner() throws Exception {
+		String maskType = "Protected";
+		int year = 2000;
+		MaskLoader.mask_metadata.put(maskType, new MaskMetadata(maskType, false, 1, 0));
 
-    @Test
-    void cellOneMaskUpdater_appliesMaskAndOwner_andCleansPreviousAssignments() throws Exception {
-        String maskType = "Urban_mask"; // contains "Urban"
-        int year = 2000;
+		Aft farm = mock(Aft.class);
+		when(farm.getLabel()).thenReturn("Farm");
+		CellState active = statefulCell(maskType, farm);
+		CellState inactive = statefulCell(maskType, farm);
+		CellsLoader.hashCell.put("1,2", active.cell);
+		CellsLoader.hashCell.put("3,4", inactive.cell);
 
-        // AFT "Urban"
-        Aft urban = mock(Aft.class);
-        when(urban.getLabel()).thenReturn("Urban");
+		Path csv = maskCsv("protected.csv", "1,2,1\n3,4,0\n");
+		MaskLoader.mask_paths.put(maskType, new TreeMap<>(Map.of(year, csv)));
 
-        Map<String, Aft> afts = new ConcurrentHashMap<>();
-        afts.put("Urban", urban);
+		try (MockedStatic<CellsLoader> cells = Mockito.mockStatic(CellsLoader.class)) {
+			cells.when(() -> CellsLoader.getCell(1, 2)).thenReturn(active.cell);
+			cells.when(() -> CellsLoader.getCell(3, 4)).thenReturn(inactive.cell);
+			LandMaskUpdater.cellOneMaskUpdater(maskType, year);
+		}
 
-        // 3 stateful cells; all start already masked + owned -> should be cleaned then re-applied for rows with 1
-        CellState c12 = statefulCell(maskType, urban);
-        CellState c34 = statefulCell(maskType, urban);
-        CellState c56 = statefulCell(maskType, urban);
+		assertEquals(maskType, active.maskType.get());
+		assertSame(farm, active.owner.get());
+		assertNull(inactive.maskType.get());
+		assertSame(farm, inactive.owner.get(), "removing a mask must not erase land ownership");
+	}
 
-        CellsLoader.hashCell.put("1,2", c12.cell);
-        CellsLoader.hashCell.put("3,4", c34.cell);
-        CellsLoader.hashCell.put("5,6", c56.cell);
+	@Test
+	void forcedMaskUsesUniqueAllowedTargetFromRestrictionMap() throws Exception {
+		String maskType = "UrbanControl";
+		int year = 2000;
+		MaskLoader.mask_metadata.put(maskType, new MaskMetadata(maskType, true, 1, 0));
 
-        // CSV file: apply to (1,2) and (5,6), not (3,4)
-        Path csv = tmp.resolve("mask.csv");
-        Files.writeString(csv,
-                "X,Y,Year_2000\n" +
-                "1,2,1\n" +
-                "3,4,0\n" +
-                "5,6,1\n");
+		Path restriction = tmp.resolve("restriction.csv");
+		MaskLoader.restriction_paths.put(maskType, new TreeMap<>(Map.of(year, restriction)));
+		String[][] matrix = { { "", "Farm", "Urban" }, { "Farm", "0", "0" }, { "Urban", "0", "1" } };
 
-        MaskLoader.mask_paths.put(maskType, new TreeMap<>(Map.of(year, csv)));
+		Aft farm = mock(Aft.class);
+		when(farm.getLabel()).thenReturn("Farm");
+		Aft urban = mock(Aft.class);
+		when(urban.getLabel()).thenReturn("Urban");
+		Map<String, Aft> afts = new ConcurrentHashMap<>(Map.of("Farm", farm, "Urban", urban));
+		CellState cell = statefulCell(null, farm);
+		CellsLoader.hashCell.put("1,2", cell.cell);
+		Path csv = maskCsv("urban.csv", "1,2,1\n");
+		MaskLoader.mask_paths.put(maskType, new TreeMap<>(Map.of(year, csv)));
 
-        try (MockedStatic<CellsLoader> cellsLoader = Mockito.mockStatic(CellsLoader.class);
-             MockedStatic<AFTsLoader> aftsLoader = Mockito.mockStatic(AFTsLoader.class)) {
+		try (MockedStatic<Timestep> timestep = Mockito.mockStatic(Timestep.class);
+				MockedStatic<CsvTools> csvTools = Mockito.mockStatic(CsvTools.class)) {
+			timestep.when(Timestep::getCurrentYear).thenReturn(year);
+			csvTools.when(() -> CsvTools.csvReader(restriction)).thenReturn(matrix);
+			LandMaskUpdater.updateRestrections(maskType);
+		}
+		try (MockedStatic<Timestep> timestep = Mockito.mockStatic(Timestep.class);
+				MockedStatic<CellsLoader> cells = Mockito.mockStatic(CellsLoader.class);
+				MockedStatic<AFTsLoader> aftsLoader = Mockito.mockStatic(AFTsLoader.class)) {
+			timestep.when(Timestep::getCurrentYear).thenReturn(year);
+			cells.when(() -> CellsLoader.getCell(1, 2)).thenReturn(cell.cell);
+			aftsLoader.when(AFTsLoader::getAftHash).thenReturn(afts);
+			LandMaskUpdater.cellOneMaskUpdater(maskType, year);
+		}
 
-            cellsLoader.when(() -> CellsLoader.getCell(1, 2)).thenReturn(c12.cell);
-            cellsLoader.when(() -> CellsLoader.getCell(3, 4)).thenReturn(c34.cell);
-            cellsLoader.when(() -> CellsLoader.getCell(5, 6)).thenReturn(c56.cell);
+		assertEquals(List.of("Urban"), LandMaskUpdater.forcedAllowedAftLabels.get(maskType));
+		assertEquals(maskType, cell.maskType.get());
+		assertSame(urban, cell.owner.get());
+	}
 
-            aftsLoader.when(AFTsLoader::getAftHash).thenReturn(afts);
-            Tracker.sankeydata.put("Abandoned", new ConcurrentHashMap<>());
-            Tracker.sankeydata.put("Urban", new ConcurrentHashMap<>());
-            Tracker.sankeydata.get("Abandoned").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
-            Tracker.sankeydata.get("Urban").put(Timestep.getCurrentYear(),new ConcurrentHashMap<>() );
-            LandMaskUpdater.cellsForecedToChange.put(maskType, new ConcurrentHashMap<>());
-//            CellsUpdater.decesionsNewOwner = new ConcurrentHashMap<>();
-            AFTsLoader.getAftHash().put("Abandoned", new Aft("Abandoned"));
-           
-            LandMaskUpdater.cellOneMaskUpdater(maskType, year);
+	@Test
+	void multipleForcedTargetsAreRetainedForConfiguredSelection() {
+		String maskType = "Ambiguous";
+		int year = 2000;
+		MaskLoader.mask_metadata.put(maskType, new MaskMetadata(maskType, true, 1, 0));
+		Path restriction = tmp.resolve("ambiguous.csv");
+		MaskLoader.restriction_paths.put(maskType, new TreeMap<>(Map.of(year, restriction)));
+		String[][] matrix = { { "", "A", "B" }, { "A", "1", "0" }, { "B", "0", "1" } };
 
-            // (1,2) should be masked + owned
-            assertEquals(maskType, c12.maskType.get());
-            assertSame(urban, c12.owner.get());
+		try (MockedStatic<Timestep> timestep = Mockito.mockStatic(Timestep.class);
+				MockedStatic<CsvTools> csvTools = Mockito.mockStatic(CsvTools.class)) {
+			timestep.when(Timestep::getCurrentYear).thenReturn(year);
+			csvTools.when(() -> CsvTools.csvReader(restriction)).thenReturn(matrix);
+			LandMaskUpdater.updateRestrections(maskType);
+		}
 
-            // (3,4) should be cleaned and NOT re-applied
-            assertNull(c34.maskType.get());
-            assertNull(c34.owner.get());
+		assertEquals(List.of("A", "B"), LandMaskUpdater.forcedAllowedAftLabels.get(maskType));
+	}
 
-            // (5,6) should be masked + owned
-            assertEquals(maskType, c56.maskType.get());
-            assertSame(urban, c56.owner.get());
-        }
-    }
+	@Test
+	void multipleForcedTargetsUseReproducibleRandomSelectionWithoutNeighbors() {
+		String maskType = "Multi";
+		LandMaskUpdater.forcedAllowedAftLabels.put(maskType, List.of("A", "B"));
+		ConfigLoader.config.most_competitive_aft_probability = 0.0;
+		ConfigLoader.config.random_seed = 12345L;
 
-    @Test
-    void cellOneMaskUpdater_missingXYColumns_doesNotCleanOrChangeCells() throws Exception {
-        String maskType = "Urban_mask";
-        int year = 2000;
+		Aft a = mock(Aft.class);
+		when(a.getLabel()).thenReturn("A");
+		when(a.isInteract()).thenReturn(true);
+		Aft b = mock(Aft.class);
+		when(b.getLabel()).thenReturn("B");
+		when(b.isInteract()).thenReturn(true);
+		Map<String, Aft> afts = new ConcurrentHashMap<>(Map.of("A", a, "B", b));
+		Cell cell = mock(Cell.class);
 
-        Aft urban = mock(Aft.class);
-        when(urban.getLabel()).thenReturn("Urban");
+		try (MockedStatic<Timestep> timestep = Mockito.mockStatic(Timestep.class);
+				MockedStatic<AFTsLoader> aftsLoader = Mockito.mockStatic(AFTsLoader.class, Mockito.CALLS_REAL_METHODS)) {
+			timestep.when(Timestep::getCurrentYear).thenReturn(2000);
+			aftsLoader.when(AFTsLoader::getAftHash).thenReturn(afts);
+			Aft first = LandMaskUpdater.selectForcedOwner(cell, maskType, null);
+			Aft second = LandMaskUpdater.selectForcedOwner(cell, maskType, null);
+			assertSame(first, second);
+			assertTrue(first == a || first == b);
+		}
+	}
 
-        CellState c12 = statefulCell(maskType, urban);
-        CellsLoader.hashCell.put("1,2", c12.cell);
+	@Test
+	void multipleForcedTargetsUseMostCompetitiveSelectionWhenConfigured() {
+		String maskType = "Multi";
+		LandMaskUpdater.forcedAllowedAftLabels.put(maskType, List.of("A", "B"));
+		ConfigLoader.config.most_competitive_aft_probability = 1.0;
 
-        Path csv = tmp.resolve("bad_header.csv");
-        Files.writeString(csv,
-                "A,B,Year_2000\n" +
-                "1,2,1\n");
+		Aft a = mock(Aft.class);
+		when(a.getLabel()).thenReturn("A");
+		when(a.isInteract()).thenReturn(true);
+		Aft b = mock(Aft.class);
+		when(b.getLabel()).thenReturn("B");
+		when(b.isInteract()).thenReturn(true);
+		Map<String, Aft> afts = new ConcurrentHashMap<>(Map.of("A", a, "B", b));
+		Cell cell = mock(Cell.class);
+		RegionalModelRunner runner = mock(RegionalModelRunner.class);
 
-        MaskLoader.mask_paths.put(maskType, new TreeMap<>(Map.of(year, csv)));
+		try (MockedStatic<Timestep> timestep = Mockito.mockStatic(Timestep.class);
+				MockedStatic<AFTsLoader> aftsLoader = Mockito.mockStatic(AFTsLoader.class);
+				MockedStatic<Competitiveness> competitiveness = Mockito.mockStatic(Competitiveness.class)) {
+			timestep.when(Timestep::getCurrentYear).thenReturn(2000);
+			aftsLoader.when(AFTsLoader::getAftHash).thenReturn(afts);
+			competitiveness.when(() -> Competitiveness.mostCompetitiveAgent(cell, List.of(a, b), runner)).thenReturn(b);
 
-        try (MockedStatic<CellsLoader> cellsLoader = Mockito.mockStatic(CellsLoader.class)) {
-            // even if getCell would return something, code returns early before cleaning
-            cellsLoader.when(() -> CellsLoader.getCell(anyInt(), anyInt())).thenReturn(c12.cell);
+			assertSame(b, LandMaskUpdater.selectForcedOwner(cell, maskType, runner));
+			competitiveness.verify(() -> Competitiveness.mostCompetitiveAgent(cell, List.of(a, b), runner));
+		}
+	}
 
-            LandMaskUpdater.cellOneMaskUpdater(maskType, year);
+	@Test
+	void lowerPriorityNumberWinsWhenMasksOverlap() throws Exception {
+		int year = 2000;
+		MaskMetadata weak = new MaskMetadata("Weak", false, 5, 0);
+		MaskMetadata strong = new MaskMetadata("Strong", false, 1, 1);
+		MaskLoader.mask_metadata.put(weak.name(), weak);
+		MaskLoader.mask_metadata.put(strong.name(), strong);
+		MaskLoader.mask_paths.put(weak.name(), new TreeMap<>(Map.of(year, maskCsv("weak.csv", "1,2,1\n"))));
+		MaskLoader.mask_paths.put(strong.name(), new TreeMap<>(Map.of(year, maskCsv("strong.csv", "1,2,1\n"))));
 
-            // unchanged
-            assertEquals(maskType, c12.maskType.get());
-            assertSame(urban, c12.owner.get());
-        }
-    }
+		CellState cell = statefulCell(null, null);
+		CellsLoader.hashCell.put("1,2", cell.cell);
+		try (MockedStatic<CellsLoader> cells = Mockito.mockStatic(CellsLoader.class)) {
+			cells.when(() -> CellsLoader.getCell(anyInt(), anyInt())).thenReturn(cell.cell);
+			LandMaskUpdater.applyMasks(year);
+		}
 
-    @Test
-    void updateRestrections_updatesRestrictionsMap_whenYearPathExists() {
-        String maskType = "Urban_mask";
-        int year = 2000;
+		assertEquals("Strong", cell.maskType.get());
+	}
 
-        Path dummy = tmp.resolve("restr.csv");
-        MaskLoader.restriction_paths.put(maskType, new TreeMap<>(Map.of(year, dummy)));
+	@Test
+	void maskAbsentFromMetadataIsIgnored() throws Exception {
+		String maskType = "Unregistered";
+		int year = 2000;
+		CellState cell = statefulCell(null, null);
+		Path csv = maskCsv("unregistered.csv", "1,2,1\n");
+		MaskLoader.mask_paths.put(maskType, new TreeMap<>(Map.of(year, csv)));
 
-        String[][] matrix = new String[][] {
-                {"", "AFT1", "AFT2"},
-                {"MaskA", "1", "0"},
-                {"MaskB", "0", "1"}
-        };
+		LandMaskUpdater.cellOneMaskUpdater(maskType, year);
 
-        try (MockedStatic<Timestep> timestep = Mockito.mockStatic(Timestep.class);
-             MockedStatic<CsvTools> csvTools = Mockito.mockStatic(CsvTools.class)) {
+		assertNull(cell.maskType.get());
+	}
 
-            timestep.when(Timestep::getCurrentYear).thenReturn(year);
-            csvTools.when(() -> CsvTools.csvReader(dummy)).thenReturn(matrix);
+	@Test
+	void missingRestrictionEntryDoesNotThrow() {
+		assertDoesNotThrow(() -> LandMaskUpdater.updateRestrections("NoSuchMask"));
+	}
 
-            LandMaskUpdater.updateRestrections(maskType);
+	private Path maskCsv(String name, String rows) throws Exception {
+		Path path = tmp.resolve(name);
+		Files.writeString(path, "X,Y,Year_2000\n" + rows);
+		return path;
+	}
 
-            assertNotNull(LandMaskUpdater.restrictions.get(maskType));
-            Map<String, Boolean> r = LandMaskUpdater.restrictions.get(maskType);
+	private static final class CellState {
+		final Cell cell;
+		final AtomicReference<String> maskType;
+		final AtomicReference<Aft> owner;
 
-            assertEquals(true,  r.get("MaskA_AFT1"));
-            assertEquals(false, r.get("MaskA_AFT2"));
-            assertEquals(false, r.get("MaskB_AFT1"));
-            assertEquals(true,  r.get("MaskB_AFT2"));
-        }
-    }
+		CellState(Cell cell, AtomicReference<String> maskType, AtomicReference<Aft> owner) {
+			this.cell = cell;
+			this.maskType = maskType;
+			this.owner = owner;
+		}
+	}
 
-    @Test
-    void updateRestrections_missingMaskTypeKey_throwsNpe_documentingRisk() {
-        assertThrows(NullPointerException.class, () -> LandMaskUpdater.updateRestrections("NoSuchMask"));
-    }
-
-    // ---------------- helpers ----------------
-
-    private static final class CellState {
-        final Cell cell;
-        final AtomicReference<String> maskType;
-        final AtomicReference<Aft> owner;
-
-        CellState(Cell cell, AtomicReference<String> maskType, AtomicReference<Aft> owner) {
-            this.cell = cell;
-            this.maskType = maskType;
-            this.owner = owner;
-        }
-    }
-
-    private static CellState statefulCell(String initialMaskType, Aft initialOwner) {
-        AtomicReference<String> maskRef = new AtomicReference<>(initialMaskType);
-        AtomicReference<Aft> ownerRef = new AtomicReference<>(initialOwner);
-
-        Answer<Object> ans = inv -> {
-            String m = inv.getMethod().getName();
-            switch (m) {
-                case "getMaskType": return maskRef.get();
-                case "setMaskType": maskRef.set((String) inv.getArgument(0)); return null;
-                case "getOwner": return ownerRef.get();
-                case "setOwner": ownerRef.set((Aft) inv.getArgument(0)); return null;
-                default: return Mockito.RETURNS_DEFAULTS.answer(inv);
-            }
-        };
-
-        Cell cell = mock(Cell.class, withSettings().defaultAnswer(ans));
-        return new CellState(cell, maskRef, ownerRef);
-    }
+	private static CellState statefulCell(String initialMaskType, Aft initialOwner) {
+		AtomicReference<String> maskRef = new AtomicReference<>(initialMaskType);
+		AtomicReference<Aft> ownerRef = new AtomicReference<>(initialOwner);
+		Answer<Object> answer = invocation -> switch (invocation.getMethod().getName()) {
+		case "getMaskType" -> maskRef.get();
+		case "setMaskType" -> {
+			maskRef.set(invocation.getArgument(0));
+			yield null;
+		}
+		case "getOwner" -> ownerRef.get();
+		case "setOwner" -> {
+			ownerRef.set(invocation.getArgument(0));
+			yield null;
+		}
+		default -> Mockito.RETURNS_DEFAULTS.answer(invocation);
+		};
+		Cell cell = mock(Cell.class, withSettings().defaultAnswer(answer));
+		return new CellState(cell, maskRef, ownerRef);
+	}
 }

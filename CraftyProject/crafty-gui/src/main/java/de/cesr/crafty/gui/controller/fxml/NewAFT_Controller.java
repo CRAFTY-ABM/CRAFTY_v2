@@ -44,12 +44,12 @@ public class NewAFT_Controller extends AFTsConfigurationController {
 		TextField fieldText = new TextField("AFT_Name");
 		NewWindow windowAddAFT = new NewWindow();
 		BorderPane rootPane = new BorderPane();
-		Button addToThisSimulation = Tools.button("Add To This Simulation", "b6e7c9");
-		Button addToDATA = Tools.button("ADD To Input Data", "b6e7c9");
+		Button addToThisSimulation = Tools.button("Add to this simulation", "b6e7c9");
+		Button addToDATA = Tools.button("Add to input data", "b6e7c9");
 		ColorPicker colorPicker = new ColorPicker();
 		TextArea textArea = new TextArea();
 
-		windowAddAFT.creatwindows("Add New Agent Functional Type", 0.7, 0.9, rootPane);
+		windowAddAFT.creatwindows("Add a new Agent Functional Type", 0.7, 0.9, rootPane);
 		Aft newAFT = new Aft("newAFT");
 
 		colorPicker.setOnAction(_ -> {
@@ -121,9 +121,9 @@ public class NewAFT_Controller extends AFTsConfigurationController {
 		sensitivtyFire.fire();
 		productionFire.fire();
 		vbox.getChildren().addAll(
-				Tools.hBox(Tools.text("Agent Functional Type name:   ", Color.BLUE), fieldText, name,
-						new Text("AFT Color"), colorPicker),
-				Tools.hBox(Tools.vBox(tableProduction, Tools.T(" Behevoir Parametrs ", true, gridBehevoir),
+				Tools.hBox(Tools.text("Agent Functional Type name:", Color.BLUE), fieldText, name,
+						new Text("AFT color"), colorPicker),
+				Tools.hBox(Tools.vBox(tableProduction, Tools.T("Behavior parameters", true, gridBehevoir),
 						new Text("Description"), textArea), histogram),
 				tableSensetivty, Tools.T("", true, gridRadar));
 		rootPane.setCenter(vbox);

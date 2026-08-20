@@ -2,6 +2,7 @@ package de.cesr.crafty.core.crafty;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,15 +27,15 @@ import de.cesr.crafty.core.utils.general.DeterministicRandom;
  *
  * Core concepts:
  * - Utility calculation ({@link #utility(Cell, Aft, RegionalModelRunner)}):
- *   Utility is computed as the sum over services of (marginal utility + service tax/subsidy) multiplied
- *   by the cell’s productivity for the candidate AFT, plus an AFT-specific land tax/subsidy term.
+ *   Utility is computed from marginal utility and productivity. When cell-level policy effects are enabled,
+ *   cell service and land taxes/subsidies are included as additional terms.
  *
  * - Candidate set selection:
  *   Candidates are either all active AFTs or a neighbourhood-derived subset (extended Moore neighbourhood),
- *   depending on configuration ({@code use_neighbor_priority}, {@code neighbor_radius}).
+ *   depending on configuration ({@code use_neighbour_priority}, {@code neighbour_radius}).
  *
  * - Competitor choice:
- *   With probability {@code MostCompetitorAFTProbability}, the best-performing candidate (higher  utility) is chosen;
+ *   With probability {@code most_competitive_aft_probability}, the best-performing candidate (higher  utility) is chosen;
  *   otherwise a random AFT is tested. This provides a mix of deterministic pressure and stochastic exploration.
  *
  * - Constraints (masks/restrictions):
@@ -48,10 +49,6 @@ import de.cesr.crafty.core.utils.general.DeterministicRandom;
  *   either a simple give-in threshold (drawn from owner parameters or category-pair distributions) or,
  *   when enabled, a behaviour-based give-in value computed by {@link CellBehaviour}.
  *
- * Mutation on win:
- * If {@code mutate_on_competition_win} is enabled, the new owner is cloned via {@link Aft#Aft(Aft)} to
- * introduce small random parameter variation; otherwise the competitor instance is reused.
- *
  * Every successful land-use change increments {@link Listener#landUseChangeCounter}.
  */
 
@@ -61,17 +58,18 @@ import de.cesr.crafty.core.utils.general.DeterministicRandom;
  */
 
 public class Competitiveness {
+	/** Immutable ownership change calculated without mutating model state. */
+	static record CompetitionDecision(Cell cell, Aft newOwner) {
+	}
 
-	private static final boolean COUPLED_WITH_PLUM = ConfigLoader.config.COUPLED_WITH_PLUM;
-	private static final boolean use_cell_level_taxes = ConfigLoader.config.use_cell_level_taxes;
-	
+	private static final boolean coupled_with_plum = ConfigLoader.config.coupled_with_plum;
 
 	static double utility(Cell c, Aft a, RegionalModelRunner r) {
-		if (COUPLED_WITH_PLUM) {
+		if (coupled_with_plum) {
 			return utilityUseOnlyPrice(c, a, r);
 		}
-		if (use_cell_level_taxes) {
-			utilityUseMarginalWithTexes(c, a, r);
+		if (ConfigLoader.config.use_cell_level_taxes) {
+			return utilityUseMarginalWithTaxes(c, a, r);
 		}
 		return utilityUseMarginal(c, a, r);
 	}
@@ -80,14 +78,13 @@ public class Competitiveness {
 		if (a == null || !a.isInteract()) {
 			return 0;
 		}
-		// u= sum_s[ (ms+ts*d0)ps]+ land_ts*abs(u1)
+		// u= sum_s[ms*ps]
 		return ServiceSet.getServicesList().stream()
-				.mapToDouble(serviceName -> (c.getServicesTax().getOrDefault(serviceName, 0d)
-						+ r.getMarginal().get(serviceName)) * c.productivity(a, serviceName))
-				.sum() + c.getLandTax().getOrDefault(a.getLabel(), 0d);
+				.mapToDouble(serviceName -> r.getMarginal().get(serviceName) * c.productivity(a, serviceName))
+				.sum();
 	}
 
-	private static double utilityUseMarginalWithTexes(Cell c, Aft a, RegionalModelRunner r) {
+	private static double utilityUseMarginalWithTaxes(Cell c, Aft a, RegionalModelRunner r) {
 		if (a == null || !a.isInteract()) {
 			return 0;
 		}
@@ -123,58 +120,23 @@ public class Competitiveness {
 		return sum;
 	}
 
-//	public static Aft mostCompetitiveAgent(Cell c, Collection<Aft> setAfts, RegionalModelRunner r) {
-//		if (setAfts.size() == 0) {
-//			return c.owner;
-//		}
-//		double uti = Double.NEGATIVE_INFINITY;
-//		Aft theBestAFT = setAfts.iterator().next();
-//		for (Aft agent : setAfts) {
-//			double u = utility(c, agent, r);
-//			if (u > uti) {
-//				uti = u;
-//				theBestAFT = agent;
-//			}
-//		}
-//		return theBestAFT;
-//	}
-
-	private static void Competition(Cell c, Aft competitor, RegionalModelRunner r) {
+	private static CompetitionDecision evaluateCandidate(Cell c, Aft owner, Aft competitor, RegionalModelRunner r) {
 		if (competitor == null || !competitor.isInteract()) {
-			return;
+			return null;
 		}
-		if (makeCompetition(c, competitor)) {
+		if (!makeCompetition(c, owner, competitor)) {
+			return null;
+		}
 
-			if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
-				landUsechangeNormalisedUtility(c, competitor, r);
-			} else {
-				landUsechange(c, competitor, r);
-			}
-		}
+		boolean changesOwner = AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed
+				? landUsechangeNormalisedUtility(c, owner, competitor, r)
+				: landUsechange(c, owner, competitor, r);
+		return changesOwner ? new CompetitionDecision(c, competitor) : null;
 	}
 
-	private static boolean makeCompetition(Cell c, Aft competitor) {
+	private static boolean makeCompetition(Cell c, Aft owner, Aft competitor) {
 
-//####### tmp for special rules
-//########### no deforestation ##############
-//		if (c.getOwner() != null && c.getOwner().getCategory() != null && competitor != null
-//				&& competitor.getCategory() != null) {
-//			boolean tmp = (c.getOwner().getCategory().getName().equals("forest"))
-//					&& (!competitor.getCategory().getName().equals("forest") || competitor.getLabel().equals("AF"));
-//			if (tmp) {
-//				return false;
-//			}
-//		}
-//		################### protecte CW ###########
-//		if (c.getOwner() != null && c.getOwner().getLabel() != null && c.getOwner().getLabel().equals("CW")) {
-//			return false;
-//		}
-//############ CW can't compete for land ##########
-//		if (competitor != null && competitor.getLabel() != null && competitor.getLabel().equals("CW")) {
-//		return false;
-//	}
-//		###############
-		if (c.getOwner() == competitor) {
+		if (owner == competitor) {
 			return false;
 		}
 
@@ -182,82 +144,72 @@ public class Competitiveness {
 		if (c.getMaskType() != null) {
 			ConcurrentHashMap<String, Boolean> mask = LandMaskUpdater.restrictions.get(c.getMaskType());
 			if (mask != null) {
-				if (c.getOwner() == null) {
+				if (owner == null) {
 					if (mask.get(competitor.getLabel() + "_" + competitor.getLabel()) != null)
 						makeCompetition = mask.get(competitor.getLabel() + "_" + competitor.getLabel());
 				} else {
-					if (mask.get(c.getOwner().getLabel() + "_" + competitor.getLabel()) != null)
-						makeCompetition = mask.get(c.getOwner().getLabel() + "_" + competitor.getLabel());
+					if (mask.get(owner.getLabel() + "_" + competitor.getLabel()) != null)
+						makeCompetition = mask.get(owner.getLabel() + "_" + competitor.getLabel());
 				}
 			}
-		} else if (c.getOwner() != null && c.getOwnerLifeCounter() < c.getOwner().getMin_life_cycle()) {
+		} else if (owner != null && c.getOwnerLifeCounter() < owner.getMin_life_cycle()) {
 			makeCompetition = false;
 		}
 		return makeCompetition;
 
 	}
 
-	private static void landUsechange(Cell c, Aft competitor, RegionalModelRunner r) {
+	private static boolean landUsechange(Cell c, Aft owner, Aft competitor, RegionalModelRunner r) {
 		double uC = utility(c, competitor, r);
-		if (c.getOwner() == competitor) {
-			return;
+		if (owner == competitor) {
+			return false;
 		}
-		if (c.getOwner() == null || c.getOwner().isAbandoned()) {
-			if (uC >= r.getDistributionMeanY().get(competitor.getLabel())) {
-				takeOverAcell(c, competitor);
-			}
-			return;
+		if (owner == null || owner.isAbandoned()) {
+			return uC >= r.getDistributionMeanY().get(competitor.getLabel());
 		}
 		double uO = c.getCurrentUtility();
 
 		double nbr = r.getDistributionMeanY() != null
-				? (r.getDistributionMeanY().get(c.getOwner().getLabel()) * (giveInThreshold(c, competitor)))
+				? (r.getDistributionMeanY().get(owner.getLabel()) * (giveInThreshold(c, owner, competitor)))
 				: 0;
 
-		if ((uC - uO > nbr) && uC > 0) {
-			takeOverAcell(c, competitor);
-		}
+		return (uC - uO > nbr) && uC > 0;
 	}
 
-	private static void landUsechangeNormalisedUtility(Cell c, Aft competitor, RegionalModelRunner r) {
+	private static boolean landUsechangeNormalisedUtility(Cell c, Aft owner, Aft competitor, RegionalModelRunner r) {
 		if (r.getMaxUtility() == r.getMinUtility()) {
-			return;
+			return false;
 		}
-		if (c.getOwner() == competitor) {
-			return;
+		if (owner == competitor) {
+			return false;
 		}
 		double uC = (utility(c, competitor, r) - r.getMinUtility()) / (r.getMaxUtility() - r.getMinUtility());
 
-		if (c.getOwner() == null || c.getOwner().isAbandoned()) {
-			if (uC > 0) {
-				takeOverAcell(c, competitor);
-			}
-			return;
+		if (owner == null || owner.isAbandoned()) {
+			return uC > 0;
 		}
 
 		double uO = (c.getCurrentUtility() - r.getMinUtility()) / (r.getMaxUtility() - r.getMinUtility());
 
 		double giveIn = 0;
-		boolean sameCategories = c.getOwner().category.getName().equals(competitor.category.getName());
-		boolean sameIntesity = c.getOwner().category.getIntensityLevel() == (competitor.category.getIntensityLevel());
+		boolean sameCategories = owner.category.getName().equals(competitor.category.getName());
+		boolean sameIntesity = owner.category.getIntensityLevel() == (competitor.category.getIntensityLevel());
 
 		if (!sameCategories || (sameCategories && sameIntesity)) {
-			giveIn = giveInThreshold(c, competitor);
+			giveIn = giveInThreshold(c, owner, competitor);
+//			return;
 		} else {
-			if (CellBehaviourUpdater.cellsBehevoir.get(c) != null) {
-				giveIn = CellBehaviourUpdater.cellsBehevoir.get(c).give_In(competitor);
-			}
+			CellBehaviour cellBehaviour = CellBehaviourUpdater.cellBehaviours.get(c);
+			giveIn = cellBehaviour != null ? cellBehaviour.give_In(competitor)
+					: giveInThreshold(c, owner, competitor);
 		}
-		if ((uC > uO + giveIn) && uC > 0) {
-
-			takeOverAcell(c, competitor);
-		}
+		return (uC > uO + giveIn) && uC > 0;
 	}
 
 	private static void takeOverAcell(Cell c, Aft newOwner) {
 		String oldOwner = c.getOwner() != null ? c.getOwner().getLabel() : "Abandoned";
 
-		c.setOwner(ConfigLoader.config.mutate_on_competition_win ? new Aft(newOwner) : newOwner);//
+		c.setOwner(newOwner);
 //		CellsUpdater.decesionsNewOwner.put(c, newOwner);
 		c.setOwnerLifeCounter(1);
 		Listener.landUseChangeCounter.getAndIncrement();
@@ -267,23 +219,8 @@ public class Competitiveness {
 		}
 	}
 
-//	private static double giveInThreshold(Aft owner, Aft competitor) {
-//		if (AftCategorised.useCategorisationGivIn) {
-//			String key = owner.getCategory().getName() + "|" + competitor.getCategory().getName();
-//			Double mean = AftCategorised.getMean().get(key);
-//			Double sd = AftCategorised.getSD().get(key);
-//			// Only use the BehaviorLoader-based mean & sd if BOTH are present AND the
-//			// categories differ.
-//			if (mean != null && sd != null) {
-//				return mean + sd * ThreadLocalRandom.current().nextGaussian();
-//			}
-//		}
-//		// else Fallback to the default owner's giveInMean
-//		return owner.getGiveInMean() + owner.getGiveInSD() * new Random().nextGaussian();
-//	}
-	private static double giveInThreshold(Cell cell, Aft competitor) {
-		Aft owner = cell.getOwner();
-		long runSeed = ConfigLoader.config.longSeedID.get();
+	private static double giveInThreshold(Cell cell, Aft owner, Aft competitor) {
+		long runSeed = ConfigLoader.config.random_seed;
 		int year = Timestep.getCurrentYear();
 
 		long cellId = DeterministicRandom.stableCellKey(cell);
@@ -306,16 +243,40 @@ public class Competitiveness {
 	}
 
 	static void competition(Cell c, RegionalModelRunner r) {
-		boolean Neighboor = ConfigLoader.config.use_neighbor_priority
-				&& ConfigLoader.config.neighbor_priority_probability > Math.random();
-		Collection<Aft> afts = Neighboor
-				? CellsSubSets.detectExtendedNeighboringAFTs(c, ConfigLoader.config.neighbor_radius)
+		competition(c, r, DeterministicRandom.Process.CELL_SELECTION_COMPETITION);
+	}
+
+	static void competition(Cell c, RegionalModelRunner r, int decisionContext) {
+		applyCompetitionDecision(evaluateCompetition(c, r, decisionContext));
+	}
+
+	static CompetitionDecision evaluateCompetition(Cell c, RegionalModelRunner r, int decisionContext) {
+		Aft owner = c.getOwner();
+		long runSeed = ConfigLoader.config.random_seed;
+		int year = Timestep.getCurrentYear();
+		long cellId = DeterministicRandom.stableCellKey(c);
+
+		boolean useNeighbors = ConfigLoader.config.use_neighbour_priority
+				&& DeterministicRandom.randomBoolean(runSeed, year, DeterministicRandom.Process.NEIGHBOR_PICK, cellId,
+						decisionContext, 0, ConfigLoader.config.neighbour_priority_probability);
+		Collection<Aft> afts = useNeighbors
+				? CellsSubSets.detectExtendedNeighboringAFTs(c, ConfigLoader.config.neighbour_radius)
 				: AFTsLoader.getActivateAFTsHash().values();
 
-		if (Math.random() < ConfigLoader.config.MostCompetitorAFTProbability) {
-			Competition(c, mostCompetitiveAgent(c, afts, r), r);
+		boolean chooseMostCompetitive = DeterministicRandom.randomBoolean(runSeed, year,
+				DeterministicRandom.Process.COMPETITOR_PICK, cellId, decisionContext, 0,
+				ConfigLoader.config.most_competitive_aft_probability);
+		if (chooseMostCompetitive) {
+			return evaluateCandidate(c, owner, mostCompetitiveAgent(c, afts, r), r);
 		} else {
-			Competition(c, AFTsLoader.getRandomAFT(afts), r);
+			return evaluateCandidate(c, owner,
+					AFTsLoader.getDeterministicRandomAFT(afts, runSeed, year, cellId, decisionContext, 0), r);
+		}
+	}
+
+	static void applyCompetitionDecision(CompetitionDecision decision) {
+		if (decision != null) {
+			takeOverAcell(decision.cell(), decision.newOwner());
 		}
 	}
 
@@ -323,7 +284,6 @@ public class Competitiveness {
 		if (setAfts == null || setAfts.isEmpty()) {
 			return c.getOwner();
 		}
-
 		final double EPS = 1e-12;
 		double bestUtility = Double.NEGATIVE_INFINITY;
 
@@ -340,6 +300,7 @@ public class Competitiveness {
 				winners.add(agent);
 			}
 		}
+		winners.sort(Comparator.comparing(Aft::getLabel));
 		return winners.get(0);
 	}
 

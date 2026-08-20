@@ -2,6 +2,7 @@ package de.cesr.crafty.core.cli;
 
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import de.cesr.crafty.core.utils.non_java_code_controller.RScriptRunnerConfig;
 
@@ -13,6 +14,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Loads the CRAFTY configuration from a YAML file and exposes it as a global
@@ -40,6 +44,81 @@ import java.nio.file.Paths;
  *
  */
 public class ConfigLoader {
+	private static final Map<String, String> LEGACY_KEYS = Map.ofEntries(
+			Map.entry("start_End_Year", "simulation_year_range"),
+			Map.entry("metaData_directory", "metadata_directory"),
+			Map.entry("BASELINE_path", "baseline_path"),
+			Map.entry("CAPITALS_directory", "capitals_directory"),
+			Map.entry("gisPath", "gis_path"),
+			Map.entry("GIS_data_path", "gis_path"),
+			Map.entry("landControle_directories", "land_control_directories"),
+			Map.entry("SHOCKS_Maps_directory", "shock_maps_directory"),
+			Map.entry("aft_production_directory", "aft_production_parameters_directory"),
+			Map.entry("service_utility_weight_path", "service_utility_weights_path"),
+			Map.entry("waitingFlag_directories_path", "waiting_flags_path"),
+			Map.entry("AFT_capital_adjustments", "aft_capital_adjustments_directory"),
+			Map.entry("regionalization", "regionalisation"),
+			Map.entry("MostCompetitorAFTProbability", "most_competitive_aft_probability"),
+			Map.entry("use_neighbor_priority", "use_neighbour_priority"),
+			Map.entry("neighbor_priority_probability", "neighbour_priority_probability"),
+			Map.entry("neighbor_radius", "neighbour_radius"),
+			Map.entry("participating_cells_percentage", "participating_cell_fraction"),
+			Map.entry("land_abandonment_percentage", "land_abandonment_fraction"),
+			Map.entry("takeOverUnmanageCells_percentage", "unmanaged_cell_takeover_fraction"),
+			Map.entry("Output_path", "output_path"),
+			Map.entry("generate_charts_plots_PNG", "generate_chart_plots_png"),
+			Map.entry("generate_map_PAs_forced", "generate_forced_mask_outputs"),
+			Map.entry("export_LOGGER", "export_logger"),
+			Map.entry("LOGGER_info", "logger_info"),
+			Map.entry("LOGGER_warn", "logger_warn"),
+			Map.entry("LOGGER_trace", "logger_trace"),
+			Map.entry("printRegionalModelRunnerMeasures", "print_regional_model_runner_measures"),
+			Map.entry("printAbstractModelRunnerMeasures", "print_abstract_model_runner_measures"),
+			Map.entry("chartSynchronisation", "chart_synchronisation"),
+			Map.entry("chartSynchronisationGap", "chart_synchronisation_gap"),
+			Map.entry("chart_synchronization", "chart_synchronisation"),
+			Map.entry("chart_synchronization_gap", "chart_synchronisation_gap"),
+			Map.entry("mapSynchronisation", "map_synchronisation"),
+			Map.entry("mapSynchronisationGap", "map_synchronisation_gap"),
+			Map.entry("map_synchronization", "map_synchronisation"),
+			Map.entry("map_synchronization_gap", "map_synchronisation_gap"),
+			Map.entry("LLM_model_name", "llm_model_name"),
+			Map.entry("LLM_API_KEY", "llm_api_key"),
+			Map.entry("LLM_provider", "llm_provider"),
+			Map.entry("COUPLED_WITH_PLUM", "coupled_with_plum"),
+			Map.entry("plumCalibPath", "plum_calibration_path"),
+			Map.entry("plumOutPutPath", "plum_output_path"),
+			Map.entry("services_commodities_map", "service_commodity_mapping_path"),
+			Map.entry("Behevoir_Cells_directory", "cell_behaviour_parameters_directory"),
+			Map.entry("behavior_cells_directory", "cell_behaviour_parameters_directory"),
+			Map.entry("behaviour_cells_directory", "cell_behaviour_parameters_directory"),
+			Map.entry("cell_behavior_parameters_directory", "cell_behaviour_parameters_directory"),
+			Map.entry("aft_behevoir_directory", "aft_behaviour_parameters_directory"),
+			Map.entry("aft_behavior_directory", "aft_behaviour_parameters_directory"),
+			Map.entry("aft_behaviour_directory", "aft_behaviour_parameters_directory"),
+			Map.entry("aft_behavior_parameters_directory", "aft_behaviour_parameters_directory"),
+			Map.entry("categories_givingInDistribution", "category_give_in_distributions_directory"),
+			Map.entry("categories_giving_in_distribution", "category_give_in_distributions_directory"),
+			Map.entry("category_give_in_distribution_directory", "category_give_in_distributions_directory"),
+			Map.entry("use_AFTs_categories_GiveIn", "use_category_based_give_in"),
+			Map.entry("use_aft_categories_give_in", "use_category_based_give_in"),
+			Map.entry("use_cell_behavior_model", "use_cell_behaviour_model"),
+			Map.entry("steepness_logistic_eq", "cell_behaviour_logistic_steepness"),
+			Map.entry("cell_behavior_logistic_steepness", "cell_behaviour_logistic_steepness"));
+
+	private static final Set<String> REMOVED_KEYS = Set.of(
+			"service_taxes_and_subsidies_path",
+			"services_taxes_subsidies_path",
+			"land_taxes_and_subsidies_path",
+			"land_taxes_subsidies_path",
+			"consider_taxes_and_subsidies",
+			"consider_subsidies_taxes",
+			"mutate_on_competition_win",
+			"mutation_interval",
+			"generate_chart_plots_pdf",
+			"generate_charts_plots_PDF",
+			"generate_map_plots_tif");
+
 	public static String configPath;
 	public static Config config;
 
@@ -71,9 +150,21 @@ public class ConfigLoader {
 				return new Config(); // Return default config
 			}
 
+			LoaderOptions rawOptions = new LoaderOptions();
+			Yaml rawYaml = new Yaml(new SafeConstructor(rawOptions));
+			Object rawConfig = rawYaml.load(inputStream);
+			if (rawConfig == null) {
+				System.out.println("Config file is empty or invalid. Using default config values.");
+				return new Config();
+			}
+			if (!(rawConfig instanceof Map<?, ?> rawMap)) {
+				throw new IllegalArgumentException("Configuration root must be a YAML mapping.");
+			}
+
+			Map<Object, Object> normalisedConfig = normaliseLegacyKeys(rawMap);
 			Constructor constructor = new Constructor(Config.class, new LoaderOptions());
-			Yaml yaml = new Yaml(constructor);
-			Config loadedConfig = yaml.load(inputStream);
+			Yaml typedYaml = new Yaml(constructor);
+			Config loadedConfig = typedYaml.load(rawYaml.dump(normalisedConfig));
 			System.out.println("loadedConfig: " + loadedConfig);
 			if (loadedConfig == null) {
 				System.out.println("Config file is empty or invalid. Using default config values.");
@@ -84,6 +175,69 @@ public class ConfigLoader {
 			System.out.println("Failed to load config. Using default config values.");
 			e.printStackTrace();
 			return new Config();
+		} finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				} catch (IOException e) {
+					System.out.println("Failed to close config input stream: " + e.getMessage());
+				}
+			}
+		}
+	}
+
+	private static Map<Object, Object> normaliseLegacyKeys(Map<?, ?> rawConfig) {
+		Map<Object, Object> normalised = new LinkedHashMap<>();
+		rawConfig.forEach(normalised::put);
+		normaliseLegacySeedId(normalised);
+
+		for (String removedKey : REMOVED_KEYS) {
+			if (normalised.remove(removedKey) != null) {
+				System.out.println("[Config] Removed key '" + removedKey
+						+ "' ignored; this configuration option is no longer supported.");
+			}
+		}
+
+		for (Map.Entry<String, String> alias : LEGACY_KEYS.entrySet()) {
+			String legacyKey = alias.getKey();
+			String canonicalKey = alias.getValue();
+			if (!normalised.containsKey(legacyKey)) {
+				continue;
+			}
+			if (normalised.containsKey(canonicalKey)) {
+				System.out.println("[Config] Deprecated key '" + legacyKey + "' ignored because canonical key '"
+						+ canonicalKey + "' is also present.");
+			} else {
+				normalised.put(canonicalKey, normalised.get(legacyKey));
+				System.out.println("[Config] Deprecated key '" + legacyKey + "'; use '" + canonicalKey + "'.");
+			}
+			normalised.remove(legacyKey);
+		}
+		return normalised;
+	}
+
+	private static void normaliseLegacySeedId(Map<Object, Object> configValues) {
+		if (!configValues.containsKey("seedID")) {
+			return;
+		}
+
+		Object legacyValue = configValues.remove("seedID");
+		String text = legacyValue == null ? "" : legacyValue.toString().trim();
+		if (text.equalsIgnoreCase("rank") || text.equalsIgnoreCase("random")) {
+			configValues.putIfAbsent("cell_selection", text.toLowerCase());
+			System.out.println("[Config] Deprecated key 'seedID'; use 'cell_selection' and 'random_seed'.");
+			return;
+		}
+
+		try {
+			long seed = legacyValue instanceof Number number ? number.longValue() : Long.parseLong(text);
+			configValues.putIfAbsent("cell_selection", "random");
+			configValues.putIfAbsent("random_seed", seed);
+			System.out.println("[Config] Deprecated numeric key 'seedID' migrated to cell_selection=random and random_seed="
+					+ seed + ".");
+		} catch (NumberFormatException exception) {
+			System.out.println("[Config] Deprecated key 'seedID' ignored because value '" + text
+					+ "' is neither 'rank', 'random', nor an integer seed.");
 		}
 	}
 

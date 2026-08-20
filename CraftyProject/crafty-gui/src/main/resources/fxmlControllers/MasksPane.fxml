@@ -8,13 +8,13 @@
 <VBox xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="de.cesr.crafty.gui.controller.fxml.MasksPaneController"
 	fx:id="TopBox">
-	<Button text="Clears cell masks" onAction="#clear"
+	<Button text="Clear cell masks" onAction="#clear"
 		styleClass="button-icon">
 		<!-- <graphic>
 			<FontIcon iconLiteral="fas-trash-restore" iconSize="15" />
 		</graphic> -->
 		<tooltip>
-			<Tooltip text="Clears cell masks" />
+			<Tooltip text="Clear all cell masks" />
 		</tooltip>
 	</Button>
 </VBox>

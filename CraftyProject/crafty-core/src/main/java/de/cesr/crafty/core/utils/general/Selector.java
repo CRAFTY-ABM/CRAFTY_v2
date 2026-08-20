@@ -101,12 +101,19 @@ public class Selector {
 			}
 		}
 
-		ConcurrentHashMap<String, Cell> subset = new ConcurrentHashMap<>(Math.max(16, n * 2));
-		for (EntryScore es : heap) {
-			subset.put(es.key, es.cell);
-		}
+		List<EntryScore> selected = new ArrayList<>(heap);
+		selected.sort((a, b) -> {
+			int cmp = Double.compare(a.score, b.score);
+			if (cmp != 0) {
+				return cmp;
+			}
+			cmp = Long.compare(a.cellId, b.cellId);
+			return cmp != 0 ? cmp : a.key.compareTo(b.key);
+		});
 		 
-		LOGGER.info("Random score-based seed percentage=" + (percentage * 100.0) + "% seed size=" + subset.size());
-		return new ArrayList<>(subset.values());
+		LOGGER.info("Random score-based seed percentage=" + (percentage * 100.0) + "% seed size=" + selected.size());
+		List<Cell> result = new ArrayList<>(selected.size());
+		selected.forEach(entry -> result.add(entry.cell));
+		return result;
 	}
 }

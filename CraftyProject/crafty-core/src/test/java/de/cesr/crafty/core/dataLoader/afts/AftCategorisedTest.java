@@ -3,6 +3,7 @@ package de.cesr.crafty.core.dataLoader.afts;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +19,7 @@ import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.AftCategory;
 import de.cesr.crafty.core.ToyData;
 import de.cesr.crafty.core.cli.CustomLogger;
+import de.cesr.crafty.core.cli.ConfigLoader;
 
 public class AftCategorisedTest {
 
@@ -78,6 +80,36 @@ public class AftCategorisedTest {
 		assertTrue(intensities.get("Forest").contains("Low"));
 		assertTrue(intensities.get("Forest").contains("Medium"));
 		assertTrue(intensities.get("Pasture").contains("High"));
+	}
+
+	@Test
+	void categoriesLoader_whenSwitchIsOff_clearsAndDisablesCategories() {
+		ConfigLoader.config.use_category_based_give_in = false;
+
+		AftCategorised.CategoriesLoader();
+		AftCategorised.initializeBehaviourByCategories();
+
+		assertTrue(AftCategorised.aftCategories.isEmpty());
+		assertTrue(AftCategorised.CategoriesIntestisy.isEmpty());
+		assertTrue(AftCategorised.categoriesColor.isEmpty());
+		assertFalse(AftCategorised.useCategorisationGivIn);
+		assertTrue(AftCategorised.getMean().isEmpty());
+		assertTrue(AftCategorised.getSD().isEmpty());
+	}
+
+	@Test
+	void categoryBehaviour_whenStandardDeviationMatrixIsMissing_staysDisabled() throws IOException {
+		Path distributions = projectDir.resolve("category-distributions");
+		Files.createDirectories(distributions);
+		Files.writeString(distributions.resolve("categories_givingInDistributionMean_Default.csv"), "A,B\nA,0.1\n");
+		ConfigLoader.config.category_give_in_distributions_directory = distributions.toString();
+		AftCategorised.useCategorisationGivIn = true;
+
+		AftCategorised.initializeBehaviourByCategories();
+
+		assertFalse(AftCategorised.useCategorisationGivIn);
+		assertTrue(AftCategorised.getMean().isEmpty());
+		assertTrue(AftCategorised.getSD().isEmpty());
 	}
 
  	@Test

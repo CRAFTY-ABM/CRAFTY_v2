@@ -26,7 +26,7 @@ import de.cesr.crafty.core.utils.general.Utils;
  * competitiveness and land-use change processes.
  *
  * Input discovery:
- * If {@code ConfigLoader.config.service_utility_weight_path} is set and non-empty:
+ * If {@code ConfigLoader.config.service_utility_weights_path} is set and non-empty:
  * - If it points to a file, that file is used (typically a single file for all regions but could be by regions).
  * - If it points to a directory, the loader searches within it for a region-specific file containing
  *       the token "..;RegionName;..;".
@@ -63,7 +63,7 @@ public class ServiceWeightLoader {
 
 	private static Path uwPath(Region R) {
 		Path path;
-		String uw = ConfigLoader.config.service_utility_weight_path;
+		String uw = ConfigLoader.config.service_utility_weights_path;
 		try {
 			if (!uw.isEmpty()) {
 				if (Paths.get(uw).toFile().isFile()) {
@@ -77,7 +77,7 @@ public class ServiceWeightLoader {
 						R.getName()).get(0);
 			}
 		} catch (NullPointerException e) {
-			LOGGER.info("Utility Weight file not fund for |" + R.getName()
+			LOGGER.info("Utility Weight file not found for |" + R.getName()
 					+ "| default value will use: Utility_Weights = 1 for all services");
 			useDefaultUtilityW(R);
 			return null;

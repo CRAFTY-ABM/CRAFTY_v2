@@ -2,9 +2,12 @@ package de.cesr.crafty.gui.controller.fxml;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TitledPane;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -17,6 +20,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
@@ -34,6 +38,7 @@ import de.cesr.crafty.gui.main.GuiScaler;
 import de.cesr.crafty.core.utils.file.PathTools;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.scene.control.Alert;
 
 public class MenuBarController {
 	@FXML
@@ -78,10 +83,9 @@ public class MenuBarController {
 		// to update it
 		String outputPath = PathTools.makeDirectory(ProjectLoader.getProjectPath() + File.separator
 				+ "Input-Data-Analyses" + File.separator + "Capitals-trends-through-Scenarios" + File.separator);
-		// Check if the folder is existe
-		String message = "Generating a repository of data for capitals' trends across scenarios \n"
-				+ "may take time depending on the size of the data (size of the map),\n"
-				+ "the scenarios considered and the time period.";
+		// Check if the folder is exist
+		String message = "Generating the data directory for capital trends across scenarios may take time,\n"
+				+ "depending on the map size, the number of scenarios, and the time period.";
 		Consumer<String> ok = _ -> {
 			CapitalsAnalyzer.generateGrapheDataByScenarios(outputPath);
 		};
@@ -92,7 +96,7 @@ public class MenuBarController {
 	}
 
 	@FXML
-	public void resrart(ActionEvent event) {
+	public void restart(ActionEvent event) {
 		restartApplication();
 	}
 
@@ -107,29 +111,62 @@ public class MenuBarController {
 		ColorsTools.windowzpalette(winColor);
 	}
 
-	private void restartApplication() {
-		String javaHome = System.getProperty("java.home");
-		String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
-		String classPath = ManagementFactory.getRuntimeMXBean().getClassPath();
-		String mainClass = FxMain.class.getName();
+	@FXML
+	public void increaseTextSize(ActionEvent event) {
+		GuiScaler.increaseTextSize(FxMain.scene);
+	}
 
-		// Build the command
+	@FXML
+	public void decreaseTextSize(ActionEvent event) {
+		GuiScaler.decreaseTextSize(FxMain.scene);
+	}
+
+	@FXML
+	public void resetTextSize(ActionEvent event) {
+		GuiScaler.resetTextSize(FxMain.scene);
+	}
+
+	private void restartApplication() {
+		try {
+			Process process = new ProcessBuilder(buildRestartCommand()).start();
+			if (process.waitFor(750, TimeUnit.MILLISECONDS)) {
+				throw new IOException("The restarted application exited immediately with code " + process.exitValue());
+			}
+			System.exit(0);
+		} catch (IOException e) {
+			showRestartError(e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			showRestartError(e);
+		}
+	}
+
+	private List<String> buildRestartCommand() {
+		ProcessHandle.Info processInfo = ProcessHandle.current().info();
+		if (processInfo.command().isPresent() && processInfo.arguments().isPresent()) {
+			List<String> command = new ArrayList<>();
+			command.add(processInfo.command().get());
+			Collections.addAll(command, processInfo.arguments().get());
+			return command;
+		}
+
+		String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
 		List<String> command = new ArrayList<>();
 		command.add(javaBin);
 		command.addAll(ManagementFactory.getRuntimeMXBean().getInputArguments());
 		command.add("-cp");
-		command.add(classPath);
-		command.add(mainClass);
+		command.add(ManagementFactory.getRuntimeMXBean().getClassPath());
+		command.add(FxMain.class.getName());
+		return command;
+	}
 
-		try {
-			// Use ProcessBuilder to execute the command
-			ProcessBuilder processBuilder = new ProcessBuilder(command);
-			processBuilder.start();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		System.exit(0);
+	private void showRestartError(Exception error) {
+		error.printStackTrace();
+		Alert alert = new Alert(Alert.AlertType.ERROR);
+		alert.setTitle("Restart failed");
+		alert.setHeaderText("CRAFTY could not be restarted");
+		alert.setContentText(error.getMessage());
+		alert.showAndWait();
 	}
 
 	private void openProject() {
@@ -168,7 +205,6 @@ public class MenuBarController {
 			if (onlyOneTime) {
 				Platform.runLater(() -> {
 					FxMain.anchor.getChildren().remove(FxMain.logo);
-					GuiScaler.reScale(FxMain.primaryStage);
 				});
 				onlyOneTime = false;
 //				GuiScaler.igorInitialScaled = false;
@@ -180,13 +216,29 @@ public class MenuBarController {
 	private void initialsePanes() {
 		WarningWindowes.showWaitingDialog(_ -> {
 			try {
-				FxMain.anchor.setCenter(FXMLLoader.load(getClass().getResource("/fxmlControllers/TabPaneFXML.fxml")));
+				Parent workspace = FXMLLoader.load(getClass().getResource("/fxmlControllers/TabPaneFXML.fxml"));
+				disableTitledPaneAnimations(workspace);
+				FxMain.anchor.setCenter(workspace);
 			} catch (IOException en) {
 				// TODO Auto-generated catch block
 				en.printStackTrace();
 			}
 		});
 
+	}
+
+	private void disableTitledPaneAnimations(Node node) {
+		if (node instanceof TitledPane pane) {
+			pane.setAnimated(false);
+			if (pane.getContent() != null) {
+				disableTitledPaneAnimations(pane.getContent());
+			}
+		}
+		if (node instanceof Parent parent) {
+			for (Node child : parent.getChildrenUnmodifiable()) {
+				disableTitledPaneAnimations(child);
+			}
+		}
 	}
 
 	private void openWebInBrowser() {
@@ -220,7 +272,7 @@ public class MenuBarController {
 		}
 
 		// “Clear history” entry
-		MenuItem clear = new MenuItem("Clear History");
+		MenuItem clear = new MenuItem("Clear history");
 		clear.setOnAction(_ -> {
 			RecentProjects.clear();
 			updateRecentFilesMenu();

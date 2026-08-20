@@ -74,7 +74,7 @@ public class AFTsConfigurationController {
 	private Button AFTAnalisisBtn;
 
 	NewAFT_Controller newAftPane;
-	RadioButton plotInitialDistrebution = new RadioButton("  Distribution map ");
+	RadioButton plotInitialDistrebution = new RadioButton("Distribution map");
 	RadioButton plotOptimalLandon = new RadioButton("Cumulative expected service productivity");
 	NewWindow Analysewin = new NewWindow();
 	private boolean isNotInitialsation = false;
@@ -120,7 +120,7 @@ public class AFTsConfigurationController {
 		}
 		BarChart<String, Number> histogramePlevel = AFTsProductionController.getInstance().getHistogramePlevel();
 		// histogramePlevel.getData().clear();
-		AFTsProductionController.getInstance().getBox2().getChildren().clear();
+//		AFTsProductionController.getInstance().getBox2().getChildren().clear();
 		AFTsProductionController.getInstance().getHBox1().getChildren().clear();
 		AFTsProductionController.getInstance().getHBox1().getChildren()
 				.add(AFTsProductionController.productivitySampleChart(a.getLabel(), false));
@@ -132,17 +132,17 @@ public class AFTsConfigurationController {
 			paths = PathTools.fileFilter(PathTools.asFolder("production"), "default_production", a.getLabel(), ".csv");
 		}
 		if (paths != null) {
-			AFTsProductionController.getInstance().getBox2().getChildren().add(CsvToHtml.tabeWeb(paths.get(0)));
+//			AFTsProductionController.getInstance().getBox2().getChildren().add(CsvToHtml.tabeWeb(paths.get(0)));
 		}
 		GridPane grid = new GridPane();
 		ubdateRadarchart(AFTsLoader.getAftHash().get(AFTChoisButton.getValue()), grid);
 		grid.setMinWidth(TopBox.getMinWidth());
-		AFTsProductionController.getInstance().getBox2().getChildren().forEach(child -> {
-			if (child instanceof GridPane) {
-				AFTsProductionController.getInstance().getBox2().getChildren().remove(child);
-			}
-		});
-		AFTsProductionController.getInstance().getBox2().getChildren().add(grid);
+//		AFTsProductionController.getInstance().getBox2().getChildren().forEach(child -> {
+//			if (child instanceof GridPane) {
+//				AFTsProductionController.getInstance().getBox2().getChildren().remove(child);
+//			}
+//		});
+//		AFTsProductionController.getInstance().getBox2().getChildren().add(grid);
 	}
 
 	void colorland(Aft a) {
@@ -303,14 +303,14 @@ public class AFTsConfigurationController {
 		// add also in csv folder
 		Path pathCSV = ProjectLoader.getAftMetaData();
 		String[][] tmp = CsvTools.csvReader(ProjectLoader.getAftMetaData());
-		boolean isExiste = false;
+		boolean isExist = false;
 		for (int i = 0; i < tmp.length; i++) {
 			if (a.getLabel().equalsIgnoreCase(tmp[i][Utils.indexof("Label", tmp[0])])) {
-				isExiste = true;
+				isExist = true;
 				break;
 			}
 		}
-		if (!isExiste) {
+		if (!isExist) {
 			String[][] tmp2 = new String[tmp.length + 1][tmp[0].length];
 			for (int i = 0; i < tmp2.length - 1; i++) {
 				for (int j = 0; j < tmp2[0].length; j++) {

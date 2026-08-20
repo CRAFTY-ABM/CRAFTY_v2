@@ -46,6 +46,8 @@ public final class DeterministicRandom {
         public static final int GIVE_UP_GAUSSIAN = 9;
         public static final int GIVE_UP_PROBABILITY = 10;
         public static final int GIVE_IN_THRESHOLD = 11;
+        public static final int COMPETITION_BATCH_ORDER = 12;
+        public static final int FORCED_MASK_COMPETITOR_PICK = 13;
 
         private Process() {
         }

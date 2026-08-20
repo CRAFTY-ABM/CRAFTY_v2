@@ -1,0 +1,286 @@
+@startuml
+
+title CRAFTY Institution Migration - Clean Configuration and Runtime Boundaries
+left to right direction
+hide empty methods
+hide circle
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+legend left
+  |= Colour |= Responsibility |
+  |<#EAF7EA> | Shared by fuzzy, LLM, and manual |
+  |<#E1F0FF> | Fuzzy only |
+  |<#FFE6F0> | LLM only |
+  |<#FFF2CC> | Engine-neutral orchestration/runtime |
+  |<#EEEEEE> | Manual GUI |
+endlegend
+
+package "YAML files" #FFFFFF {
+  class "targets.yaml" as TargetsYaml <<YAML>> {
+    schema_version: 1
+    targets
+    name
+    type
+    crafty_elements
+    normalization: optional (default raw)
+    goals: optional
+  }
+
+  class "institutions.yaml" as InstitutionsYaml <<YAML>> {
+    schema_version: 1
+    institutions
+    schedule / scope / budget
+    target references
+    policies / effects
+    decision_engine.type
+  }
+
+  note bottom of TargetsYaml
+    schema_version is a format identifier,
+    not a simulation flag.
+    Current loader accepts version 1 only.
+  end note
+}
+
+package "config" #E8F1FF {
+  class CanonicalInstitutionYamlLoader {
+    + load(targetsFile, institutionsFile)
+    - parseAndValidateSchemaVersion1()
+  }
+  class ConfigurationException
+
+  note bottom of CanonicalInstitutionYamlLoader
+    Read-only configuration boundary.
+    There is no YAML writer or second validator.
+    Parsing and schema validation happen here.
+  end note
+}
+
+package "shared model" #EAF7EA {
+  class InstitutionConfiguration <<record>> {
+    schemaVersion: int
+    targets: Map
+    institutions: Map
+  }
+
+  class InstitutionDefinition <<record>> {
+    id: String
+    name: String
+    description: String
+    schedule: ActivationSchedule
+    scope: SpatialScope
+    budget: BudgetDefinition
+    targets: List<TargetReference>
+    policies: Map<PolicyDefinition>
+    decisionEngine: DecisionEngineDefinition
+  }
+
+  class TargetDefinition <<record>> {
+    id: String
+    observations: List<CraftyElementRef>
+    normalization: NormalizationType
+    goalTrajectories: Map
+  }
+
+  class TargetReference <<record>> {
+    targetId: String
+  }
+
+  class PolicyDefinition <<record>> {
+    id: String
+    effects: List<CraftyElementRef>
+    cost: PolicyCost
+    constraints: PolicyConstraints
+  }
+
+  class PolicyConstraints <<record>> {
+    value: NumericRange
+  }
+
+  class DecisionEngineDefinition <<record>> {
+    type: DecisionEngineType
+    fuzzy: FuzzyEngineConfig
+    llm: LlmEngineConfig
+  }
+
+  class ActivationSchedule <<record>>
+  class SpatialScope <<record>>
+  class BudgetDefinition <<record>>
+  class PolicyCost <<record>>
+  class NumericRange <<record>>
+  class CraftyElementRef <<record>>
+  enum DecisionEngineType {
+    FUZZY
+    LLM
+    MANUAL
+  }
+  enum NormalizationType
+}
+
+package "decision.fuzzy" #E1F0FF {
+  class FuzzyEngineConfig <<record>> {
+    fclFile: Path
+    startAtFirstStep: boolean
+    optimizeBudget: boolean
+    targets: Map<FuzzyTargetSettings>
+    policies: Map<FuzzyPolicySettings>
+  }
+
+  class FuzzyTargetSettings <<record>> {
+    desiredValue: double
+  }
+
+  class FuzzyPolicySettings <<record>> {
+    functionBlock: String
+    stepSize: double
+    change: NumericRange
+  }
+
+  class FuzzyInstitutionRuntime
+  class FuzzyInstitutionRuntimeSet
+  class FuzzyDecisionEngine
+  class FuzzyPolicyState
+  interface FuzzyEvaluator
+}
+
+package "decision.fuzzy.integration" #D8EAF8 {
+  class FuzzyInstitutionRunner
+  class FuzzyConnector
+  class FuzzyExternalValues
+  class DataCollector
+}
+
+package "decision.llm" #FFE6F0 {
+  class LlmEngineConfig <<record>> {
+    promptFile: Path
+    retryCount: int
+  }
+
+  class LlmDecisionEngine
+  class LlmPromptBuilder
+  class LlmPolicyParser
+  interface LlmClient
+  class LlmClientFactory
+}
+
+package "decision.llm.runtime" #F9E1EC {
+  class LlmRunner
+  class ParadigmRuntimeSet
+  class ParadigmRuntime
+  class LlmInstitutionRuntime
+  class LlmPolicyState
+  class LlmTargetState
+
+  note bottom of ParadigmRuntimeSet
+    paradigm scope -> named paradigm runtime
+    regions scope -> combined regional runtime
+    all_cells scope -> runtime "all" with every cell
+  end note
+}
+
+package "engine-neutral runtime" #FFF2CC {
+  class InstitutionOrchestrator
+  class DecisionSchedule
+  interface InstitutionDecisionEngine
+  class TargetObserver
+  class PolicyEffectApplier
+}
+
+package "runner" #DDEEFF {
+  class InstitutionRunner <<main>>
+}
+
+package "manual GUI (crafty-gui)" #EEEEEE {
+  class GuiInstitutionBootstrap
+  class InstitutionViewModel
+  class TargetViewModel
+  class PolicyViewModel
+}
+
+TargetsYaml --> CanonicalInstitutionYamlLoader
+InstitutionsYaml --> CanonicalInstitutionYamlLoader
+CanonicalInstitutionYamlLoader --> InstitutionConfiguration : creates
+CanonicalInstitutionYamlLoader ..> ConfigurationException : reports all errors
+
+InstitutionConfiguration *-- TargetDefinition
+InstitutionConfiguration *-- InstitutionDefinition
+InstitutionDefinition *-- TargetReference
+InstitutionDefinition *-- PolicyDefinition
+InstitutionDefinition *-- DecisionEngineDefinition
+PolicyDefinition *-- PolicyCost
+PolicyDefinition *-- PolicyConstraints
+PolicyConstraints *-- NumericRange
+TargetDefinition *-- CraftyElementRef : observations
+PolicyDefinition *-- CraftyElementRef : effects
+
+DecisionEngineDefinition o-- FuzzyEngineConfig : type = FUZZY
+DecisionEngineDefinition o-- LlmEngineConfig : type = LLM
+FuzzyEngineConfig *-- FuzzyTargetSettings
+FuzzyEngineConfig *-- FuzzyPolicySettings
+FuzzyPolicySettings *-- NumericRange : change limit
+
+InstitutionRunner --> CanonicalInstitutionYamlLoader : loads once
+InstitutionRunner --> InstitutionConfiguration : detect one type
+InstitutionRunner --> FuzzyInstitutionRunner : FUZZY
+InstitutionRunner --> LlmRunner : LLM
+InstitutionOrchestrator --> InstitutionDecisionEngine
+InstitutionOrchestrator *-- DecisionSchedule
+TargetObserver --> TargetDefinition
+PolicyEffectApplier --> PolicyDefinition
+
+FuzzyDecisionEngine ..|> InstitutionDecisionEngine
+FuzzyInstitutionRuntime --> FuzzyDecisionEngine
+FuzzyInstitutionRuntime --> FuzzyPolicyState
+FuzzyInstitutionRuntime --> FuzzyEngineConfig
+FuzzyInstitutionRunner --> FuzzyInstitutionRuntimeSet
+FuzzyInstitutionRuntimeSet --> FuzzyInstitutionRuntime
+FuzzyConnector --> InstitutionConfiguration
+FuzzyConnector --> FuzzyExternalValues
+
+LlmDecisionEngine ..|> InstitutionDecisionEngine
+LlmInstitutionRuntime --> LlmDecisionEngine
+LlmInstitutionRuntime --> LlmEngineConfig
+LlmInstitutionRuntime --> LlmPromptBuilder
+LlmDecisionEngine --> LlmClient
+LlmDecisionEngine --> LlmPolicyParser
+LlmClientFactory --> LlmClient
+LlmRunner --> ParadigmRuntimeSet
+ParadigmRuntimeSet *-- ParadigmRuntime
+ParadigmRuntime *-- LlmInstitutionRuntime
+LlmInstitutionRuntime *-- LlmPolicyState
+LlmInstitutionRuntime *-- LlmTargetState
+
+GuiInstitutionBootstrap --> CanonicalInstitutionYamlLoader : loads once
+GuiInstitutionBootstrap --> InstitutionConfiguration
+GuiInstitutionBootstrap --> InstitutionViewModel
+InstitutionViewModel *-- PolicyViewModel
+InstitutionViewModel *-- TargetViewModel
+PolicyViewModel --> PolicyEffectApplier
+TargetViewModel --> TargetObserver
+
+note right of DecisionEngineDefinition
+  Exactly one branch is active:
+  FUZZY  -> fuzzy config only
+  LLM    -> LLM config only
+  MANUAL -> no engine-specific config
+end note
+
+note bottom of LlmEngineConfig
+  Fixed behavior, therefore not flags:
+  * output is always policy change
+  * failed retries always produce zero change
+end note
+
+note bottom of PolicyConstraints
+  Shared because value bounds and costs are
+  consumed by fuzzy and the manual GUI.
+  Fuzzy-only change limits are not stored here.
+end note
+
+note "Removed dead configuration:\n- target unit\n- LLM output_mode\n- LLM failure_fallback\n- global policy start/end flags\n- target/policy direction\n- affects_targets\n- BudgetStrategy\n\nRemoved dead migration code:\n- CanonicalInstitutionYamlWriter\n- RuntimeConfigurationValidator and helpers\n- InstitutionOrchestratorFactory\n- InstitutionRuntime wrapper\n- ModelOutputProvider\n- InstitutionStateSnapshot\n- isolated LLM_Local demo client\n\nSingle packaged entry point:\n- InstitutionRunner\n\nEngine executors:\n- FuzzyInstitutionRunner\n- LlmRunner" as CleanupNote #FFEEEE
+CleanupNote .. CanonicalInstitutionYamlLoader
+
+@enduml

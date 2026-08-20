@@ -12,7 +12,6 @@ import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.ManagerTypes;
-import de.cesr.crafty.core.crafty.Region;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.CsvProcessors;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
@@ -25,13 +24,12 @@ import tech.tablesaw.api.Table;
 import tech.tablesaw.io.csv.CsvReadOptions;
 
 /**
- * Scheduled updater responsible for time-varying AFT parameters (production, behaviour, and land policy inputs).
+ * Scheduled updater responsible for time-varying AFT production and behaviour parameters.
  *
  * This updater is executed once per model step (typically per simulated year) and applies any parameter
  * changes defined in the input directories. It supports:
  * - Updating AFT production parameters (productivity levels and sensitivity matrix).
  * - Updating AFT behavioural parameters (give-in/give-up distributions, probabilities).
- * - Loading land taxes/subsidies per AFT and region at the start of the simulation.
  *
  * Update logic:
  * - Parameter file paths are pre-resolved by {@link AFTsLoader} into maps keyed by AFT label and
@@ -45,8 +43,6 @@ import tech.tablesaw.io.csv.CsvReadOptions;
  *   populates {@code service -> (capital -> exponent)} in {@link Aft#getSensByService()}.
  * - Behaviour files are read as a key/value style CSV and populate giving-in/up distribution parameters
  *   and noise ranges.
- * - Land taxes/subsidies are loaded per region and stored as a time series (year -> value) in each AFT.
- *   If no file is found, a default value of 0 is applied for all years.
  *
  * Notes:
  * - Production and sensitivity updates use the global service and capital lists ({@link ServiceSet} and
@@ -74,17 +70,12 @@ public class AftsUpdater extends AbstractUpdater {
 	public void step() {
 		updatePorB("production");
 		updatePorB("agents");
-		if (Timestep.getTick() == 0) {
-			CellsLoader.regions.values().forEach(R -> {
-				load_land_taxes_subsidies(R);
-			});
-		}
-		update_AFT_capital_adjustments_values();
+		updateAftCapitalAdjustmentValues();
 
 	}
 
-	private void update_AFT_capital_adjustments_values() {
-		// Clear AFT_capital_adjustments for each AFT
+	private void updateAftCapitalAdjustmentValues() {
+		// Clear capital adjustments for each AFT.
 		// Find if there is any file for capital adjusments in YAML
 		// if No,check the default
 		// if No, ignore -> for all afts -> capital_adjustments=null
@@ -95,8 +86,8 @@ public class AftsUpdater extends AbstractUpdater {
 
 		Path path = null;
 		ArrayList<Path> directory;
-		if (Paths.get(ConfigLoader.config.AFT_capital_adjustments).toFile().isDirectory()) {
-			directory = PathTools.findAllFilePaths(Paths.get(ConfigLoader.config.AFT_capital_adjustments));
+		if (Paths.get(ConfigLoader.config.aft_capital_adjustments_directory).toFile().isDirectory()) {
+			directory = PathTools.findAllFilePaths(Paths.get(ConfigLoader.config.aft_capital_adjustments_directory));
 		} else {
 			directory = PathTools.fileFilter("AFT_capital_adjustments", ProjectLoader.getScenario(),
 					Timestep.getCurrentYear() + ".csv");
@@ -147,7 +138,7 @@ public class AftsUpdater extends AbstractUpdater {
 					if (pORb.equals("production")) {
 						updateAFTProduction(aft, p);
 					} else {
-						updateAFTBehevoir(aft, p);
+						updateAFTBehaviour(aft, p);
 					}
 					LOGGER.info("Update " + pORb + " parametres for AFT: " + aftName + " using: " + p);
 				} else {
@@ -164,7 +155,7 @@ public class AftsUpdater extends AbstractUpdater {
 				if (ServiceSet.getServicesList().contains(m[i][0])) {
 					a.getProductivityLevel().put(m[i][0], Utils.sToD(m[i][Utils.indexof("Production", m[0])]));
 				} else {
-					LOGGER.warn("(" + m[i][0] + ")  is not existe in Services List, will be ignored");
+					LOGGER.warn("(" + m[i][0] + ")  is not exist in Services List, will be ignored");
 				}
 			}
 		}
@@ -205,7 +196,7 @@ public class AftsUpdater extends AbstractUpdater {
 		}
 	}
 
-	public static void updateAFTBehevoir(Aft a, Path path) {
+	public static void updateAFTBehaviour(Aft a, Path path) {
 		Map<String, List<String>> reder = CsvProcessors.ReadAsaHash(path);
 		a.setGiveInMean(Utils.sToD(reder.get("givingInDistributionMean").get(0)));
 		a.setGiveUpMean(Utils.sToD(reder.get("givingUpDistributionMean").get(0)));
@@ -214,56 +205,6 @@ public class AftsUpdater extends AbstractUpdater {
 //		a.setServiceLevelNoiseMin(Utils.sToD(reder.get("serviceLevelNoiseMin").get(0)));
 //		a.setServiceLevelNoiseMax(Utils.sToD(reder.get("serviceLevelNoiseMax").get(0)));
 		a.setGiveUpProbabilty(Utils.sToD(reder.get("givingUpProb").get(0)));
-	}
-
-	private void load_land_taxes_subsidies(Region R) {
-		Path path = landTSPath(R);
-		if (path == null) {
-			LOGGER.info("AFT lan_taxes_subsidies file not fund for |" + R.getName()
-					+ "| default value will use: land_taxes_subsidies = 0 for all AFts");
-			ConfigLoader.config.consider_subsidies_taxes = false;
-			return;
-		}
-		Map<String, List<String>> hashTS = CsvProcessors.ReadAsaHash(path);
-		LOGGER.info("Update land_taxes_subsidies for [" + R.getName() + "]: " + path);
-		hashTS.forEach((AFTName, vect) -> {
-			if (AFTsLoader.getActivateAFTsHash().keySet().contains(AFTName)) {
-				ConcurrentHashMap<Integer, Double> dv = new ConcurrentHashMap<>();
-				for (int i = 0; i < Timestep.getSize(); i++) {
-					if (i < vect.size()) {
-						dv.put(Timestep.getStartYear() + i, Utils.sToD(vect.get(i)));
-					}
-				}
-				AFTsLoader.getActivateAFTsHash().get(AFTName).getLand_taxes_subsidies().clear();
-				AFTsLoader.getActivateAFTsHash().get(AFTName).setLand_taxes_subsidies(dv);
-
-				LOGGER.trace("land_taxes_subsidies for [" + AFTName + "]: "
-						+ AFTsLoader.getActivateAFTsHash().get(AFTName).getLand_taxes_subsidies());
-			}
-		});
-
-	}
-
-	private static Path landTSPath(Region R) {
-		Path path;
-		String ts = ConfigLoader.config.land_taxes_subsidies_path;
-		if (ts != null && !ts.isEmpty()) {
-			if (Paths.get(ts).toFile().isFile()) {
-				path = Paths.get(ts);
-			} else {// if is folder
-				ArrayList<Path> directory = PathTools.findAllFilePaths(Paths.get(ts));
-				path = PathTools.fileFilter(directory, "_" + R.getName()).get(0);
-			}
-		} else {
-			try {
-				path = PathTools.fileFilter(ProjectLoader.getScenario(), PathTools.asFolder("land_taxes_subsidies"),
-						"_" + R.getName()).get(0);
-			} catch (NullPointerException e) {
-				LOGGER.warn("No Land_taxes_subsidies file fund for region: |" + R.getName() + "|");
-				return null;
-			}
-		}
-		return path;
 	}
 
 }

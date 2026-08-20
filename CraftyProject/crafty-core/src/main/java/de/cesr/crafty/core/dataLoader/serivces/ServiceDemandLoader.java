@@ -3,6 +3,7 @@ package de.cesr.crafty.core.dataLoader.serivces;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,8 +42,7 @@ import de.cesr.crafty.core.utils.general.Utils;
  *
  * Aggregation to world:
  * {@link #aggregateRegionalToWorldServiceDemand()} sums regional demands into {@link ServiceSet#worldService}
- * for each year. In addition, it computes simple averages for weights and taxes/subsidies across regions
- * (by dividing each region value by {@code CellsLoader.regions.size()} and summing).
+ * for each year. It also computes simple averages for weights across regions.
  */
 /**
  * @author Mohamed Byari
@@ -76,7 +76,7 @@ public class ServiceDemandLoader {
 						.fileFilter(ProjectLoader.getScenario(), PathTools.asFolder("demand"), "_" + R.getName())
 						.get(0);
 			} catch (NullPointerException e) {
-				LOGGER.warn("No demand file fund for region: |" + R.getName() + "|");
+				LOGGER.warn("No demand file found for region: |" + R.getName() + "|");
 				return null;
 			}
 		}
@@ -110,11 +110,12 @@ public class ServiceDemandLoader {
 	public static void aggregateRegionalToWorldServiceDemand() {
 		for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
 			int year = i;
-			ServiceSet.worldService.forEach((ns, s) -> {
-				s.getDemands().put(year, 0.);
-			});
-			CellsLoader.regions.values().forEach(r -> {
-				r.getServicesHash().forEach((ns, s) -> {
+			ServiceSet.worldService.keySet().stream().sorted()
+					.forEach(serviceName -> ServiceSet.worldService.get(serviceName).getDemands().put(year, 0.0));
+			CellsLoader.regions.values().stream().sorted(Comparator.comparing(Region::getName)).forEach(r -> {
+				r.getServicesHash().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+					String ns = entry.getKey();
+					var s = entry.getValue();
 					double nbr = s.getDemands().get(year) != null ? s.getDemands().get(year) : 0;
 					ServiceSet.worldService.get(ns).getDemands().merge(year, nbr, Double::sum);
 //					System.out.println("ns= " + ns + " year= " + year + " getWeights= " + s.getWeights().get(year) 
@@ -122,9 +123,6 @@ public class ServiceDemandLoader {
 					
 					ServiceSet.worldService.get(ns).getWeights().merge(year,
 							s.getWeights().get(year) / CellsLoader.regions.size(), Double::sum);
-					ServiceSet.worldService.get(ns).getTaxes_subsidies().merge(year,
-							s.getTaxes_subsidies().get(year) / CellsLoader.regions.size(), Double::sum);
-
 				});
 			});
 		}

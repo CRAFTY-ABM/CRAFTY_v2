@@ -39,7 +39,7 @@ public class AFTsBehaviourController {
 		grid.setHgap(20);
 		grid.setVgap(30);
 
-		// Check if the behevoir model data is avialable
+		// Check whether the behavior model data is available.
 		if (AftCategorised.useCategorisationGivIn && CellBehaviourUpdater.behaviourUsed) {
 			addTables();
 			AtomicInteger i = new AtomicInteger(), j = new AtomicInteger();
@@ -61,7 +61,7 @@ public class AFTsBehaviourController {
 			});
 		} else {
 			grid.getChildren().add(new Text(
-					"Behevoir model by data is Not avialable: need to define categories and categories_givingInDistributionMean_Default.csv "));
+					"Behaviour model data is unavailable. Define AFT categories and provide both category give-in distribution files."));
 		}
 
 	}
@@ -80,8 +80,8 @@ public class AFTsBehaviourController {
 			if (mean_path != null && SD_path != null) {
 				Node TablMean = CsvToHtml.tabeWeb(mean_path);
 				Node TablSD = CsvToHtml.tabeWeb(SD_path);
-				box.getChildren().addAll(new Text("Giving-In Normal Distribution Mean by Categories"), TablMean,
-						new Text("Giving-In Normal Distribution standard deviation (SD) by Categories"), TablSD);
+				box.getChildren().addAll(new Text("Giving-in normal distribution mean by category"), TablMean,
+						new Text("Giving-in normal distribution standard deviation (SD) by category"), TablSD);
 			}
 		}
 	}
@@ -101,7 +101,8 @@ public class AFTsBehaviourController {
 		AftCategorised.aftCategories.keySet().forEach(name -> {
 			double mean = AftCategorised.getMean().get(categoryName + "|" + name);
 			double sd = AftCategorised.getSD().get(categoryName + "|" + name);
-			output.put(name, NonGraphic.generateNormalData(mean, sd, mm, sdsd));
+			if (sd > 0)
+				output.put(name, NonGraphic.generateNormalData(mean, sd, mm, sdsd));
 
 		});
 		// AftAnalyzer.generateChart(categoryName, output);

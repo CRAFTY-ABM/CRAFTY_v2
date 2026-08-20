@@ -69,7 +69,7 @@ public final class ChartExporter {
         Layout layout = Layout.compute(hashData, hashColors, startYear, chartTitle, width, height);
 
         try {
-            if (ConfigLoader.config != null && ConfigLoader.config.generate_charts_plots_PNG) {
+            if (ConfigLoader.config != null && ConfigLoader.config.generate_chart_plots_png) {
                 File out = new File(pngPath + ".PNG");
                 ensureParentDir(out);
                 BufferedImage img = renderToImage(layout);

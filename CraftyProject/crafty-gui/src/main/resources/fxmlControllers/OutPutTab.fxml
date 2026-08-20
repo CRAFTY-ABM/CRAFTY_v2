@@ -17,46 +17,48 @@
 
 <Tab xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="de.cesr.crafty.gui.controller.fxml.OutPutTabController"
-	text="Import OutPut">
+	text="Import output">
 	<!-- TODO Add Nodes -->
 	<!-- <graphic> <FontIcon iconLiteral="fas-file-import" iconSize="15" /> 
 		</graphic> -->
 	<tooltip>
-		<Tooltip text="Model OutPut" />
+		<Tooltip text="Model output" />
 	</tooltip>
 	<content>
-		<VBox spacing="15.0">
+		<VBox spacing="8.0">
 			<children>
 
 				<Button fx:id="selecserivce" onAction="#selecserivce"
-					text="Display a serivce" >
+					text="Display a service" >
 					<!-- styleClass="button-icon" -->
 					<!-- <graphic> <FontIcon iconLiteral="fas-list-ul" iconSize="15" /> 
 						</graphic> -->
 					<tooltip>
-						<Tooltip text="Display a serivce" />
+						<Tooltip text="Display a service" />
 					</tooltip>
 				</Button>
 
-				<TabPane fx:id="tabpane" tabClosingPolicy="UNAVAILABLE">
+				<TabPane fx:id="tabpane" tabClosingPolicy="UNAVAILABLE"
+					VBox.vgrow="ALWAYS">
 					<tabs><!-- -->
 						<!-- <Tab fx:id="tmp" /> -->
-						<Tab fx:id="addTab" text="Import Simulation Results">
+						<Tab fx:id="addTab" text="Import simulation results">
 							<!-- <graphic> <FontIcon iconLiteral="fas-plus" iconSize="15" /> </graphic> -->
 							<content>
-								<VBox fx:id="fileTreeView" spacing="15.0" >
+								<VBox fx:id="fileTreeView" spacing="8.0"
+									VBox.vgrow="ALWAYS">
 								<Button  onAction="#reload" 
-											text="Reload Files">
+											text="Reload files">
 											<!-- <graphic> <FontIcon iconLiteral="far-save" iconSize="15" 
 												/> </graphic> -->
 											<tooltip>
-												<Tooltip text="Reload Files" />
+												<Tooltip text="Reload output files" />
 											</tooltip>
 										</Button>
 								</VBox>
 							</content>
 							<tooltip>
-								<Tooltip text="Add New Output from File Systme" />
+				<Tooltip text="Add output from the file system" />
 							</tooltip>
 						</Tab>
 					</tabs>

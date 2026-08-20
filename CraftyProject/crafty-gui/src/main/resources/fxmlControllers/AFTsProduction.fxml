@@ -24,32 +24,38 @@
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 
-<VBox xmlns="http://javafx.com/javafx/21"
+<ScrollPane xmlns="http://javafx.com/javafx/21"
 	xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="de.cesr.crafty.gui.controller.fxml.AFTsProductionController"
-	fx:id="TopBox">
+	fitToWidth="true" pannable="true" styleClass="responsive-scroll">
+	<content>
+	<VBox fx:id="TopBox" spacing="8.0">
 	<children>
-		<TitledPane animated="true"
-			text="Optimal Production Levels and Behevoir Parametrs">
+		<TitledPane animated="false" expanded="true"
+			text="Productivity levels histogram">
 			<content>
-				<VBox spacing="10.0">
-					<children>
-						<HBox spacing="10.0">
-							<BarChart fx:id="histogramePlevel">
-								<xAxis>
-									<CategoryAxis side="BOTTOM" />
-								</xAxis>
-								<yAxis>
-									<NumberAxis side="LEFT" />
-								</yAxis>
-							</BarChart>
-							<HBox fx:id="hbox1" spacing="10.0"/>
-						</HBox>
-					</children>
-					<VBox fx:id="box2" />
+				<VBox>
+					<BarChart fx:id="histogramePlevel"
+						minHeight="260.0" prefHeight="300.0" maxHeight="300.0"
+						styleClass="analysis-chart" VBox.vgrow="ALWAYS">
+						<xAxis>
+							<CategoryAxis side="BOTTOM" />
+						</xAxis>
+						<yAxis>
+							<NumberAxis side="LEFT" />
+						</yAxis>
+					</BarChart>
 				</VBox>
 			</content>
 		</TitledPane>
 
+		<TitledPane animated="false" expanded="true"
+			text="Productivity response curve">
+			<content>
+				<VBox fx:id="hbox1" minHeight="260.0" spacing="10.0" />
+			</content>
+		</TitledPane>
 	</children>
-</VBox>
+	</VBox>
+	</content>
+</ScrollPane>

@@ -53,52 +53,67 @@ class UtilsTest {
 
 	@Test
 	void splitIntoSubsetsShouldDistributeAllKeysAcrossSubsets() {
-		ConcurrentHashMap<String, Cell> original = new ConcurrentHashMap<>();
+		List<Cell> original = new ArrayList<>();
 		int total = 100;
 		for (int i = 0; i < total; i++) {
-			original.put("cell-" + i, new Cell(0, 0)); // value doesn't matter here
+			original.add(new Cell(i, 0));
 		}
 
 		int n = 4;
-		List<ConcurrentHashMap<String, Cell>> subsets = Utils.splitIntoSubsets(original, n);
+		List<List<Cell>> subsets = Utils.splitIntoSubsetsDeterministic(original, n, 123L, 2030,
+				DeterministicRandom.Process.COMPETITION_BATCH_ORDER);
 
 		assertEquals(n, subsets.size(), "Number of subsets should match requested n");
 
 		// All keys must appear exactly once across all subsets
-		Set<String> union = new HashSet<>();
+		Set<Cell> union = new HashSet<>();
 		int sumSizes = 0;
-		for (Map<String, Cell> subset : subsets) {
+		for (List<Cell> subset : subsets) {
 			sumSizes += subset.size();
-			subset.keySet().forEach(key -> {
-				assertTrue(union.add(key), "Key " + key + " appears more than once across subsets");
+			subset.forEach(cell -> {
+				assertTrue(union.add(cell), "Cell appears more than once across subsets");
 			});
 		}
 
 		assertEquals(total, sumSizes, "Total size across subsets should equal original size");
-		assertEquals(original.keySet(), union, "Union of subset keys should equal original key set");
+		assertEquals(new HashSet<>(original), union, "Union of subsets should equal the original cells");
 	}
 
 	@Test
 	void splitIntoSubsetsCanHandleMoreSubsetsThanCells() {
-		ConcurrentHashMap<String, Cell> original = new ConcurrentHashMap<>();
-		original.put("a", new Cell(0, 0));
-		original.put("b", new Cell(1, 0));
-		original.put("c", new Cell(0, 1));
+		List<Cell> original = List.of(new Cell(0, 0), new Cell(1, 0), new Cell(0, 1));
 
 		int n = 5; // more subsets than cells
-		List<ConcurrentHashMap<String, Cell>> subsets = Utils.splitIntoSubsets(original, n);
+		List<List<Cell>> subsets = Utils.splitIntoSubsetsDeterministic(original, n, 123L, 2030,
+				DeterministicRandom.Process.COMPETITION_BATCH_ORDER);
 
 		assertEquals(n, subsets.size());
 
-		Set<String> union = new HashSet<>();
+		Set<Cell> union = new HashSet<>();
 		int sumSizes = 0;
-		for (Map<String, Cell> subset : subsets) {
+		for (List<Cell> subset : subsets) {
 			sumSizes += subset.size();
-			union.addAll(subset.keySet());
+			union.addAll(subset);
 		}
 
 		assertEquals(original.size(), sumSizes);
-		assertEquals(original.keySet(), union);
+		assertEquals(new HashSet<>(original), union);
+	}
+
+	@Test
+	void deterministicSubsetsRepeatExactlyForSameSeed() {
+		List<Cell> cells = new ArrayList<>();
+		for (int i = 0; i < 20; i++) {
+			cells.add(new Cell(i, i % 3));
+		}
+
+		List<List<Cell>> first = Utils.splitIntoSubsetsDeterministic(cells, 4, 99L, 2040,
+				DeterministicRandom.Process.COMPETITION_BATCH_ORDER);
+		Collections.reverse(cells);
+		List<List<Cell>> second = Utils.splitIntoSubsetsDeterministic(cells, 4, 99L, 2040,
+				DeterministicRandom.Process.COMPETITION_BATCH_ORDER);
+
+		assertEquals(first, second);
 	}
 
 }

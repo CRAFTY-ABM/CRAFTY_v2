@@ -10,6 +10,8 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.io.File;
@@ -21,7 +23,6 @@ import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
 import de.cesr.crafty.gui.main.FxMain;
-import de.cesr.crafty.gui.main.GuiScaler;
 import de.cesr.crafty.gui.utils.analysis.NonGraphic;
 import de.cesr.crafty.gui.utils.graphical.FileTreeView;
 import de.cesr.crafty.gui.utils.graphical.NewWindow;
@@ -88,9 +89,10 @@ public class OutPutTabController {
 		Path output = Paths.get(ProjectLoader.getProjectPath() + File.separator + "output");
 		tree = FileTreeView.build(output, null, 1);
 		fileTreeView.getChildren().add(tree);
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY);
-		tree.setMaxHeight(scaleY);
-		tree.setMinHeight(scaleY);
+		tree.setMinHeight(0);
+		tree.setPrefHeight(Region.USE_COMPUTED_SIZE);
+		tree.setMaxHeight(Double.MAX_VALUE);
+		VBox.setVgrow(tree, Priority.ALWAYS);
 		mouseTreeFiles(tree);
 	}
 	
@@ -118,7 +120,7 @@ public class OutPutTabController {
 		if (!colorbox.isShowing()) {
 			VBox g = new VBox();
 			g.getChildren().addAll(radioColor);
-			colorbox.creatwindows("Display Services and AFT distribution", g);
+			colorbox.creatwindows("Display services and AFT distribution", g);
 		}
 	}
 

@@ -17,7 +17,7 @@
 	fx:id="TopBox">
 	<children>
 		<TitledPane animated="true"
-			text="Optimal Production Levels and Behevoir Parametrs">
+			text="Optimal production levels and behavior parameters">
 			<content>
 				<VBox spacing="20.0">
 					<children><!---->

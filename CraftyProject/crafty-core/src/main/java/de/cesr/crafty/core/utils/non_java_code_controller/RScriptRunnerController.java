@@ -53,7 +53,7 @@ public class RScriptRunnerController {
 
 			createOutputDirectories(script, year);
 
-			RScriptRunner.runRScript(Path.of("C:\\Program Files\\R\\R-4.6.0\\bin\\Rscript.exe"), scriptPath, args);
+			RScriptRunner.runRScript(scriptPath, args);
 
 			System.out.println("[R] Finished script '" + script.displayName() + "' for year " + year);
 
@@ -146,9 +146,9 @@ public class RScriptRunnerController {
 		script.outputs.values().forEach(p -> {
 			Path path = Paths.get(resolveTemplate(p, year));
 			if (path != null && path.toFile().isFile()) {
-				External_variables_Manager.valuesInjector(path);
+				External_variables_Manager_manager.valuesInjector(path);
 			}
-			System.out.println(">>>> "+path + "==> " + External_variables_Manager.getExternal_variables());
+			System.out.println(">>>> " + path + "==> " + External_variables_Manager_manager.getExternal_variables());
 		});
 
 		// Loop for files for each script

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
+import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
@@ -21,6 +23,7 @@ import de.cesr.crafty.core.updaters.AbstractUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.CsvTools;
 import de.cesr.crafty.core.utils.file.PathTools;
+import de.cesr.crafty.core.utils.general.DeterministicAggregation;
 import de.cesr.crafty.core.utils.general.Utils;
 
 /**
@@ -88,28 +91,20 @@ public class Tracker extends AbstractUpdater {
 		if (ConfigLoader.config.track_changes && ConfigLoader.config.generate_output_files) {
 			long staetTime = System.currentTimeMillis();
 			Map<String, Map<String, Double>> container = new ConcurrentHashMap<>();
-			AFTsLoader.getAftHash().values().forEach(a -> {
+			AFTsLoader.getAftHash().keySet().stream().sorted().forEach(label -> {
 				ConcurrentHashMap<String, Double> tmp = new ConcurrentHashMap<>();
-				container.put(a.getLabel(), tmp);
+				container.put(label, tmp);
 			});
-			CellsLoader.regions.values().forEach(region -> {
-				region.getCells().values()/**/ .parallelStream().forEach(c -> {
-					for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
-						if (c.getOwner() != null)
-							container.get(c.getOwner().getLabel()).merge(ServiceSet.getServicesList().get(i),
-									c.getCurrentProd()[i], Double::sum);
-					}
-				});
-			});
+			CellsLoader.regions.keySet().stream().sorted()
+					.forEach(regionName -> accumulateCellSupply(CellsLoader.regions.get(regionName).getCells().values(),
+							container));
 			AFTsLoader.hashAgentNbr.forEach((label, a) -> {
 				container.get(label).put("AggregateAFT", (double) a);
 			});
 			ConcurrentHashMap<String, Double> totalSupplyTracked = new ConcurrentHashMap<>();
-			container.forEach((aft, v) -> {
-				v.forEach((sn, sv) -> {
-					totalSupplyTracked.merge(sn, sv, Double::sum);
-				});
-			});
+			container.keySet().stream().sorted().forEach(aft -> container.get(aft).entrySet().stream()
+					.sorted(Map.Entry.comparingByKey())
+					.forEach(entry -> totalSupplyTracked.merge(entry.getKey(), entry.getValue(), Double::sum)));
 			writeMatrixToCSV(container, ConfigLoader.config.output_folder_name + File.separator + "SupplyTracker_"
 					+ Timestep.getCurrentYear() + ".csv");
 			LOGGER.trace("Time taken for trackSupply " + (System.currentTimeMillis() - staetTime) + " ms");
@@ -169,22 +164,28 @@ public class Tracker extends AbstractUpdater {
 	public static void trackSupply(String regionName) {
 		if (ConfigLoader.config.output_folder_name != null && ConfigLoader.config.track_changes) {
 			Map<String, Map<String, Double>> container = new ConcurrentHashMap<>();
-			AFTsLoader.getAftHash().values().forEach(a -> {
+			AFTsLoader.getAftHash().keySet().stream().sorted().forEach(label -> {
 				ConcurrentHashMap<String, Double> tmp = new ConcurrentHashMap<>();
-				container.put(a.getLabel(), tmp);
+				container.put(label, tmp);
 			});
-			CellsLoader.regions.get(regionName).getCells().values()/**/ .parallelStream().forEach(c -> {
-				for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
-					if (c.getOwner() != null)
-						container.get(c.getOwner().getLabel()).merge(ServiceSet.getServicesList().get(i),
-								c.getCurrentProd()[i], Double::sum);
-				}
-			});
+			accumulateCellSupply(CellsLoader.regions.get(regionName).getCells().values(), container);
 			AFTsLoader.hashAgentNbrRegions.get(regionName).forEach((label, a) -> {
 				container.get(label).put("AggregateAFT", (double) a);
 			});
 			writeMatrixToCSV(container, ConfigLoader.config.output_folder_name + File.separator + "region_" + regionName
 					+ File.separator + "SupplyTracker_" + Timestep.getCurrentYear() + ".csv");
+		}
+	}
+
+	private static void accumulateCellSupply(Collection<Cell> cells, Map<String, Map<String, Double>> container) {
+		for (Cell cell : DeterministicAggregation.cellsInStableOrder(cells)) {
+			if (cell.getOwner() == null) {
+				continue;
+			}
+			for (int i = 0; i < ServiceSet.getServicesList().size(); i++) {
+				container.get(cell.getOwner().getLabel()).merge(ServiceSet.getServicesList().get(i),
+						cell.getCurrentProd()[i], Double::sum);
+			}
 		}
 	}
 

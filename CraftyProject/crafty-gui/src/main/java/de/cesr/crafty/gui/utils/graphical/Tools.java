@@ -21,6 +21,8 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -89,6 +91,7 @@ public class Tools {
 
 	public static TitledPane T(String name, boolean isopen, Node... children) {
 		TitledPane spatial = new TitledPane(name, vBox(children));
+		spatial.setAnimated(false);
 		spatial.setExpanded(isopen);
 		// spatial.setStyle(" -fx-base: #ffffff;");
 		// Tools.mouseControle(spatial, "");
@@ -182,7 +185,7 @@ public class Tools {
 
 	public static File selectFolder(String projectPath) {
 		DirectoryChooser chooser = new DirectoryChooser();
-		chooser.setTitle("Select Project");
+		chooser.setTitle("Select project");
 		File initialDirectory = new File(projectPath);
 		if (initialDirectory.exists())
 			chooser.setInitialDirectory(initialDirectory);
@@ -191,11 +194,11 @@ public class Tools {
 	}
 
 	public static void forceResisingWidth(double scale, Pane... nodes) {
-		double width = GuiScaler.lastScreen.getBounds().getWidth() * scale;
-
-		for (int i = 0; i < nodes.length; i++) {
-			nodes[i].setMaxWidth(width / (2 * GuiScaler.graphicScaleX));
-			nodes[i].setMinWidth(width / (2 * GuiScaler.graphicScaleX));
+		for (Pane node : nodes) {
+			node.setMinWidth(0);
+			node.setMaxWidth(Double.MAX_VALUE);
+			node.setPrefWidth(Region.USE_COMPUTED_SIZE);
+			HBox.setHgrow(node, Priority.ALWAYS);
 		}
 	}
 
@@ -204,18 +207,22 @@ public class Tools {
 	}
 
 	public static void forceResisingHeight(double scale, Pane... nodes) {
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY * scale);
-		for (int i = 0; i < nodes.length; i++) {
-			nodes[i].setMaxHeight(scaleY);
-			nodes[i].setMinHeight(scaleY);
+		for (Pane node : nodes) {
+			node.setMinHeight(0);
+			node.setMaxHeight(Double.MAX_VALUE);
+			node.setPrefHeight(Region.USE_COMPUTED_SIZE);
+			VBox.setVgrow(node, Priority.ALWAYS);
 		}
 	}
 
 	public static void forceResisingHeight(double scale, ScrollPane... nodes) {
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY * scale);
-		for (int i = 0; i < nodes.length; i++) {
-			nodes[i].setMaxHeight(scaleY);
-			nodes[i].setMinHeight(scaleY);
+		for (ScrollPane node : nodes) {
+			node.setMinHeight(0);
+			node.setMaxHeight(Double.MAX_VALUE);
+			node.setPrefHeight(Region.USE_COMPUTED_SIZE);
+			node.setFitToWidth(true);
+			node.setPannable(true);
+			VBox.setVgrow(node, Priority.ALWAYS);
 		}
 	}
 

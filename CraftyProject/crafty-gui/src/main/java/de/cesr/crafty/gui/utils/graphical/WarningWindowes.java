@@ -3,11 +3,11 @@ package de.cesr.crafty.gui.utils.graphical;
 import java.util.List;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import de.cesr.crafty.gui.main.FxMain;
 import javafx.application.Platform;
-import javafx.concurrent.Task;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -29,12 +29,13 @@ import javafx.stage.StageStyle;
 
 public class WarningWindowes {
 	static String p = "";
+	private static final AtomicBoolean LOADING = new AtomicBoolean(false);
 
 	public static String alterErrorNotFileFound(String message, String path) {
 		p = path;
 		Alert alert = new Alert(AlertType.WARNING);
-		ButtonType selectfile = new ButtonType("Select a new file", ButtonBar.ButtonData.OK_DONE);
-		alert.setTitle("Error Dialog");
+		ButtonType selectfile = new ButtonType("Select another file", ButtonBar.ButtonData.OK_DONE);
+		alert.setTitle("Error");
 		alert.setHeaderText(message + " \n" + path);
 		System.out.println(message + " \n" + path);
 		alert.getButtonTypes().setAll(selectfile, ButtonType.NO);
@@ -114,10 +115,20 @@ public class WarningWindowes {
 	}
 
 	public static void showWaitingDialog(Consumer<String> action) {
+		if (!Platform.isFxApplicationThread()) {
+			Platform.runLater(() -> showWaitingDialog(action));
+			return;
+		}
+		if (!LOADING.compareAndSet(false, true)) {
+			return;
+		}
+
 		Stage waitingDialog = new Stage();
-		waitingDialog.initModality(Modality.NONE);
+		if (FxMain.primaryStage != null && FxMain.primaryStage.isShowing()) {
+			waitingDialog.initOwner(FxMain.primaryStage);
+		}
+		waitingDialog.initModality(Modality.APPLICATION_MODAL);
 		waitingDialog.initStyle(StageStyle.UNDECORATED);
-		// loadingAlert.initModality(Modality.NONE);
 		Label label = new Label("Please wait...");
 		ProgressIndicator progressIndicator = new ProgressIndicator();
 		progressIndicator.setCenterShape(true);
@@ -128,30 +139,22 @@ public class WarningWindowes {
 
 		Scene scene = new Scene(root, 200, 100);
 		waitingDialog.setScene(scene);
+		waitingDialog.setOnCloseRequest(event -> {
+			if (LOADING.get()) {
+				event.consume();
+			}
+		});
 		waitingDialog.show();
 
-		Task<Void> task = new Task<Void>() {
-			@Override
-			protected Void call() throws Exception {
-				Thread.sleep(5);
-				// method.accept("");
-				return null;
-			}
-
-			@Override
-			protected void succeeded() {
-				super.succeeded();
+		// Defer the work once so the waiting dialog is rendered before loading starts.
+		Platform.runLater(() -> {
+			try {
+				action.accept("");
+			} finally {
+				LOADING.set(false);
 				waitingDialog.close();
 			}
-		};
-		task.setOnSucceeded(_ -> {
-			action.accept("");
 		});
-
-		Thread thread = new Thread(task);
-		thread.start();
-		thread.setPriority(Thread.MAX_PRIORITY);
-
 	}
 
 }

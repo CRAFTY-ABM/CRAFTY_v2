@@ -100,7 +100,7 @@ class CellBehaviourTest {
 		double combinedInfluence = (1.0 - behaviour.getWeight_social()) * attitudeInfluence
 				+ behaviour.getWeight_social() * socialInfluence;
 
-		double exponent = ConfigLoader.config.steepness_logistic_eq
+		double exponent = ConfigLoader.config.cell_behaviour_logistic_steepness
 				* (combinedInfluence - behaviour.getWeight_inertia() * Math.abs(gap));
 
 		double expected = behaviour.getMaxGive_in() / (1.0 + Math.exp(exponent));

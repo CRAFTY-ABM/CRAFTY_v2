@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * A {@code Service} holds the region-specific exogenous drivers used in the utility and allocation process:
  * - Demand time series (year -> demand).
  * - Utility weights time series (year -> weight) used to scale marginal utility signals.
- * - Policy signals as taxes/subsidies time series (year -> value), applied during utility calculation.
  *
  * The service also stores a {@link #calibration_Factor} used to scale initial supply–demand equilibrium
  * (computed during the baseline calibration step). This factor allows the model to reconcile baseline
@@ -32,7 +31,6 @@ public class Service {
 	
 	private ConcurrentHashMap<Integer, Double> demands;
 	private ConcurrentHashMap<Integer, Double> weights = new ConcurrentHashMap<>();
-	private ConcurrentHashMap<Integer, Double> taxes_subsidies = new ConcurrentHashMap<>();
 	
 	
 	private double calibration_Factor = 1;
@@ -78,14 +76,6 @@ public class Service {
 	
 	
 
-	public ConcurrentHashMap<Integer, Double> getTaxes_subsidies() {
-		return taxes_subsidies;
-	}
-
-	public void setTaxes_subsidies(ConcurrentHashMap<Integer, Double> taxes_subsidies) {
-		this.taxes_subsidies = taxes_subsidies;
-	}
-
 	public double getCalibration_Factor() {
 		return calibration_Factor;
 	}
@@ -99,8 +89,8 @@ public class Service {
 
 	@Override
 	public String toString() {
-		return "Service [name=" + name + ", demands=" + demands + ", weights=" + weights + ", taxes_subsidies="
-				+ taxes_subsidies  + ", calibration_Factor=" + calibration_Factor + "]";
+		return "Service [name=" + name + ", demands=" + demands + ", weights=" + weights
+				+ ", calibration_Factor=" + calibration_Factor + "]";
 	}
 
 

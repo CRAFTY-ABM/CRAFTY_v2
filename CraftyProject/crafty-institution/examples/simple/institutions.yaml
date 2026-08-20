@@ -1,0 +1,38 @@
+schema_version: 1
+
+institutions:
+  - id: environment_policy
+    name: Environment policy
+    schedule: {start_year: 2020, end_year: 2100, interval_years: 4}
+    scope: {type: all_cells}
+    budget: {amount: 10000}
+
+    targets:
+      - target: biodiversity_supply
+
+    policies:
+      - id: biodiversity_subsidy
+        name: Biodiversity subsidy
+        effects:
+          AFT: {CW: 1.0, AF: 0.5}
+        cost: {unit_cost: 1.0, estimated_quantity: 1000}
+        constraints:
+          value: {min: 0, max: 100}
+
+    # For LLM, change the type and remove each policy's fuzzy-only cost and constraints.
+    decision_engine:
+      type: fuzzy
+      fuzzy:
+        fcl_file: rules.fcl
+        start_at_first_step: true
+        optimize_budget: true
+        targets:
+          biodiversity_supply: {desired_value: 1.2}
+        policies:
+          biodiversity_subsidy:
+            function_block: BIODIVERSITY
+            step_size: 0.1
+            change: {min: -5, max: 5}
+      llm:
+        prompt_file: prompt.yaml
+        retry_count: 4

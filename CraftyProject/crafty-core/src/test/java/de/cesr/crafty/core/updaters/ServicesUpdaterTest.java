@@ -32,7 +32,6 @@ class ServicesUpdaterTest {
 		// pollution)
 		clearStaticMap(ServicesUpdater.class, "demandByRegions");
 		clearStaticMap(ServicesUpdater.class, "weightByRegions");
-		clearStaticMap(ServicesUpdater.class, "taxesByRegions");
 		clearStaticMap(ServicesUpdater.class, "supplys");
 		clearStaticMap(ServicesUpdater.class, "gaps");
 
@@ -74,7 +73,7 @@ class ServicesUpdaterTest {
 	}
 
 	@Test
-	void step_populatesDemandWeightTaxesAndWritesSupplyAndGapByYear() throws Exception {
+	void step_populatesDemandAndWeightAndWritesSupplyAndGapByYear() throws Exception {
 		// Year
 		int year = 2000;
 
@@ -83,10 +82,8 @@ class ServicesUpdaterTest {
 		putIntoExternalMap(CellsLoader.class, "regions", "R1", region);
 
 		// Service inside region.getServicesHash()
-		Service service = mockService("Food", new ConcurrentHashMap<>(Map.of(year, 100.0)), // demands
-				new ConcurrentHashMap<>(Map.of(year, 2.5)), // weights
-				new ConcurrentHashMap<>(Map.of(year, -0.1)) // taxes/subsidies
-		);
+		Service service = mockService("Food", new ConcurrentHashMap<>(Map.of(year, 100.0)),
+				new ConcurrentHashMap<>(Map.of(year, 2.5)));
 
 		region.getServicesHash().put(service.getName(), service);
 
@@ -107,7 +104,6 @@ class ServicesUpdaterTest {
 
 			assertEquals(100.0, ServicesUpdater.getDemandByRegions().get("R1").get("Food"), 1e-9);
 			assertEquals(2.5, ServicesUpdater.getWeightByRegions().get("R1").get("Food"), 1e-9);
-			assertEquals(-0.1, ServicesUpdater.getTaxesByRegions().get("R1").get("Food"), 1e-9);
 
 			Map<?, ?> supplys = getStaticMap(ServicesUpdater.class, "supplys");
 			Map<?, ?> gaps = ServicesUpdater.getGaps();
@@ -128,8 +124,8 @@ class ServicesUpdaterTest {
 		putIntoExternalMap(CellsLoader.class, "regions", "R1", region);
 		RegionalModelRunner regionRunner = new RegionalModelRunner(region.getName());
 		
-		Service service = mockService("Food", new ConcurrentHashMap<>(Map.of(year, 0.0)), // demand = 0
-				new ConcurrentHashMap<>(Map.of(year, 1.0)), new ConcurrentHashMap<>(Map.of(year, 0.0)));
+		Service service = mockService("Food", new ConcurrentHashMap<>(Map.of(year, 0.0)),
+				new ConcurrentHashMap<>(Map.of(year, 1.0)));
 		region.getServicesHash().put(service.getName(), service);
 
 		regionRunner.setRegionalSupply(new ConcurrentHashMap<>(Map.of("Food", 80.0)));
@@ -158,11 +154,9 @@ class ServicesUpdaterTest {
         putIntoExternalMap(CellsLoader.class, "regions", "R1", region);
 
         // Region has a service "Biodiversity" but ServiceSet returns only "Food"
-        Service service = mockService("Biodiversity",
-        		new ConcurrentHashMap<>(Map.of(year, 10.0)),
-        		new ConcurrentHashMap<>(Map.of(year, 1.0)),
-        		new ConcurrentHashMap<>(Map.of(year, 0.0))
-        );
+		Service service = mockService("Biodiversity",
+				new ConcurrentHashMap<>(Map.of(year, 10.0)),
+				new ConcurrentHashMap<>(Map.of(year, 1.0)));
         region.getServicesHash().put(service.getName(), service);
         RegionalModelRunner regionRunner = new RegionalModelRunner(region.getName());
         regionRunner.setRegionalSupply(new ConcurrentHashMap<>(Map.of("Biodiversity", 5.0)));
@@ -219,12 +213,11 @@ class ServicesUpdaterTest {
 	}
 
 	private static Service mockService(String name, ConcurrentHashMap<Integer, Double> demands,
-			ConcurrentHashMap<Integer, Double> weights, ConcurrentHashMap<Integer, Double> taxes) throws Exception {
+			ConcurrentHashMap<Integer, Double> weights) throws Exception {
 		Service service = mock(Service.class);
 		when(service.getName()).thenReturn(name);
 		when(service.getDemands()).thenReturn(demands);
 		when(service.getWeights()).thenReturn(weights);
-		when(service.getTaxes_subsidies()).thenReturn(taxes);
 		return service;
 	}
 

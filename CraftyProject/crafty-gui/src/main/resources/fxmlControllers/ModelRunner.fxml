@@ -15,12 +15,12 @@
 		<HBox spacing="15.0">
 			<children>
 				<Button fx:id="oneStep" mnemonicParsing="false"
-					onAction="#oneStep" text="One Step"><!-- styleClass="button-icon"> -->
+					onAction="#oneStep" text="One step"><!-- styleClass="button-icon"> -->
 					<!-- <graphic> <FontIcon iconLiteral="fas-step-forward" iconSize="20" 
 						/> </graphic> -->
 				</Button>
 				<Button fx:id="run" mnemonicParsing="false" onAction="#run"
-					text="RUN"><!-- styleClass="button-icon"> -->
+					text="Run"><!-- styleClass="button-icon"> -->
 					<!-- <graphic> <FontIcon iconLiteral="far-play-circle" iconSize="22" 
 						/> </graphic> -->
 				</Button>
@@ -30,7 +30,7 @@
 						/> </graphic> -->
 				</Button>
 				<Button onAction="#selecserivce"
-					text="Display a serivce"><!-- styleClass="button-icon"> -->
+					text="Display a service"><!-- styleClass="button-icon"> -->
 					<!-- <graphic> <FontIcon iconLiteral="fas-list-ul" iconSize="20" /> 
 						</graphic> -->
 				</Button>

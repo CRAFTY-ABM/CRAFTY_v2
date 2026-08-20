@@ -72,7 +72,7 @@ public class OptionsParser {
 				craftyOptions.setScenario_Name(cmd.getOptionValue("scenario-name"));
 			}
 			if (cmd.hasOption("output-path")) {
-				craftyOptions.setOutput_path(cmd.getOptionValue("output-path"));
+				craftyOptions.setOutputPath(cmd.getOptionValue("output-path"));
 			}
 			if (cmd.hasOption("external-path")) {
 				craftyOptions.setExternal_variables_path(cmd.getOptionValue("external-path"));

@@ -1,0 +1,14 @@
+schema_version: 1
+
+targets:
+  - id: Biodiversity Supply
+    name: Biodiversity supply
+    type: External
+    crafty_elements: {msa: 1.0}
+    normalization: baseline_ratio
+    goals:
+      realist: {2030: 1.20, 2050: 1.40}
+
+  - name: Food Crop Supply
+    type: Service
+    crafty_elements: {C3cereals: 1.0}

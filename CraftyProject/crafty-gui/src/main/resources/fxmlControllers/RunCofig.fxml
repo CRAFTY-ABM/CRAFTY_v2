@@ -17,21 +17,21 @@
 	<children>
 		<VBox>
 			<children>
-				<TitledPane animated="true" text="Mechanismes">
+				<TitledPane animated="true" text="Mechanisms">
 					<content>
 						<VBox spacing="2.0">
 							<children>
 								<CheckBox fx:id="InitialEquilibrium"
 									mnemonicParsing="false" onAction="#initialEquilibrium"
-									text="Initial Supply-Demand Equilibrium (Ensure that supply and demand are balanced for eco-services during the initial tick.)" />
+									text="Balance initial supply and demand for ecosystem services" />
 								<CheckBox fx:id="removeNegative"
 									mnemonicParsing="false" onAction="#removeNegativeMarginal"
-									text="Remove negative Marginal utility" />
+									text="Remove negative marginal utility" />
 								<CheckBox fx:id="gUP" mnemonicParsing="false"
-									onAction="#giveUpMechanisme" text="Land abondenmant mechanism" />
+									onAction="#giveUpMechanisme" text="Land abandonment mechanism" />
 								<HBox spacing="5.0">
 									<children>
-										<Label text=" Land abondenmant Percentage: " />
+										<Label text="Land abandonment percentage:" />
 										<Slider fx:id="percentageOfGiveUpS"
 											blockIncrement="1.0" majorTickUnit="1.0" max="40"
 											minorTickCount="2" showTickLabels="true" showTickMarks="true" />
@@ -47,7 +47,7 @@
 								<HBox spacing="5.0">
 									<CheckBox fx:id="neighbours" mnemonicParsing="false"
 										onAction="#NeighboursAction"
-										text="Priority given to neighbouring AFTs for land competition: (Radius)" />
+										text="Prioritize neighboring AFTs in land competition (radius)" />
 									<children>
 										<Slider fx:id="NeighbourRadiusS" blockIncrement="1.0"
 											majorTickUnit="1.0" max="10.0" min="1.0" minorTickCount="5"
@@ -57,13 +57,10 @@
 											prefWidth="58.0" />
 									</children>
 								</HBox>
-								<!---->
-								<CheckBox fx:id="mutationM" mnemonicParsing="false"
-									onAction="#MutationMechanism" text="Mutation mechanism" />
 								<HBox spacing="5.0">
 									<children>
 										<Label
-											text="The percentage of 'Most competitive' AFT selection" />
+											text="Share of most-competitive AFT selections" />
 										<Slider fx:id="BestAftS" max="100.0" min="0.0"
 											minorTickCount="10" showTickLabels="true"
 											showTickMarks="true" />
@@ -74,7 +71,7 @@
 								<HBox spacing="5.0">
 									<children>
 										<Label
-											text="The percentage of  'Randomly selected'  AFT          " />
+											text="Share of randomly selected AFTs" />
 										<Slider fx:id="RandomAftS" max="100.0" min="0.0"
 											minorTickCount="10" showTickLabels="true"
 											showTickMarks="true" />
@@ -84,7 +81,7 @@
 								</HBox>
 								<HBox spacing="5.0">
 									<children>
-										<Label text="Percentage Cells  " />
+										<Label text="Percentage of cells" />
 										<Slider fx:id="cellsPersS" blockIncrement="1.0"
 											majorTickUnit="1.0" max="40" minorTickCount="2"
 											showTickLabels="true" showTickMarks="true" />
@@ -95,7 +92,7 @@
 								</HBox>
 								<HBox spacing="5.0">
 									<children>
-										<Label text="take Over Unmanage Cells percentage" />
+										<Label text="Take over unmanaged cells (%)" />
 										<Slider max="100.0" min="0.0" minorTickCount="10"
 											showTickLabels="true" showTickMarks="true" />
 										<TextField prefHeight="25.0" prefWidth="58.0" /> <!-- -->
@@ -105,7 +102,7 @@
 								<HBox spacing="5.0">
 									<children>
 										<Label
-											text="Number of time the marginal utility calculating per year" />
+											text="Number of marginal utility calculations per year" />
 										<Slider fx:id="nbrOfSubSetS" blockIncrement="1.0"
 											majorTickUnit="1.0" max="20.0" min="1.0" minorTickCount="5"
 											showTickLabels="true" showTickMarks="true" />
@@ -119,13 +116,13 @@
 
 					</content>
 				</TitledPane>
-				<TitledPane animated="false" text="Synchronisation">
+				<TitledPane animated="false" text="Synchronization">
 					<content>
 						<VBox>
 							<children>
 								<HBox>
 									<CheckBox fx:id="MapSync" mnemonicParsing="false"
-										onAction="#mapSyn" text="Map Synchronisation" />
+										onAction="#mapSyn" text="Map synchronization" />
 									<Slider fx:id="MapSync_GapS" blockIncrement="1.0"
 										majorTickUnit="9.0" max="20" min="1.0" minorTickCount="5"
 										showTickLabels="true" showTickMarks="true" />
@@ -135,7 +132,7 @@
 								</HBox>
 								<HBox>
 									<CheckBox fx:id="chartSync" mnemonicParsing="false"
-										onAction="#chartSyn" text="Chart Synchronisation" />
+										onAction="#chartSyn" text="Chart synchronization" />
 									<Slider fx:id="chartSync_GapS" blockIncrement="1.0"
 										majorTickUnit="9.0" max="20.0" min="1.0" minorTickCount="5"
 										showTickLabels="true" showTickMarks="true" />
@@ -148,21 +145,21 @@
 				</TitledPane>
 			</children>
 		</VBox>
-		<TitledPane animated="false" text="OutPut files">
+		<TitledPane animated="false" text="Output files">
 			<content>
 				<VBox spacing="5">
 					<children>
 						<CheckBox fx:id="creatCSV" mnemonicParsing="false"
-							onAction="#creatCSV" text="Create .csv output files" />
+							onAction="#creatCSV" text="Create CSV output files" />
 						<!-- <HBox spacing="20">
 							<Label />
 							<CheckBox fx:id="png" mnemonicParsing="false"
-								onAction="#png" text="generate Charts Plots .PNG" />
+								onAction="#png" text="Generate charts as PNG" />
 						</HBox> -->
 						<!-- <HBox spacing="20">
 							<Label />
 							<CheckBox fx:id="pdf" mnemonicParsing="false"
-								onAction="#pdf" text="generate Charts Plots .PDF" />
+								onAction="#pdf" text="Generate charts as PDF" />
 						</HBox> -->
 						<HBox spacing="10">
 							<Label />
@@ -176,24 +173,24 @@
 						<!-- <HBox spacing="20">
 							<Label />
 							<CheckBox fx:id="tif" mnemonicParsing="false"
-								onAction="#tif" text="Generate Map plots .tif" />
+								onAction="#tif" text="Generate maps as TIFF" />
 						</HBox> -->
 						<HBox spacing="20">
 							<Label />
 							<CheckBox fx:id="traker" mnemonicParsing="false"
-								onAction="#trakerAction" text="Create .csv supply tracker files" />
+								onAction="#trakerAction" text="Create CSV supply-tracker files" />
 						</HBox>
 						<CheckBox fx:id="logger" mnemonicParsing="false"
-							onAction="#loggerAction" text="Create .txt LOGGER files" />
+							onAction="#loggerAction" text="Create TXT log files" />
 						<HBox spacing="20">
 							<Label />
 							<CheckBox fx:id="info" mnemonicParsing="false"
-								onAction="#info" text="LOGGER Level info" />
+								onAction="#info" text="Log level: info" />
 						</HBox>
 						<HBox spacing="20">
 							<Label />
 							<CheckBox fx:id="warn" mnemonicParsing="false"
-								onAction="#warn" text="LOGGER Level info and warn" />
+								onAction="#warn" text="Log level: info and warnings" />
 						</HBox>
 
 

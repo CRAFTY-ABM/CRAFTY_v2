@@ -17,8 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
  *   - {@link #sensitivity}: service -> (capital -> exponent) sensitivity matrix used in production/utility functions.
  * - Behavioural thresholds and stochasticity: give-in / give-up means and standard deviations, noise bounds, and
  *   give-up probability.
- * - Policy instruments: {@link #land_taxes_subsidies} stores a time series (year -> tax/subsidy) and
- *   {@link #cachedLandTax} provides a cached value for fast repeated access during a step.
  *
  * Convenience methods:
  * - {@link #isActive()}, {@link #isInteract()}, {@link #isAbandoned()} provide quick checks based on {@link #type}.
@@ -42,10 +40,7 @@ public abstract class AbstractAft {
 			serviceLevelNoiseMax = 0, giveUpProbabilty = 0;
 	AftCategory category;
 	String color;
-	private ConcurrentHashMap<Integer, Double> land_taxes_subsidies = new ConcurrentHashMap<>();// <year,TS>
 	private ConcurrentHashMap<String, Double> capital_adjustments = new ConcurrentHashMap<>(); // <capital_Name,
-
-	private double cachedLandTax;
 
 	protected Map<String, Map<String, Double>> sensitivity = new ConcurrentHashMap<>(); // <service,capital,exponent>
 	private int min_life_cycle = 0, max_life_cycle = Integer.MAX_VALUE;
@@ -56,7 +51,7 @@ public abstract class AbstractAft {
 		return id;
 	}
 
-	public void setId(long id) {
+	public void setId(int id) {
 		this.id = id;
 	}
 
@@ -86,14 +81,6 @@ public abstract class AbstractAft {
 
 	public void setSensByService(Map<String, Map<String, Double>> sensByService) {
 		this.sensitivity = sensByService;
-	}
-
-	public double getCachedLandTax() {
-		return cachedLandTax;
-	}
-
-	public void setCachedLandTax(double v) {
-		cachedLandTax = v;
 	}
 
 	public AftCategory getCategory() {
@@ -206,14 +193,6 @@ public abstract class AbstractAft {
 
 	public void setCompleteName(String name) {
 		this.completeName = name;
-	}
-
-	public ConcurrentHashMap<Integer, Double> getLand_taxes_subsidies() {
-		return land_taxes_subsidies;
-	}
-
-	public void setLand_taxes_subsidies(ConcurrentHashMap<Integer, Double> land_taxes_subsidies) {
-		this.land_taxes_subsidies = land_taxes_subsidies;
 	}
 
 	public ConcurrentHashMap<String, Double> getCapital_adjustments() {

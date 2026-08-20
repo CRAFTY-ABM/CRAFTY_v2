@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Separator?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TitledPane?>
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
 	xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="de.cesr.crafty.gui.controller.fxml.GlobalViewFXMLController"
-	fx:id="TopBox">
-	<!-- TODO Add Nodes -->
+	fx:id="TopBox" spacing="10.0" styleClass="institution-dashboard">
 	<children>
-		<TitledPane animated="true" text="AFTs">
-			<TableView fx:id="TablAFTs" />
-		</TitledPane>
-		<TitledPane animated="true" text="Capitals">
-			<TableView fx:id="TablCapitals" />
-		</TitledPane>
-		<TitledPane animated="true" text="Services">
-			<TableView fx:id="TablServices" />
-		</TitledPane>
-		<TitledPane animated="true" text="Scenarios">
-			<TableView fx:id="TabScenarios" />
-		</TitledPane>
+		<HBox alignment="CENTER_LEFT" spacing="12.0"
+			styleClass="institution-dashboard-toolbar">
+			<children>
+				<Button mnemonicParsing="false" onAction="#refreshTables"
+					text="Refresh" />
+				<Label text="Global configuration"
+					styleClass="institution-dashboard-title" />
+			</children>
+		</HBox>
+		<ScrollPane fx:id="scroll" fitToWidth="true"
+			hbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS"
+			styleClass="institution-dashboard-scroll">
+			<content>
+				<VBox fx:id="contentBox" spacing="16.0" />
+			</content>
+		</ScrollPane>
 	</children>
 </VBox>

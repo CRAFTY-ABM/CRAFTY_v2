@@ -35,7 +35,7 @@ import de.cesr.crafty.core.utils.file.PathTools;
  * - Creating service objects for regions and world:
  * {@link #initialseServices()} instantiates a {@link Service} for each service name in every region’s
  * {@code servicesHash}, and also in {@link #worldService}. This ensures consistent availability of service
- * objects before demand/weight/tax updates are applied.
+ * objects before demand and weight updates are applied.
  *
  * - Regionalisation feasibility check:
  * {@link #isRegionalServicesExisting()} verifies that a demand file exists for each region (scenario-specific),
@@ -43,7 +43,7 @@ import de.cesr.crafty.core.utils.file.PathTools;
  * partially-specified regional inputs.
  *
  * - Time-varying updates:
- * {@link #serviceupdater()} triggers the update pipeline for service demand, service weights, and taxes/subsidies.
+ * {@link #serviceupdater()} triggers the update pipeline for service demand and service weights.
  * It also aggregates regional demands into the world-level service demand container.
  *
  * Notes:
@@ -122,7 +122,6 @@ public class ServiceSet {
 	public static void serviceupdater() {
 		ServiceDemandLoader.updateRegionsDemand();
 		ServiceWeightLoader.updateRegionsWeight();
-		TaxesSubsidiesLoader.initializeTaxes_subsidies();
 		ServiceDemandLoader.aggregateRegionalToWorldServiceDemand();
 	}
 

@@ -1,6 +1,5 @@
 package de.cesr.crafty.core.updaters;
 
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -9,7 +8,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
@@ -21,10 +19,11 @@ import de.cesr.crafty.core.utils.general.Selector;
 /**
  * Selects the subset of cells (“seed”) that will participate in  processes (competition and land abandonment).
  *
- * This updater implements two seed-selection strategies, controlled by {@code seedID} in the configuration:
+ * This updater implements two seed-selection strategies, controlled by
+ * {@code cell_selection} in the configuration:
  * - {@code "rank"}: deterministic ranking-based selection that picks the bottom {@code percent} of cells
  *   by current utility (optionally stratified by AFT/owner).
- * - any other non-null identifier (with {@code longSeedID != 0}): pseudo-random selection via
+ * - {@code "random"}: deterministic pseudo-random selection via
  *   {@link Selector#randomSeed(..)}.
  *
  * Ranking mode supports two behaviours:
@@ -49,28 +48,24 @@ import de.cesr.crafty.core.utils.general.Selector;
 public class SeedUpdater {
 	private static final CustomLogger LOGGER = new CustomLogger(SeedUpdater.class);
 
-	public static void inialize() {
-		if (ConfigLoader.config.seedID == null) {
-			ConfigLoader.config.seedID = "rank";
-		} else if (ConfigLoader.config.seedID.equals("0")) {
-			ConfigLoader.config.longSeedID.set(ThreadLocalRandom.current().nextLong());
-		} else if (ConfigLoader.config.seedID.matches("[-+]?\\d+")) {
-			LOGGER.info("seedID is a number ID--> " + ConfigLoader.config.seedID);
-			ConfigLoader.config.longSeedID.set((long) Long.parseLong(ConfigLoader.config.seedID));
-		} else if (Paths.get(ConfigLoader.config.seedID).toFile().isDirectory()) {
-			// not implemented yet
-			LOGGER.fatal("seed for a file is not imlemented yet (use seedID:rank or seedID: nbr)");
-		} else if (ConfigLoader.config.seedID.equalsIgnoreCase("rank")) {
-			LOGGER.info("Cells Seed flag configuration is rank. CRAFTY will rank cells by utilities");
-		} else {
-			LOGGER.fatal("SeedID flag configuration error:"
-					+ " this is not an identification number, no directory path is specified, or  not the ‘rank’ key.");
+	public static void initialize() {
+		if (ConfigLoader.config.cell_selection == null || ConfigLoader.config.cell_selection.isBlank()) {
+			ConfigLoader.config.cell_selection = "rank";
 		}
+
+		if (!ConfigLoader.config.cell_selection.equalsIgnoreCase("rank")
+				&& !ConfigLoader.config.cell_selection.equalsIgnoreCase("random")) {
+			throw new IllegalArgumentException("cell_selection must be either 'rank' or 'random', but was: "
+					+ ConfigLoader.config.cell_selection);
+		}
+
+		LOGGER.info("Cell selection mode=" + ConfigLoader.config.cell_selection + ", random seed="
+				+ ConfigLoader.config.random_seed);
 	}
 
 	public static List<Cell> selectSeed(RegionalModelRunner r, ConcurrentHashMap<String, Cell> cells, double percent,
 			boolean byAfts, int processID) {
-		long runSeed = ConfigLoader.config.longSeedID.get();
+		long runSeed = ConfigLoader.config.random_seed;
 		int year = Timestep.getCurrentYear();
 		
 		cells.values().parallelStream().forEach(c -> {
@@ -78,7 +73,7 @@ public class SeedUpdater {
 			c.setScore(score);
 		});
 		
-		if (ConfigLoader.config.seedID.equalsIgnoreCase("rank")) {
+		if (ConfigLoader.config.cell_selection.equalsIgnoreCase("rank")) {
 			// Snapshot once for deterministic ranking over a stable candidate set
 			List<Cell> snapshot = new ArrayList<>(cells.values());
 			return seedRanking(snapshot, percent, byAfts, runSeed, year, processID);

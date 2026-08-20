@@ -51,11 +51,11 @@ public class ToyData {
 		if (ConfigLoader.config == null) {
 			ConfigLoader.config = new Config();
 		}
-		ConfigLoader.config.use_AFTs_categories_GiveIn = true;
-		ConfigLoader.config.LOGGER_info = false;
+		ConfigLoader.config.use_category_based_give_in = true;
+		ConfigLoader.config.logger_info = false;
 
 		// Point metadata dir to the temp project folder
-		ConfigLoader.config.metaData_directory = projectDir.toString();
+		ConfigLoader.config.metadata_directory = projectDir.toString();
 
 		// Create empty production / behaviour directories so AFTsLoader
 		// can safely scan them without NPEs
@@ -65,8 +65,8 @@ public class ToyData {
 			Files.createDirectories(productionDir);
 			Files.createDirectories(behaviourDir);
 
-			ConfigLoader.config.aft_production_directory = productionDir.toString();
-			ConfigLoader.config.aft_behevoir_directory = behaviourDir.toString();
+			ConfigLoader.config.aft_production_parameters_directory = productionDir.toString();
+			ConfigLoader.config.aft_behaviour_parameters_directory = behaviourDir.toString();
 
 			metaData(projectDir);
 			capitals(projectDir);
@@ -160,8 +160,8 @@ public class ToyData {
 
 		Path worlds = projectDir.resolve("worlds");
 		Path capitals = worlds.resolve("capitals");
-		ConfigLoader.config.CAPITALS_directory = capitals.toString();
-//		System.out.println("000            "+ConfigLoader.config.CAPITALS_directory);
+		ConfigLoader.config.capitals_directory = capitals.toString();
+//		System.out.println("000            "+ConfigLoader.config.capitals_directory);
 
 		for (int i = Timestep.getStartYear(); i < Timestep.getEndtYear(); i++) {
 			Path csv = capitals.resolve(ProjectLoader.getScenario() + "_" + i + ".csv");

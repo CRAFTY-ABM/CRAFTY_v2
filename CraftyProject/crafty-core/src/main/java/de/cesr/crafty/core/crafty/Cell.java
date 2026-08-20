@@ -85,35 +85,6 @@ public class Cell extends AbstractCell {
 		}
 	}
 
-//	void giveUp(RegionalModelRunner r, ConcurrentHashMap<Aft, Double> distributionMean) {
-//
-//		if (getOwner() != null && getOwner().isInteract()) {
-//////##########		// tmp for special rules
-////			if (owner.getCategory() != null && owner.getCategory().getName().equals("forest")) {
-////				return;
-////			}
-////			###
-////			if (owner.getLabel().equals("CW")) {
-////				return;
-////			}
-////############
-//			String oldOwner = getOwner().getLabel();
-//			double utility = getCurrentUtility();
-//			double averageutility = distributionMean.get(getOwner());
-//			boolean givUp= (utility < averageutility
-//					* (getOwner().getGiveUpMean() + getOwner().getGiveUpSD() * new Random().nextGaussian())
-//					&& getOwner().getGiveUpProbabilty() > Math.random());
-//			if (givUp) {
-//				CellsUpdater.decesionsNewOwner.put(this, new Aft("Abandoned"));
-//				r.R.getUnmanageCellsR().add(this);
-//				setOwnerLifeCounter(0);
-//				Listener.landUseChangeCounter.getAndIncrement();
-//				Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
-//				Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
-//			}
-//		}
-//	}
-
 	void giveUp(RegionalModelRunner r, ConcurrentHashMap<String, Double> distributionMean) {
 
 		Aft owner = getOwner();
@@ -129,7 +100,7 @@ public class Cell extends AbstractCell {
 		double utility = getCurrentUtility();
 		double averageUtility = averageUtilityObj;
 
-		long runSeed = ConfigLoader.config.longSeedID.get();
+		long runSeed = ConfigLoader.config.random_seed;
 		int year = Timestep.getCurrentYear();
 
 		long cellId = DeterministicRandom.stableCellKey(this);

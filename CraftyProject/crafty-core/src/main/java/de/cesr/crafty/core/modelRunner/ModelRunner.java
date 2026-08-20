@@ -3,14 +3,15 @@ package de.cesr.crafty.core.modelRunner;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.apache.logging.log4j.LogManager;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
-import de.cesr.crafty.core.crafty.Service;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
-import de.cesr.crafty.core.dataLoader.serivces.ServiceDemandLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
@@ -51,7 +52,7 @@ import de.cesr.crafty.core.utils.graphics.ChartExporter;
  *
  3) {@link #run()}:
  *   - Executes {@link AbstractModelRunner#step()} once per year.
- *   - Exports post-run charts/plots (PNG/PDF depending on configuration).
+ *   - Exports post-run charts as PNG when configured.
  *
  * Scheduling / execution order:
  * The order in {@link #start()} is intentional. Each component may depend on outputs of earlier components,
@@ -90,11 +91,15 @@ public class ModelRunner extends AbstractModelRunner {
 	public static CellsLoader cellsSet;
 	public static CapitalUpdater capitalUpdater;
 	public static AftsUpdater aftsUpdater;
-	private static Capital_Degradation_Updater capital_Degradation_Updater;
+	static Capital_Degradation_Updater capital_Degradation_Updater;
 	public RegionsModelRunnerUpdater regionsModelRunnerUpdater;
+	private FlagUpdater flagUpdater;
+	private CellBehaviourUpdater cellBehaviourUpdater;
+	private LandMaskUpdater landMaskUpdater;
+	private final List<ModelState> initialStateUpdaters = new ArrayList<>();
+	private boolean initialStatePrepared;
 
 	public void start() {
-		
 
 		ServiceSet.loadServiceList();
 		capitalUpdater = new CapitalUpdater();
@@ -102,102 +107,93 @@ public class ModelRunner extends AbstractModelRunner {
 		cellsSet = new CellsLoader();
 		capitalUpdater.step();
 		capital_Degradation_Updater = new Capital_Degradation_Updater();
-		regionsModelRunnerUpdater=new RegionsModelRunnerUpdater();
+		regionsModelRunnerUpdater = new RegionsModelRunnerUpdater();
+		flagUpdater = new FlagUpdater();
+		cellBehaviourUpdater = new CellBehaviourUpdater();
+		landMaskUpdater = new LandMaskUpdater();
+		initialStateUpdaters.clear();
+		initialStateUpdaters.add(flagUpdater);
+		initialStateUpdaters.add(capitalUpdater);
+		initialStateUpdaters.add(aftsUpdater);
+		initialStateUpdaters.add(cellBehaviourUpdater);
+		initialStateUpdaters.add(landMaskUpdater);
+		initialStateUpdaters.add(capital_Degradation_Updater);
+		initialStatePrepared = false;
 		getScheduled().clear();
-		getScheduled().add(new FlagUpdater());
+		getScheduled().add(flagUpdater);
 		getScheduled().add(new ServicesUpdater());
 		getScheduled().add(capitalUpdater);
 		getScheduled().add(aftsUpdater);
-		getScheduled().add(new CellBehaviourUpdater());
-		getScheduled().add(new LandMaskUpdater());
+		getScheduled().add(cellBehaviourUpdater);
+		getScheduled().add(landMaskUpdater);
 		getScheduled().add(capital_Degradation_Updater);
 		getScheduled().add(new SupplyUpdater());
 		getScheduled().add(new Listener());
 		getScheduled().add(new Tracker());
 		getScheduled().add(regionsModelRunnerUpdater);
 		getScheduled().add(new Timestep());
-	} 
+	}
 
 	public void initialzeRun() {
-		
+
 		PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
 				Listener.exportConfigurationFile(), false);
-		demandEquilibrium();
+		if (ConfigLoader.config.initial_demand_supply_equilibrium) {
+			prepareInitialState();
+			InitialDSEquilibriumManager.demandEquilibrium();
+			initialStatePrepared = true;
+		}
+	}
+
+	/**
+	 * Applies every year-zero input that can affect service supply before the
+	 * initial demand calibration is calculated.
+	 */
+	private void prepareInitialState() {
+		flagUpdater.step();
+		capitalUpdater.step();
+		aftsUpdater.step();
+		cellBehaviourUpdater.step();
+		landMaskUpdater.step();
+		capital_Degradation_Updater.step();
+	}
+
+	/**
+	 * The year-zero input updaters have already run during initialization. Skip
+	 * them once so masks, adjustments and external hooks are not applied twice.
+	 */
+	@Override
+	public void step() {
+		if (!initialStatePrepared) {
+			super.step();
+			return;
+		}
+
+		List<ModelState> fullSchedule = new ArrayList<>(getScheduled());
+		getScheduled().removeAll(initialStateUpdaters);
+		try {
+			super.step();
+			initialStatePrepared = false;
+		} finally {
+			getScheduled().clear();
+			getScheduled().addAll(fullSchedule);
+		}
 	}
 
 	public void run() {
-		for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
-			step();
+		try {
+			for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
+				step();
+			}
+			exportChartsPlots();
+		} finally {
+			CustomLogger.shutdownRunFileLoggers();
+			LogManager.shutdown();
 		}
-		exportChartsPlots();
-		CustomLogger.shutdownLogger();
-	}
-
-	public static void demandEquilibrium() {
-		if (ConfigLoader.config.initial_demand_supply_equilibrium) {
-			RegionalDemandEquilibrium_calculation();
-			RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(RegionalRunner -> {
-				RegionalRunner.R.getServicesHash().forEach((ns, s) -> {
-					s.getDemands().forEach((year, v) -> {
-						s.getDemands().put(year, v / s.getCalibration_Factor());
-					});
-				});
-			});
-			initialTotalDSEquilibriumListrner();
-			ServiceDemandLoader.aggregateRegionalToWorldServiceDemand();
-		}
-	}
-
-	private static void RegionalDemandEquilibrium_calculation() {
-		ModelRunner.capitalUpdater.step();
-		// Initial capital degradation
-		capital_Degradation_Updater.step();
-		// Calculate EQ
-		// Remumber the service has 0 supply hashMap<regionName, List<servicesNames>>
-		// Calculate the average EQ
-		// go to 0 supply services and repleas them with the average
-
-		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(RegionalRunner -> {
-			ServiceSet.NoInitialSupplyServices.put(RegionalRunner.R.getName(), new ArrayList<>());
-			RegionalRunner.initialDSEquilibriumFactorCalculation();
-		});
-
-		// calculate the average
-		HashMap<String, Double> averageEQ = new HashMap<>();
-		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(RegionalRunner -> {
-			ServiceSet.getServicesList().forEach(serviceName -> {
-				double av = RegionalRunner.R.getServicesHash().get(serviceName).getCalibration_Factor()
-						/ RegionsModelRunnerUpdater.regionsModelRunner.size();
-				averageEQ.merge(serviceName, av, Double::sum);
-			});
-		});
-
-		// comeback to NoInitialSupplyServices-EQ with the averageEQ
-		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(RegionalRunner -> {
-			ServiceSet.getServicesList().forEach(serviceName -> {
-				if (ServiceSet.NoInitialSupplyServices.get(RegionalRunner.R.getName()).contains(serviceName)) {
-					RegionalRunner.R.getServicesHash().get(serviceName)
-							.setCalibration_Factor(averageEQ.get(serviceName));
-				}
-			});
-
-		});
-
-	}
-
-	private static void initialTotalDSEquilibriumListrner() {
-		ServiceSet.worldService.forEach((serviceName, service) -> {
-			RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(RegionalRunner -> {
-				Service s = RegionalRunner.R.getServicesHash().get(serviceName);
-				int i = ServiceSet.getServicesList().indexOf(serviceName);
-				RegionalRunner.listner.DSEquilibriumListener[i + 1][0] = serviceName;
-				RegionalRunner.listner.DSEquilibriumListener[i + 1][1] = String.valueOf(s.getCalibration_Factor());
-			});
-		});
 	}
 
 	public static void exportChartsPlots() {
-		if (ConfigLoader.config.generate_charts_plots_PNG || ConfigLoader.config.generate_charts_plots_PDF) {
+		if (ConfigLoader.config.generate_chart_plots_png) {
 			String path = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "plots");
 			Listener.servicedemandHash.forEach((serviceName, serviceHash) -> {
 				ChartExporter.createAndSaveChartAsPNG(serviceHash, Timestep.getStartYear(), serviceName,

@@ -10,41 +10,36 @@
 <?import javafx.scene.layout.Region?>
 
 
-<VBox xmlns="http://javafx.com/javafx/21"
+<ScrollPane xmlns="http://javafx.com/javafx/21"
 	xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="de.cesr.crafty.gui.controller.fxml.AFTsMapsController"
-	fx:id="TopBox">
+	fitToWidth="true" pannable="true" styleClass="responsive-scroll">
+	<content>
+	<VBox fx:id="TopBox">
 	<children>
-	<TitledPane animated="true" text="AFTs Distribution">
-			<content>
-				<VBox fx:id="box1">
-				</VBox>
-			</content>
-		</TitledPane>
-
-		<TitledPane animated="true" text="AFTs Distribution">
+		<TitledPane animated="true" text="AFT distribution">
 			<content>
 				<VBox>
 					<Button fx:id="aftColors" mnemonicParsing="false"
-						onAction="#aftColorsAction" text="Display of AFT distribution">
+						onAction="#aftColorsAction" text="Display AFT distribution">
 					</Button>
 					<PieChart fx:id="pieAFTsDistrebution" />
 				</VBox>
 			</content>
 		</TitledPane>
 
-		<TitledPane animated="true" text="AFTs Categories">
+		<TitledPane animated="true" text="AFT categories">
 			<content>
 				<VBox>
 					<Button fx:id="CategoriesColor" mnemonicParsing="false"
 						onAction="#CategoriesColorsAction"
-						text="Display of AFT by Categories">
+						text="Display AFTs by category">
 					</Button>
 					<PieChart fx:id="pieAFTsCategories" />
 				</VBox>
 			</content>
 		</TitledPane>
-		<TitledPane animated="true" text="AFTs Intensities">
+		<TitledPane animated="true" text="AFT intensities">
 			<content>
 				<!-- <ScrollPane></ScrollPane> -->
 				<GridPane fx:id="grid" />
@@ -52,4 +47,6 @@
 			</content>
 		</TitledPane>
 	</children>
-</VBox>
+	</VBox>
+	</content>
+</ScrollPane>

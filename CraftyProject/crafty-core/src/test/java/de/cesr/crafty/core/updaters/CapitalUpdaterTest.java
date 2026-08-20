@@ -24,7 +24,7 @@ import de.cesr.crafty.core.utils.file.CsvTools;
  * Unit tests for {@link CapitalUpdater}.
  *
  * Focus: - capitals list initialisation from a small "capitals metadata" CSV -
- * CAPITALS_directory map wiring when a CAPTIALS_directory folder is provided
+ * capitals_directory map wiring when a CAPTIALS_directory folder is provided
  *
  * NOTE: You may need to adapt the way the metadata path is set on ProjectLoader
  * depending on your actual API (e.g. setCapitalsMetadata(Path) or similar).

@@ -40,8 +40,7 @@ public class AFTsMapsController {
 	private VBox toplevel;
 	@FXML
 	private VBox TopBox;
-	@FXML
-	private VBox box1;
+
 
 	ArrayList<PieChart> pieCharts;
 

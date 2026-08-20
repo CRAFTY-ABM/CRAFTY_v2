@@ -38,6 +38,8 @@ public class MainHeadless {
 		runner.start();
 		runner.initialzeRun();
 		runner.run();
+////		CraftyDataUpscaler.main(args);
+//		SplitByRegions.main(args);
 	}
 
 	public static void initializeConfig(String[] args) {
@@ -45,7 +47,7 @@ public class MainHeadless {
 		options = OptionsParser.parseArguments(args);
 		ConfigLoader.configPath = options.getConfigFilePath();
 		ConfigLoader.init();
-		SeedUpdater.inialize();
+		SeedUpdater.initialize();
 
 		// If the user specified a project directory and scenario name, override the
 		// ones in the YAML
@@ -57,9 +59,9 @@ public class MainHeadless {
 		if (scenarioName != null) {
 			ConfigLoader.config.scenario = scenarioName;
 		}
-		String ouputPath = options.getOutput_path();
+		String ouputPath = options.getOutputPath();
 		if (ouputPath != null) {
-			ConfigLoader.config.Output_path = ouputPath;
+			ConfigLoader.config.output_path = ouputPath;
 		}
 		String external = options.getExternal_variables_path();
 		if (external != null) {
@@ -69,8 +71,6 @@ public class MainHeadless {
 		if (output_folder_name != null) {
 			ConfigLoader.config.output_folder_name = output_folder_name;
 		}
-		
 	}
-
 
 }

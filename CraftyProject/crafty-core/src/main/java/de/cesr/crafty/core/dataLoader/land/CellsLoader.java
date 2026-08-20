@@ -25,7 +25,7 @@ import de.cesr.crafty.core.utils.file.PathTools;
  * - Reads the baseline map CSV and creates {@link Cell} instances (via {@link CsvProcessors} / {@link CsvKind#BASELINE}).
  * - Loads auxiliary GIS attributes (via {@link GisLoader}) that assign region identifiers and other spatial fields.
  * - Builds the region container(s) ({@link #regions}) either as:
- *   - multiple regions when {@code config.regionalization} is enabled, or
+ *   - multiple regions when {@code config.regionalisation} is enabled, or
  *   - a single “world” region containing all cells otherwise.
  * - Initializes the global service registry and regional service state via {@link ServiceSet}.
  * - Computes basic grid extents ({@link #minX}, {@link #maxX}, {@link #minY}, {@link #maxY}) from loaded cells.
@@ -53,19 +53,19 @@ public class CellsLoader {
 	public static ConcurrentHashMap<String, Region> regions = new ConcurrentHashMap<>();
 	public static int maxX, maxY, minX, minY;
 
-	public static boolean regionalization = false;
+	public static boolean regionalisation = false;
 
 	private static int nbrOfCells = 0;
 
 	public CellsLoader() {
-		regionalization = ConfigLoader.config.regionalization;
+		regionalisation = ConfigLoader.config.regionalisation;
 		hashCell.clear();
-		if (ConfigLoader.config.BASELINE_path == null || ConfigLoader.config.BASELINE_path.isEmpty()) {
-			ConfigLoader.config.BASELINE_path = PathTools.fileFilter(PathTools.asFolder("worlds"), "Baseline_map")
+		if (ConfigLoader.config.baseline_path == null || ConfigLoader.config.baseline_path.isEmpty()) {
+			ConfigLoader.config.baseline_path = PathTools.fileFilter(PathTools.asFolder("worlds"), "Baseline_map")
 					.iterator().next().toString();
 		}
-		LOGGER.info("BASELINE_path  = " + ConfigLoader.config.BASELINE_path);
-		CsvProcessors.processCSV(Paths.get(ConfigLoader.config.BASELINE_path), CsvKind.BASELINE);
+		LOGGER.info("baseline_path  = " + ConfigLoader.config.baseline_path);
+		CsvProcessors.processCSV(Paths.get(ConfigLoader.config.baseline_path), CsvKind.BASELINE);
 		AFTsLoader.hashAgentNbr();
 
 		new GisLoader().loadGisData();
@@ -101,7 +101,7 @@ public class CellsLoader {
 
 	public static void regionsInitialize() {
 		regions = new ConcurrentHashMap<>();
-		if (regionalization) {
+		if (regionalisation) {
 			CellsLoader.regionsNamesSet.forEach(regionName -> {
 				regions.put(regionName, new Region(regionName));
 			});
@@ -112,7 +112,7 @@ public class CellsLoader {
 			});
 			boolean isRegionalPossible = ServiceSet.isRegionalServicesExisting();
 			if (!isRegionalPossible) {
-				regionalization = false;
+				regionalisation = false;
 				regionsInitialize();
 			}
 		} else {

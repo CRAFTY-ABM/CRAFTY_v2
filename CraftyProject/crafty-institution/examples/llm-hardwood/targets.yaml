@@ -1,0 +1,14 @@
+schema_version: 1
+
+targets:
+  - id: hardwood_supply
+    name: Hardwood supply
+    type: Service
+    crafty_elements:
+      Hardwood: 1.0
+    normalization: baseline_ratio
+    goals:
+      realist:
+        2020: 1.0
+        2050: 1.10
+        2100: 1.20

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
@@ -75,24 +76,21 @@ class AFTsLoaderTest {
     }
 
     @Test
-    void getRandomAFT_returnsOneOfActiveAfts() {
-        // Act
-        Aft random = AFTsLoader.getRandomAFT();
+    void deterministicRandomAft_isIndependentOfCollectionOrder() {
+        List<Aft> forward = List.of(new Aft("A"), new Aft("B"), new Aft("C"));
+        List<Aft> reverse = List.of(forward.get(2), forward.get(1), forward.get(0));
 
-        // Assert
-        assertNotNull(random, "Random AFT should not be null when active AFTs exist");
-        assertTrue(
-            AFTsLoader.getActivateAFTsHash().containsValue(random),
-            "Random AFT must be one of the active AFTs"
-        );
+        Aft first = AFTsLoader.getDeterministicRandomAFT(forward, 123L, 2030, 77L, 1L, 0);
+        Aft second = AFTsLoader.getDeterministicRandomAFT(reverse, 123L, 2030, 77L, 1L, 0);
+
+        assertNotNull(first);
+        assertEquals(first.getLabel(), second.getLabel());
     }
 
     @Test
-    void getRandomAFT_fromEmptyCollection_returnsNull() {
-        // Act
-        Aft random = AFTsLoader.getRandomAFT(new ArrayList<>());
+    void deterministicRandomAft_fromEmptyCollection_returnsNull() {
+        Aft random = AFTsLoader.getDeterministicRandomAFT(new ArrayList<>(), 123L, 2030, 77L, 1L, 0);
 
-        // Assert
         assertNull(random, "Random AFT from an empty collection should be null");
     }
 }

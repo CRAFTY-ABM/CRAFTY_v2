@@ -13,39 +13,40 @@
 	<children>
 		<TabPane tabClosingPolicy="UNAVAILABLE">
 			<tabs>
-				<Tab text="AFTs Distribution">
-					<!-- <graphic>
-						<FontIcon iconLiteral="fas-chart-pie" iconSize="15" />
-					</graphic> -->
-					<tooltip>
-						<Tooltip text="AFTs Distribution" />
-					</tooltip>
-					<content>
-						<fx:include source="/fxmlControllers/AFTMaps.fxml" />
-					</content>
-				</Tab>
-	 		<Tab text="Capitals">
+				 		<Tab text="Capital distribution">
 					<!-- <graphic>
 						<FontIcon iconLiteral="fas-layer-group" iconSize="15" />
 					</graphic> -->
 					<tooltip>
-						<Tooltip text="Capitals Distribution" />
+						<Tooltip text="Capital distribution" />
 					</tooltip>
 					<content>
 						<fx:include source="/fxmlControllers/Capitals.fxml" />
 					</content>
 				</Tab>
-				<Tab text="LandUseControl">
+				<Tab text="AFT distribution">
 					<!-- <graphic>
-						<FontIcon iconLiteral="far-file-alt" iconSize="15" />
+						<FontIcon iconLiteral="fas-chart-pie" iconSize="15" />
 					</graphic> -->
+					<tooltip>
+						<Tooltip text="AFT distribution" />
+					</tooltip>
+					<content>
+						<fx:include source="/fxmlControllers/AFTMaps.fxml" />
+					</content>
+				</Tab>
+
+<!-- 				<Tab text="LandUseControl">
+					<graphic>
+						<FontIcon iconLiteral="far-file-alt" iconSize="15" />
+					</graphic>
 					<tooltip>
 						<Tooltip text="LandUseControl" />
 					</tooltip>
 					<content>
 						<fx:include source="/fxmlControllers/MasksPane.fxml" /> 
 					</content>
-				</Tab>
+				</Tab> -->
 			</tabs>
 		</TabPane>
 	</children>

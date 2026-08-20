@@ -6,18 +6,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 import de.cesr.crafty.gui.utils.graphical.ColorsTools;
 import de.cesr.crafty.gui.utils.graphical.NewWindow;
 import de.cesr.crafty.gui.utils.graphical.SaveAs;
 import de.cesr.crafty.gui.utils.graphical.SmoothMockField;
-import de.cesr.crafty.gui.utils.graphical.Tools;
 import de.cesr.crafty.gui.controller.fxml.RegionController;
+import de.cesr.crafty.gui.controller.fxml.TabPaneController;
 import de.cesr.crafty.gui.main.FxMain;
 import de.cesr.crafty.gui.main.GuiScaler;
 import de.cesr.crafty.core.cli.CustomLogger;
@@ -32,12 +31,13 @@ import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.SubScene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.Separator;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
@@ -57,6 +57,10 @@ public class CellsCanvas {
 	private static WritableImage writableImage;
 
 	private static String colortype = "AFT";
+	private static volatile String displayedCapital;
+	private static volatile Integer displayedCapitalYear;
+	private static volatile Map<Cell, Double> displayedCapitalValues = Map.of();
+	private static volatile String displayedAftLabel;
 	// private static CellsLoader cellsSet;
 
 //	public static Pane root = new Pane();
@@ -68,14 +72,17 @@ public class CellsCanvas {
 		initialMaxMinXY();
 		canvas = new Canvas();
 		gc = canvas.getGraphicsContext2D();
+		installMapContextMenu();
 		writableImage = new WritableImage(maxX - minX, maxY - minY);
 		pixelWriter = writableImage.getPixelWriter();
 		gc.setImageSmoothing(false);
 		MapPane canvasPane = new MapPane();
 
-		subScene = new SubScene(canvasPane, GuiScaler.lastScreen.getBounds().getWidth() / (2 * GuiScaler.graphicScaleX),
-				(GuiScaler.lastScreen.getBounds().getHeight() / GuiScaler.graphicScaleY));
+		Rectangle2D screen = GuiScaler.lastScreen.getVisualBounds();
+		subScene = new SubScene(canvasPane, Math.max(600, screen.getWidth() * 0.48),
+				Math.max(400, screen.getHeight() * 0.8));
 		MapPane.fitMapInWindow();
+		
 	}
 
 	private static void initialMaxMinXY() {
@@ -116,38 +123,84 @@ public class CellsCanvas {
 	}
 
 	public static void showOnlyOneAFT(Aft a) {
-		CellsLoader.hashCell.values().parallelStream().forEach(cell -> {
-			if (cell.getOwner() == null || !cell.getOwner().getLabel().equals(a.getLabel())) {
-				ColorP(cell, Color.GRAY);
-			} else {
-				ColorP(cell, a.getColor());
-			}
-		});
-		gc.drawImage(writableImage, 0, 0);
+		if (a == null) {
+			return;
+		}
+		clearCapitalDisplayOverride();
+		displayedAftLabel = a.getLabel();
+		colortype = "AFT";
+		colorMap();
 	}
 
 	public static void colorMap(String str) {
+		clearCapitalDisplayOverride();
+		clearAftDisplayFilter();
 		colortype = str;
 		colorMap();
+	}
+
+	/** Displays capital values loaded for a year without changing any cell state. */
+	public static void colorCapitalMap(String capital, int year, Map<Cell, Double> values) {
+		clearAftDisplayFilter();
+		displayedCapitalValues = Map.copyOf(values);
+		displayedCapital = capital;
+		displayedCapitalYear = year;
+		colortype = capital;
+		colorMap();
+	}
+
+	public static Double getDisplayedCapitalValue(Cell cell, String capital) {
+		if (capital != null && capital.equals(displayedCapital)) {
+			return displayedCapitalValues.get(cell);
+		}
+		return cell.getCapitals().get(capital);
+	}
+
+	public static Integer getDisplayedCapitalYear(String capital) {
+		return capital != null && capital.equals(displayedCapital) ? displayedCapitalYear : null;
+	}
+
+	private static void clearCapitalDisplayOverride() {
+		displayedCapital = null;
+		displayedCapitalYear = null;
+		displayedCapitalValues = Map.of();
+	}
+
+	private static void clearAftDisplayFilter() {
+		displayedAftLabel = null;
+	}
+
+	public static String getColorType() {
+		return colortype;
+	}
+
+	public static WritableImage getMapImage() {
+		return writableImage;
 	}
 
 	static AtomicInteger step = new AtomicInteger(1);
 
 	public static void colorMap() {
-		LOGGER.info("Changing the map colors...");
+//		LOGGER.info("Changing the map colors...");
 		Set<Double> values = Collections.synchronizedSet(new HashSet<>());
 		if (colortype.equalsIgnoreCase("Agent") || colortype.equalsIgnoreCase("AFT")) {
+			String aftFilter = displayedAftLabel;
 			CellsLoader.hashCell.values().parallelStream().forEach(c -> {
-				if (c.getOwner() != null) {
+				if (c.getOwner() != null
+						&& (aftFilter == null || c.getOwner().getLabel().equals(aftFilter))) {
 					ColorP(c, c.getOwner().getColor());
+				} else if (aftFilter != null) {
+					ColorP(c, Color.GRAY);
 				} else {
 					ColorP(c, AFTsLoader.getAftHash().get("Abandoned").getColor());
 				}
 			});
 		} else if (CapitalUpdater.getCapitalsList().contains(colortype)) {
 			CellsLoader.hashCell.values().parallelStream().forEach(c -> {
-				if (c != null && c.getCapitals().get(colortype) != null)
-					ColorP(c, ColorsTools.getColorForValue(c.getCapitals().get(colortype)));
+				if (c != null) {
+					Double value = getDisplayedCapitalValue(c, colortype);
+					ColorP(c, value == null ? Color.GRAY : ColorsTools.getColorForValue(value));
+				}
 			});
 
 		} else if (ServiceSet.getServicesList().contains(colortype)) {
@@ -207,84 +260,38 @@ public class CellsCanvas {
 			});
 		}
 		gc.drawImage(writableImage, 0, 0);
+		MapStatisticsPane.refresh(colortype);
 	}
 
 	static AtomicInteger nbr = new AtomicInteger(52);
 
-	public static void MapControlerBymouse() {
-		CellsCanvas.getCanvas().setOnMouseClicked(event -> {
-			if (event.getButton() != MouseButton.SECONDARY) {
-				return; // ignore other buttons
-			}
+	private static void installMapContextMenu() {
+		canvas.setOnContextMenuRequested(event -> {
+			double worldX = (event.getX() - MapPane.offsetX) / MapPane.scale + minX;
+			double worldY = (event.getY() - MapPane.offsetY) / MapPane.scale + minY;
+			Cell cell = CellsLoader.getCell((int) Math.floor(worldX), (int) Math.floor(worldY));
 
-			double worldX = (event.getX() - MapPane.offsetX) / MapPane.scale + CellsCanvas.minX;
-			double worldY = (event.getY() - MapPane.offsetY) / MapPane.scale + CellsCanvas.minY;
-
-			int cellX = (int) worldX;
-			int cellY = (int) worldY;
-
-			Cell cell = CellsLoader.getCell(cellX, cellY);
+			MenuItem printCell = new MenuItem(cell == null
+					? "Print cell info (no cell at this position)"
+					: "Print cell info to console");
+			printCell.setDisable(cell == null);
 			if (cell != null) {
-				ColorP(cell, Color.RED);
-				gc.drawImage(writableImage, 0, 0);
-//				gc.fillRect(worldX, worldY, Cell.getSize(), Cell.getSize());
-				HashMap<String, Consumer<String>> menu = new HashMap<>();
-				menu.put("Print Cell Info into the Console", _ -> {
-					System.out.println(cell);
-				});
-				menu.put("Save Map as PNG", _ -> {
-					SaveAs.png("", canvas);
-				});
-//				menu.put("Selecet Region", _ -> {
-//					selectRegion(cell);
-//				});
-//				menu.put("Clean Regions", _ -> {
-//					box.getChildren().clear();
-//					RegionController.getRegionCells().clear();
-//				});
-//				menu.put("Open Regions Selected", _ -> {
-//					openRegions(cell);
-//				});
-				menu.put("Detach", _ -> {
-					try {
-						VBox mapBox = (VBox) subScene.getParent();
-						VBox parent = (VBox) subScene.getParent().getParent();
-						List<Integer> findpath = Tools.findIndexPath(mapBox, parent);
-						Tools.reInsertChildAtIndexPath(new Separator(), parent, findpath);
-						NewWindow win = new NewWindow();
-						double origineW = subScene.getWidth();
-						double originH = subScene.getHeight();
-
-						subScene.setWidth(GuiScaler.lastScreen.getBounds().getWidth() * .8);
-						subScene.setHeight(GuiScaler.lastScreen.getBounds().getHeight() * 0.8);
-
-						win.creatwindows("Map", mapBox);
-						MapPane.fitMapInWindow();
-						win.setOnCloseRequest(_ -> {
-							parent.getChildren().add(mapBox);
-							subScene.setWidth(origineW);
-							subScene.setHeight(originH);
-						});
-					} catch (ClassCastException d) {
-						LOGGER.warn(d.getMessage());
-					}
-				});
-
-				ContextMenu cm = new ContextMenu();
-
-				MenuItem[] item = new MenuItem[menu.size()];
-				AtomicInteger i = new AtomicInteger();
-				menu.forEach((k, v) -> {
-					item[i.get()] = new MenuItem(k);
-					cm.getItems().add(item[i.get()]);
-					item[i.get()].setOnAction(_ -> {
-						v.accept(k);
-					});
-					i.getAndIncrement();
-				});
-				cm.show(canvas.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-				event.consume();
+				printCell.setOnAction(_ -> System.out.println(cell));
 			}
+
+			MenuItem savePng = new MenuItem("Save map as PNG");
+			savePng.setOnAction(_ -> SaveAs.png("CRAFTY-map", canvas));
+
+			MenuItem detach = new MenuItem("Detach map");
+			TabPaneController controller = TabPaneController.getInstance();
+			detach.setDisable(controller == null);
+			if (controller != null) {
+				detach.setOnAction(_ -> controller.detachMap());
+			}
+
+			ContextMenu menu = new ContextMenu(printCell, new SeparatorMenuItem(), savePng, detach);
+			menu.show(canvas.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+			event.consume();
 		});
 	}
 

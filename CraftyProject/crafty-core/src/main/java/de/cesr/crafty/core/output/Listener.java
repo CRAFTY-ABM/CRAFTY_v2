@@ -30,6 +30,7 @@ import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.CsvTools;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
+import de.cesr.crafty.core.utils.graphics.CellCsvOutputHandler;
 import de.cesr.crafty.core.utils.graphics.MapPngExporter;
 
 /**
@@ -77,8 +78,11 @@ public class Listener extends AbstractUpdater {
 	public static ConcurrentHashMap<String, Integer> newAftsInLandNbr = new ConcurrentHashMap<>();
 
 	public static String[][] compositionAftListener;
+	public static String[][] relativecompositionAftListener;
 	public static Map<String, ArrayList<Double>> compositionAftHash = new HashMap<>();
 	public static String[][] servicedemandListener;
+	public static String[][] equilibredServicedemandListener;
+
 	public static Map<String, Map<String, ArrayList<Double>>> servicedemandHash = new HashMap<>();
 	private static String[][] DSEquilibriumListener;
 	private static String[][] landEventCounter;
@@ -114,14 +118,23 @@ public class Listener extends AbstractUpdater {
 	public void initializeListeners() {
 		initializeListExportingYearsMap();
 		servicedemandListener = new String[Timestep.getSize() + 1][ServiceSet.getServicesList().size() * 2 + 1];
+		equilibredServicedemandListener = new String[Timestep.getSize() + 1][ServiceSet.getServicesList().size() * 2
+				+ 1];
+
 		servicedemandListener[0][0] = "Year";
+		equilibredServicedemandListener[0][0] = "Year";
 		for (int i = 1; i < ServiceSet.getServicesList().size() + 1; i++) {
 			servicedemandListener[0][i] = "Supply:" + ServiceSet.getServicesList().get(i - 1);
 			servicedemandListener[0][i + ServiceSet.getServicesList().size()] = "Demand:"
 					+ ServiceSet.getServicesList().get(i - 1);
+			equilibredServicedemandListener[0][i] = "Supply:" + ServiceSet.getServicesList().get(i - 1);
+			equilibredServicedemandListener[0][i + ServiceSet.getServicesList().size()] = "Demand:"
+					+ ServiceSet.getServicesList().get(i - 1);
 		}
 		compositionAftListener = new String[Timestep.getSize() + 1][AFTsLoader.getAftHash().size() + 1];
 		compositionAftListener[0][0] = "Year";
+		relativecompositionAftListener = new String[Timestep.getSize() + 1][AFTsLoader.getAftHash().size() + 1];
+		relativecompositionAftListener[0][0] = "Year";
 
 		newAftsInLandListener = new String[Timestep.getSize() + 1][AFTsLoader.getActivateAFTsHash().size() + 1];
 		newAftsInLandListener[0][0] = "Year";
@@ -131,6 +144,7 @@ public class Listener extends AbstractUpdater {
 		int k = 1;
 		for (String label : AFTsLoader.getAftHash().keySet()) {
 			compositionAftListener[0][k] = label;
+			relativecompositionAftListener[0][k] = label;
 			averageUtilities[0][k++] = label;
 			compositionAftHash.put(label, new ArrayList<>());
 		}
@@ -164,11 +178,23 @@ public class Listener extends AbstractUpdater {
 		AtomicInteger m = new AtomicInteger(1);
 		int y = Timestep.getTick() + 1;
 		servicedemandListener[y][0] = String.valueOf(Timestep.getCurrentYear());
+		equilibredServicedemandListener[y][0] = String.valueOf(Timestep.getCurrentYear());
+
 		ServiceSet.getServicesList().forEach(serviceName -> {
 			servicedemandListener[y][m.get()] = String.valueOf(totalSupply.get(serviceName));
+
 			Service ds = ServiceSet.worldService.get(serviceName);
 			servicedemandListener[y][m.get() + ServiceSet.getServicesList().size()] = String
 					.valueOf(ds.getDemands().get(Timestep.getCurrentYear()));
+
+			if (RegionsModelRunnerUpdater.regionsModelRunner.size() == 1) {
+				RegionalModelRunner rRunner = RegionsModelRunnerUpdater.regionsModelRunner.values().iterator().next();
+				double eq= rRunner.R.getServicesHash().get(serviceName).getCalibration_Factor();
+				equilibredServicedemandListener[y][m.get()] = String.valueOf(totalSupply.get(serviceName) * eq);
+				equilibredServicedemandListener[y][m.get() + ServiceSet.getServicesList().size()] = String
+						.valueOf(ds.getDemands().get(Timestep.getCurrentYear()) * eq);
+			}
+
 			m.getAndIncrement();
 			servicedemandHash.get(serviceName).get("Supply").add(totalSupply.get(serviceName));
 			servicedemandHash.get(serviceName).get("Demand").add(ds.getDemands().get(Timestep.getCurrentYear()));
@@ -178,13 +204,17 @@ public class Listener extends AbstractUpdater {
 	public void compositionAFT() {
 		int y = Timestep.getTick() + 1;
 		compositionAftListener[y][0] = String.valueOf(Timestep.getCurrentYear());
+		relativecompositionAftListener[y][0] = String.valueOf(Timestep.getCurrentYear());
 		averageUtilities[y][0] = String.valueOf(Timestep.getCurrentYear());
 		newAftsInLandListener[y][0] = String.valueOf(Timestep.getCurrentYear());
 
 		AFTsLoader.hashAgentNbr.forEach((name, value) -> {
 			int index = Utils.indexof(name, compositionAftListener[0]);
+
 			if (index > 0) {
 				compositionAftListener[y][index] = String.valueOf(value);
+				relativecompositionAftListener[y][index] = String
+						.valueOf((double) value / (double) CellsLoader.getNbrOfCells());
 				compositionAftHash.get(name).add((double) value);
 			}
 		});
@@ -203,7 +233,7 @@ public class Listener extends AbstractUpdater {
 						.get(Timestep.getCurrentYear() - 1) != null) {
 					averageUtilities[y - 1][Utils.indexof(name, averageUtilities[0])] = String
 							.valueOf(RegionsModelRunnerUpdater.regionsModelRunner.get(R.getName()).getDistributionMean()
-									.get(Timestep.getCurrentYear() - 1).get(aft));
+									.get(Timestep.getCurrentYear() - 1).get(aft.getLabel()));
 				} else {
 					averageUtilities[y - 1][Utils.indexof(name, averageUtilities[0])] = "null";
 				}
@@ -224,12 +254,21 @@ public class Listener extends AbstractUpdater {
 		Path aggregateAFTComposition = Paths.get(ConfigLoader.config.output_folder_name + File.separator
 				+ ProjectLoader.getScenario() + "Total-AggregateAFTComposition.csv");
 		CsvTools.writeCSVfile(compositionAftListener, aggregateAFTComposition);
+		Path relativeAFTComposition = Paths.get(ConfigLoader.config.output_folder_name + File.separator
+				+ ProjectLoader.getScenario() + "Total-RelativeAFTComposition.csv");
+		CsvTools.writeCSVfile(relativecompositionAftListener, relativeAFTComposition);
+
 		Path newAftsInLandListenerPath = Paths.get(ConfigLoader.config.output_folder_name + File.separator
 				+ ProjectLoader.getScenario() + "Total-AggregateNewAFT.csv");
 		CsvTools.writeCSVfile(newAftsInLandListener, newAftsInLandListenerPath);
 		Path aggregateServiceDemand = Paths.get(ConfigLoader.config.output_folder_name + File.separator
 				+ ProjectLoader.getScenario() + "Total-AggregateServiceDemand.csv");
 		CsvTools.writeCSVfile(servicedemandListener, aggregateServiceDemand);
+		
+		Path aggregateEQServiceDemand = Paths.get(ConfigLoader.config.output_folder_name + File.separator
+				+  "equilibredServiceDemand.csv");
+		CsvTools.writeCSVfile(equilibredServicedemandListener, aggregateEQServiceDemand);
+		
 		Path DSEquilibriumPath = Paths.get(ConfigLoader.config.output_folder_name + File.separator
 				+ ProjectLoader.getScenario() + "Total-AggregateDemandServicesEquilibrium.csv");
 		DSEquilibriumListener();
@@ -287,15 +326,16 @@ public class Listener extends AbstractUpdater {
 	}
 
 	private void writeMap() {
-		CsvTools.exportCellsToCSV(ConfigLoader.config.output_folder_name + File.separator + ProjectLoader.getScenario()
-				+ "-Cell-" + Timestep.getCurrentYear() + ".csv", CellsLoader.hashCell);
 
-		if (ConfigLoader.config.generate_map_PAs_forced) {
+		CellCsvOutputHandler.fromConfig().export(ConfigLoader.config.output_folder_name + File.separator
+				+ ProjectLoader.getScenario() + "-Cell-" + Timestep.getCurrentYear() + ".csv", CellsLoader.hashCell);
+
+		if (ConfigLoader.config.generate_forced_mask_outputs) {
 			String tmp = PathTools.makeDirectory(
 					ConfigLoader.config.output_folder_name + File.separator + "cells-forced-to-change-by-masks");
 			MaskLoader.restriction_paths.keySet().forEach(maskType -> {
 				if (LandMaskUpdater.cellsForecedToChange.get(maskType).size() > 0) {
-					CsvTools.exportCellsToCSV(
+					CellCsvOutputHandler.fromConfig().export(
 							tmp + File.separator + maskType + "-" + Timestep.getCurrentYear() + ".csv",
 							LandMaskUpdater.cellsForecedToChange.get(maskType));
 					LOGGER.info("number of cells forced  to change by mask (" + maskType + "):  "
@@ -310,10 +350,6 @@ public class Listener extends AbstractUpdater {
 				}
 			});
 		}
-
-//		if (year != Timestep.getStartYear())
-//			CsvTools.writeCSVfile(Selector.seedMap,
-//					Paths.get(ConfigLoader.config.output_folder_name + File.separator + "-SEED-" + year + ".csv"));
 	}
 
 	public static void outputfolderPath(String outputpath, String outputName) {

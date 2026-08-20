@@ -1,6 +1,8 @@
 package de.cesr.crafty.core.crafty;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
 import java.util.function.Predicate;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
@@ -18,7 +20,7 @@ import de.cesr.crafty.core.utils.general.CellsSubSets;
  * - Inertia (resistance to change, increasing with the intensity gap between the current owner and competitor).
  *
  * The main entry point is {@link #give_In(Aft)}, which returns a value bounded by {@link #maxGive_in}
- * using a logistic function (steepness controlled by {@link #steepness_logistic_eq}).
+	 * using a logistic function (steepness controlled by the configured cell behaviour logistic steepness).
  *
  * Social influence is only active when categorisation-based give-in is enabled
  * ({@link AftCategorised#useCategorisationGivIn}) and the behaviour module is switched on
@@ -39,13 +41,19 @@ import de.cesr.crafty.core.utils.general.CellsSubSets;
  *
  */
 public class CellBehaviour {
+	private static final List<String> PARAMETER_NAMES = List.of(
+			"Attitude_intensification",
+			"Weight_inertia",
+			"Weight-social",
+			"Critical_mass",
+			"MaxGive_in",
+			"Neighborhood_size");
 
 	double Attitude_intensification;
 	double Weight_inertia;//
 	double weight_social;
 	double Critical_mass;//
 	int neighborhood_size;
-//	double steepness_logistic_eq = 7;
 	double maxGive_in;
 	private Cell c;
 
@@ -53,10 +61,35 @@ public class CellBehaviour {
 		this.c = c;
 	}
 
+	public static List<String> parameterNames() {
+		return PARAMETER_NAMES;
+	}
+
+	public double parameterValue(String parameterName) {
+		if (parameterName == null) {
+			throw unknownParameter(null);
+		}
+		String normalised = parameterName.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+		return switch (normalised) {
+		case "attitude_intensification" -> getAttitude_intensification();
+		case "weight_inertia" -> getWeight_inertia();
+		case "weight_social" -> getWeight_social();
+		case "critical_mass" -> getCritical_mass();
+		case "maxgive_in", "max_give_in" -> getMaxGive_in();
+		case "neighborhood_size", "neighbourhood_size" -> getNeighborhood_size();
+		default -> throw unknownParameter(parameterName);
+		};
+	}
+
+	private static IllegalArgumentException unknownParameter(String parameterName) {
+		return new IllegalArgumentException("Unknown cell behaviour parameter '" + parameterName
+				+ "'. Supported parameters: " + PARAMETER_NAMES);
+	}
+
 	public double give_In(Aft competitor) {
 		int intesificationGap = competitor.getCategory().getIntensityLevel()
 				- c.getOwner().getCategory().getIntensityLevel();
-		return maxGive_in / (1 + Math.exp(ConfigLoader.config.steepness_logistic_eq
+		return maxGive_in / (1 + Math.exp(ConfigLoader.config.cell_behaviour_logistic_steepness
 				* ((1 - weight_social) * Attitude_influence(competitor) + weight_social * social_influence(competitor)
 						- Weight_inertia * Math.abs(intesificationGap))));
 	}
@@ -151,8 +184,8 @@ public class CellBehaviour {
 	public String toString() {
 		return "CellBehaviour [Attitude_intensification=" + Attitude_intensification + ", Weight_inertia="
 				+ Weight_inertia + ", weight_social=" + weight_social + ", Critical_mass=" + Critical_mass
-				+ ", neighborhood_size=" + neighborhood_size + ", steepness_logistic_eq="
-				+ ConfigLoader.config.steepness_logistic_eq + ", maxGive_in=" + maxGive_in + "]";
+				+ ", neighborhood_size=" + neighborhood_size + ", cell_behaviour_logistic_steepness="
+				+ ConfigLoader.config.cell_behaviour_logistic_steepness + ", maxGive_in=" + maxGive_in + "]";
 	}
 
 }
