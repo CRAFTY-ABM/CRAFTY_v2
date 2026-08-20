@@ -379,7 +379,16 @@ public class RegionalModelRunner {
 
 	private void giveUp() {
 //		tmp = new AtomicInteger();
-		if (ConfigLoader.config.use_abandonment_threshold) {
+		if (ConfigLoader.config.use_price_explicit_givingUp) {
+			List<Cell> sample = SeedUpdater.selectSeed(this, R.getCells(),
+					ConfigLoader.config.land_abandonment_percentage, false,
+					DeterministicRandom.Process.CELL_SELECTION_ABANDONMENT);
+			if (sample != null) {
+				sample.parallelStream().forEach(c -> {
+					c.priceExplicitGiveUp(this);
+				});
+			}
+		} else if (ConfigLoader.config.use_abandonment_threshold) {
 			List<Cell> randomCellsubSetForGiveUp = SeedUpdater.selectSeed(this, R.getCells(),
 					ConfigLoader.config.land_abandonment_percentage, false,
 					DeterministicRandom.Process.CELL_SELECTION_ABANDONMENT);

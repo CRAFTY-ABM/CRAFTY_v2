@@ -346,6 +346,24 @@ public class AFTsLoader extends HashSet<Aft> {
 			if (csv.containsKey("Twin_cost")) {
 				a.setTwinCost(Utils.sToD(csv.get("Twin_cost").get(i)));
 			}
+			if (csv.containsKey("Receives_subsidy")) {
+				String val = csv.get("Receives_subsidy").get(i).trim();
+				try {
+					double parsed = Double.parseDouble(val);
+					if (parsed >= 0.0 && parsed <= 1.0) {
+						a.setReceivesSubsidy(parsed);
+					} else {
+						LOGGER.warn("Receives_subsidy value '" + val + "' for AFT " + label
+								+ " is outside [0,1], defaulting to 0.0");
+						a.setReceivesSubsidy(0.0);
+					}
+				} catch (NumberFormatException e) {
+					LOGGER.warn("Unrecognised Receives_subsidy value '" + val
+							+ "' for AFT " + label + ", defaulting to 0.0");
+					a.setReceivesSubsidy(0.0);
+				}
+			}
+
 			}
 		}
 
@@ -354,6 +372,11 @@ public class AFTsLoader extends HashSet<Aft> {
 		}
 		if (ConfigLoader.config.use_twinned_cost && !csv.containsKey("Twin_cost")) {
 			LOGGER.fatal("use_twinned_cost is true but 'Twin_cost' column is missing from AFTsMetaData");
+		}
+		if (ConfigLoader.config.use_price_explicit_givingUp && !csv.containsKey("Receives_subsidy")) {
+			LOGGER.warn("use_price_explicit_givingUp is true but 'Receives_subsidy' column is missing "
+					+ "from AFTsMetaData — all AFTs will default to not receiving subsidies; "
+					+ "institutional model may still set them");
 		}
 
 		for (Aft a : hashAFTs.values()) {

@@ -45,6 +45,12 @@ public enum CsvKind {
 			CsvProcessors.associateIntensityCostsToCells(index, line);
 		}
 	},
+	SUBSIDY {
+		@Override
+		void apply(String line, Map<String, Integer> index) {
+			CsvProcessors.associateSubsidiesToCells(index, line);
+		}
+	},
 	CAPITALS {
 		@Override
 		void apply(String line, Map<String, Integer> index) {

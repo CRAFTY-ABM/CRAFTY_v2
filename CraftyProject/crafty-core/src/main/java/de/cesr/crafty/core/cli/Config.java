@@ -60,6 +60,9 @@ public class Config {
 	public boolean spatial_production_costs = false;
 	public String costs_directory = "";
 
+	// Price-explicit giving up
+	public boolean use_price_explicit_givingUp = false;
+
 	// Twinned AFTs
 	public boolean use_twinned_AFTs = false;
 	public boolean use_twinned_cost = false;
@@ -177,6 +180,7 @@ public class Config {
 				+ "|-> use_production_costs=" + use_production_costs + "\n"
 				+ "|-> spatial_production_costs=" + spatial_production_costs + "\n"
 				+ "|-> costs_directory=" + costs_directory + "\n"
+				+ "|-> use_price_explicit_givingUp=" + use_price_explicit_givingUp + "\n"
 				+ "] \n\n";
 	}
 

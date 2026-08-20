@@ -60,6 +60,9 @@ public abstract class AbstractAft {
 	private String twinLabel = null;
 	private double twinCost = 0.0;
 
+	// Subsidy eligibility (0.0 = none, 1.0 = full, fractional = partial)
+	private double receivesSubsidy = 0.0;
+
 	public long getId() {
 		return id;
 	}
@@ -278,6 +281,14 @@ public abstract class AbstractAft {
 
 	public boolean hasTwin() {
 		return twinLabel != null && !twinLabel.isBlank();
+	}
+
+	public double getReceivesSubsidy() {
+		return receivesSubsidy;
+	}
+
+	public void setReceivesSubsidy(double receivesSubsidy) {
+		this.receivesSubsidy = receivesSubsidy;
 	}
 
 }

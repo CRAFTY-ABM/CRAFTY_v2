@@ -47,6 +47,7 @@ public class ConfigLoader {
 	public static void init() {
 		config = loadConfig();
 		validateProductionCostConfig();
+		validateGiveUpConfig();
 		validateTwinnedAftConfig();
 		validatePriceUtilityConfig();
 		try {
@@ -80,6 +81,20 @@ public class ConfigLoader {
 		}
 	}
 
+	static void validateGiveUpConfig() {
+		if (config == null) return;
+		if (config.use_price_explicit_givingUp) {
+			LOGGER.warn("Using price explicit givingUp");
+			if (config.use_abandonment_threshold) {
+				LOGGER.info("use_price_explicit_givingUp overrides use_abandonment_threshold");
+			}
+			if (!config.use_explicit_price_utility && !config.use_price_only_utility) {
+				LOGGER.warn("use_price_explicit_givingUp is designed for price-based utility modes; "
+						+ "current utility mode may produce unexpected results");
+			}
+		}
+	}
+
 	public static boolean isUseTwinnedAFTs() {
 		return config != null && config.use_twinned_AFTs;
 	}
@@ -94,6 +109,10 @@ public class ConfigLoader {
 
 	public static boolean isSpatialProductionCosts() {
 		return config != null && config.spatial_production_costs;
+	}
+
+	public static boolean isUsePriceExplicitGivingUp() {
+		return config != null && config.use_price_explicit_givingUp;
 	}
 
 	private static Config loadConfig() {

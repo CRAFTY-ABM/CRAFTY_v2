@@ -401,4 +401,20 @@ public class CsvProcessors {
 		}
 	}
 
+	static void associateSubsidiesToCells(Map<String, Integer> indexof, String data) {
+		String[] row = COMMA.split(data, -1);
+		int x = (int) Utils.sToD(row[indexof.get("X")]);
+		int y = (int) Utils.sToD(row[indexof.get("Y")]);
+
+		Cell c = CellsLoader.getCell(x, y);
+		if (c == null) {
+			return;
+		}
+
+		Integer col = indexof.get("SUBSIDY");
+		if (col != null && col < row.length) {
+			c.setGiveUpSubsidy(Utils.sToD(row[col]));
+		}
+	}
+
 }

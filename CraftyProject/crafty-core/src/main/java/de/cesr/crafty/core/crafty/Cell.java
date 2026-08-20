@@ -200,4 +200,24 @@ public class Cell extends AbstractCell {
 		}
 	}
 
+	void priceExplicitGiveUp(RegionalModelRunner r) {
+		Aft owner = getOwner();
+		if (owner == null || !owner.isInteract()) {
+			return;
+		}
+
+		double utility = getCurrentUtility();
+		double subsidy = owner.getReceivesSubsidy() * getGiveUpSubsidy();
+
+		if (utility + subsidy < 0) {
+			String oldOwner = owner.getLabel();
+			setOwner(null);
+			r.R.getUnmanageCellsR().add(this);
+			setOwnerLifeCounter(0);
+			Listener.landUseChangeCounter.getAndIncrement();
+			Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
+			Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
+		}
+	}
+
 }

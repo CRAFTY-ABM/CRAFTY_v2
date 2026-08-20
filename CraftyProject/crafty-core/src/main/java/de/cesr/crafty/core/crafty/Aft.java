@@ -55,6 +55,7 @@ public class Aft extends AbstractAft {
 
 			setTwinLabel(other.getTwinLabel());
 			setTwinCost(other.getTwinCost());
+			setReceivesSubsidy(other.getReceivesSubsidy());
 		}
 
 	}

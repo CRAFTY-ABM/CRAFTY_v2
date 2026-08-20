@@ -41,6 +41,8 @@ public abstract class AbstractCell {
 	private ConcurrentHashMap<String, Double> irrigationCosts = new ConcurrentHashMap<>();
 	private ConcurrentHashMap<String, Double> intensityCosts = new ConcurrentHashMap<>();
 
+	private double giveUpSubsidy = 0.0;
+
 	private double[] currentProd;
 	private double currentUtility;
 	String CurrentRegion;
@@ -222,6 +224,14 @@ public abstract class AbstractCell {
 
 	public ConcurrentHashMap<String, Double> getIntensityCosts() {
 		return intensityCosts;
+	}
+
+	public double getGiveUpSubsidy() {
+		return giveUpSubsidy;
+	}
+
+	public void setGiveUpSubsidy(double giveUpSubsidy) {
+		this.giveUpSubsidy = giveUpSubsidy;
 	}
 
 }
