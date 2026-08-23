@@ -27,7 +27,7 @@ import de.cesr.crafty.core.updaters.SupplyUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.graphics.ChartExporter;
-
+import de.cesr.crafty.core.utils.analysis.LandscapeFragmentationListener;
 /**
  * Main CRAFTY model runner.
  *
@@ -129,6 +129,9 @@ public class ModelRunner extends AbstractModelRunner {
 		getScheduled().add(capital_Degradation_Updater);
 		getScheduled().add(new SupplyUpdater());
 		getScheduled().add(new Listener());
+		if (ConfigLoader.config.generate_land_fragmentation_output) {
+			getScheduled().add(new LandscapeFragmentationListener());
+		}
 		getScheduled().add(new Tracker());
 		getScheduled().add(regionsModelRunnerUpdater);
 		getScheduled().add(new Timestep());

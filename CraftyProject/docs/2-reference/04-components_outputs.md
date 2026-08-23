@@ -95,6 +95,19 @@ Common diagnostic exports:
 
 These are useful for calibration and stability checking.
 
+### 3.5 Landscape fragmentation (optional)
+
+Enable annual AFT clustering and fragmentation metrics with:
+
+```yaml
+generate_land_fragmentation_output: true
+```
+
+The file `<scenario>-land-fragmentation.csv` contains one row per year. Metrics use eight-neighbour (Moore)
+connectivity: cells that share an edge or a corner are neighbours. Same-AFT adjacency, the composition-adjusted clustering index, largest-patch share, and normalized
+effective mesh size increase as the landscape becomes more clustered. Boundary-edge density, patch count, and
+patch density increase as it becomes more fragmented. Cells without an owner are treated as one unmanaged class.
+
 ---
 
 ## 4) Region-specific outputs (when regionalisation is enabled)

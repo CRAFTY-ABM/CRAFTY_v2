@@ -95,6 +95,9 @@ marginal_utility_calculations_per_tick: 5
 # Enable CSV outputs
 generate_output_files: true
 
+# Optional annual AFT clustering and fragmentation metrics
+generate_land_fragmentation_output: false
+
 # If empty → CRAFTY uses a timestamped run folder under:
 #   <project_path>/output/<scenario>/
 output_folder_name: ""

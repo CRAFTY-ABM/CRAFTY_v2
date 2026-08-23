@@ -89,6 +89,7 @@ Typical content (depends on enabled modules):
 - **AFT composition** over time (area per AFT, land-use transitions)
 - **Service supply and demand** time series
 - **Marginal utilities** 
+- **Landscape fragmentation and AFT clustering** when `generate_land_fragmentation_output: true`
 - **Summary diagnostics** (land use event counts, competitiveness outcomes, etc.)
 
 ### 4.1 File naming

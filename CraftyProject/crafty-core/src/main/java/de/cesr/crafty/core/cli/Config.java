@@ -71,6 +71,13 @@ public class Config {
 	public String cell_selection = "rank";
 	public long random_seed = 1L;
 	public double participating_cell_fraction = 0.03;
+	/**
+	 * Number of deterministic competition batches evaluated per simulation tick.
+	 * Regional supply and marginal utility are refreshed after every batch, allowing
+	 * later batches to respond to land-use changes made by earlier batches. Values
+	 * must be at least one; increasing this value changes decision feedback frequency,
+	 * not the number of participating cells.
+	 */
 	public int marginal_utility_calculations_per_tick = 5;
 	public double land_abandonment_fraction = 0.02;
 	public double unmanaged_cell_takeover_fraction = 0.8;
@@ -80,6 +87,8 @@ public class Config {
 	public String output_folder_name = "";
 	public String output_path = "";
 	public boolean generate_output_files = true;
+	/** Write annual adjacency- and patch-based AFT fragmentation metrics. */
+	public boolean generate_land_fragmentation_output = false;
 	public boolean generate_chart_plots_png = false;
 	public boolean generate_map_output_files = true;
 	public boolean generate_forced_mask_outputs = false;
@@ -146,7 +155,9 @@ public class Config {
 				+ "|-> land_abandonment_fraction=" + land_abandonment_fraction + "\n"
 				+ "|-> unmanaged_cell_takeover_fraction=" + unmanaged_cell_takeover_fraction + "\n"
 				+ "|-> output_folder_name=" + output_folder_name + "\n" + "|-> output_path=" + output_path + "\n"
-				+ "|-> generate_output_files=" + generate_output_files + "\n" + "|-> generate_chart_plots_png="
+				+ "|-> generate_output_files=" + generate_output_files + "\n"
+				+ "|-> generate_land_fragmentation_output=" + generate_land_fragmentation_output + "\n"
+				+ "|-> generate_chart_plots_png="
 				+ generate_chart_plots_png + "\n" + "|-> generate_map_output_files=" + generate_map_output_files + "\n"
 				+ "|-> map_output_frequency=" + map_output_frequency + "\n"
 				+ "|-> track_changes=" + track_changes + "\n" + "|-> export_logger=" + export_logger + "\n"

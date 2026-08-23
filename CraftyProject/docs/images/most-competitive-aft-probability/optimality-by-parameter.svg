@@ -1,0 +1,117 @@
+﻿<svg xmlns='http://www.w3.org/2000/svg' width='1400' height='620' viewBox='0 0 1400 620'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='700' y='38' text-anchor='middle' font-family='sans-serif' font-size='24' font-weight='bold'>SSP370 demand-supply optimality</text>
+<text x='700' y='62' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#475569'>Model-aligned relative gaps, 2021-2100; lower gap and higher attainment are better</text>
+<rect x='110' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='110' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Relative gap RMSE</text>
+<line x1='110' y1='505' x2='460' y2='505' stroke='#e5e7eb'/>
+<text x='100' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>10.7%</text>
+<line x1='110' y1='407.5' x2='460' y2='407.5' stroke='#e5e7eb'/>
+<text x='100' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>13.1%</text>
+<line x1='110' y1='310' x2='460' y2='310' stroke='#e5e7eb'/>
+<text x='100' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>15.6%</text>
+<line x1='110' y1='212.5' x2='460' y2='212.5' stroke='#e5e7eb'/>
+<text x='100' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>18.1%</text>
+<line x1='110' y1='115' x2='460' y2='115' stroke='#e5e7eb'/>
+<text x='100' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>20.6%</text>
+<text x='110' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0</text>
+<text x='145' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.1</text>
+<text x='180' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.2</text>
+<text x='215' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.3</text>
+<text x='250' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.4</text>
+<text x='285' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.5</text>
+<text x='320' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.6</text>
+<text x='355' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.7</text>
+<text x='390' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.8</text>
+<text x='425' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.9</text>
+<text x='460' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<polyline points='110,154.31 145,360.66 180,404.73 215,434.5 250,465.69 285,462.24 320,438.27 355,447.79 390,453.67 425,452.52 460,424.19' fill='none' stroke='#2563eb' stroke-width='3'/>
+<circle cx='110' cy='154.310201378506' r='4' fill='#2563eb'/>
+<circle cx='145' cy='360.660922249498' r='4' fill='#2563eb'/>
+<circle cx='180' cy='404.734184947073' r='4' fill='#2563eb'/>
+<circle cx='215' cy='434.497223521379' r='4' fill='#2563eb'/>
+<circle cx='250' cy='465.689798621494' r='4' fill='#2563eb'/>
+<circle cx='285' cy='462.239784191438' r='4' fill='#2563eb'/>
+<circle cx='320' cy='438.271096908305' r='4' fill='#2563eb'/>
+<circle cx='355' cy='447.792767395553' r='4' fill='#2563eb'/>
+<circle cx='390' cy='453.672144155635' r='4' fill='#2563eb'/>
+<circle cx='425' cy='452.520026628166' r='4' fill='#2563eb'/>
+<circle cx='460' cy='424.19162502055' r='4' fill='#2563eb'/>
+<text x='285' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>most_competitive_aft_probability</text>
+<text x='38' y='310' text-anchor='middle' transform='rotate(-90 38 310)' font-family='sans-serif' font-size='12'>Relative gap</text>
+<rect x='555' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='555' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Mean relative gap</text>
+<line x1='555' y1='505' x2='905' y2='505' stroke='#e5e7eb'/>
+<text x='545' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>6.2%</text>
+<line x1='555' y1='407.5' x2='905' y2='407.5' stroke='#e5e7eb'/>
+<text x='545' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>7.8%</text>
+<line x1='555' y1='310' x2='905' y2='310' stroke='#e5e7eb'/>
+<text x='545' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>9.5%</text>
+<line x1='555' y1='212.5' x2='905' y2='212.5' stroke='#e5e7eb'/>
+<text x='545' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>11.2%</text>
+<line x1='555' y1='115' x2='905' y2='115' stroke='#e5e7eb'/>
+<text x='545' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>12.9%</text>
+<text x='555' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0</text>
+<text x='590' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.1</text>
+<text x='625' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.2</text>
+<text x='660' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.3</text>
+<text x='695' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.4</text>
+<text x='730' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.5</text>
+<text x='765' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.6</text>
+<text x='800' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.7</text>
+<text x='835' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.8</text>
+<text x='870' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.9</text>
+<text x='905' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<polyline points='555,173.07 590,348.51 625,389.32 660,417.2 695,446.66 730,445.4 765,445.07 800,433.64 835,446.3 870,446.93 905,435.29' fill='none' stroke='#dc2626' stroke-width='3'/>
+<circle cx='555' cy='173.067736370512' r='4' fill='#dc2626'/>
+<circle cx='590' cy='348.513735314095' r='4' fill='#dc2626'/>
+<circle cx='625' cy='389.322404008025' r='4' fill='#dc2626'/>
+<circle cx='660' cy='417.199469484645' r='4' fill='#dc2626'/>
+<circle cx='695' cy='446.662743804079' r='4' fill='#dc2626'/>
+<circle cx='730' cy='445.404170298468' r='4' fill='#dc2626'/>
+<circle cx='765' cy='445.065108021413' r='4' fill='#dc2626'/>
+<circle cx='800' cy='433.643341764276' r='4' fill='#dc2626'/>
+<circle cx='835' cy='446.296728705188' r='4' fill='#dc2626'/>
+<circle cx='870' cy='446.932263629488' r='4' fill='#dc2626'/>
+<circle cx='905' cy='435.29405703685' r='4' fill='#dc2626'/>
+<text x='730' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>most_competitive_aft_probability</text>
+<text x='483' y='310' text-anchor='middle' transform='rotate(-90 483 310)' font-family='sans-serif' font-size='12'>Relative gap</text>
+<rect x='1000' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='1000' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Objectives within 5%</text>
+<line x1='1000' y1='505' x2='1350' y2='505' stroke='#e5e7eb'/>
+<text x='990' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>43.8%</text>
+<line x1='1000' y1='407.5' x2='1350' y2='407.5' stroke='#e5e7eb'/>
+<text x='990' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>48.1%</text>
+<line x1='1000' y1='310' x2='1350' y2='310' stroke='#e5e7eb'/>
+<text x='990' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>52.4%</text>
+<line x1='1000' y1='212.5' x2='1350' y2='212.5' stroke='#e5e7eb'/>
+<text x='990' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>56.7%</text>
+<line x1='1000' y1='115' x2='1350' y2='115' stroke='#e5e7eb'/>
+<text x='990' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>61.0%</text>
+<text x='1000' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0</text>
+<text x='1035' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.1</text>
+<text x='1070' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.2</text>
+<text x='1105' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.3</text>
+<text x='1140' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.4</text>
+<text x='1175' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.5</text>
+<text x='1210' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.6</text>
+<text x='1245' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.7</text>
+<text x='1280' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.8</text>
+<text x='1315' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.9</text>
+<text x='1350' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<polyline points='1000,467.26 1035,378.4 1070,353.02 1105,303.65 1140,224.67 1175,203.52 1210,192.23 1245,193.64 1280,162.61 1315,152.74 1350,165.44' fill='none' stroke='#15803d' stroke-width='3'/>
+<circle cx='1000' cy='467.258064516129' r='4' fill='#15803d'/>
+<circle cx='1035' cy='378.403732098944' r='4' fill='#15803d'/>
+<circle cx='1070' cy='353.016779979748' r='4' fill='#15803d'/>
+<circle cx='1105' cy='303.653261970201' r='4' fill='#15803d'/>
+<circle cx='1140' cy='224.671633154925' r='4' fill='#15803d'/>
+<circle cx='1175' cy='203.515839722262' r='4' fill='#15803d'/>
+<circle cx='1210' cy='192.232749891509' r='4' fill='#15803d'/>
+<circle cx='1245' cy='193.643136120353' r='4' fill='#15803d'/>
+<circle cx='1280' cy='162.61463908578' r='4' fill='#15803d'/>
+<circle cx='1315' cy='152.741935483871' r='4' fill='#15803d'/>
+<circle cx='1350' cy='165.435411543469' r='4' fill='#15803d'/>
+<text x='1175' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>most_competitive_aft_probability</text>
+<text x='928' y='310' text-anchor='middle' transform='rotate(-90 928 310)' font-family='sans-serif' font-size='12'>Share of service-years</text>
+</svg>
+

@@ -172,8 +172,8 @@ Neighbour effects reduce the competitor search space by prioritising AFTs presen
 | Key | Type | Meaning |
 |---|---:|---|
 | `use_neighbour_priority` | boolean | If `true`, the model can derive a candidate competitor set from an extended Moore neighbourhood but still use random . |
-| `neighbour_radius` | integer | Neighbourhood radius (in cells) used when neighbour effects are enabled. |
-| `neighbour_priority_probability` | number | Probability of applying neighbour priority logic. |
+| [`neighbour_radius`](../1-user-guide/neighbour_radius-sensitivities.md) | integer | Moore-neighbourhood radius (in cells) used when neighbour effects are enabled. See the linked SSP370 sensitivity results for radii one to five. |
+| [`neighbour_priority_probability`](../1-user-guide/neighbour_priority_probability-sensitivities.md) | number | Probability of applying neighbour priority logic. See the linked SSP370 sensitivity results for a fixed radius of two cells. |
 
 ---
 
@@ -209,7 +209,7 @@ The former overloaded `seedID` key is deprecated. A legacy value of `rank` is mi
 | `land_abandonment_fraction` | number | 0..1 | Max fraction of cells that can abandon land per tick (year). |
 | `participating_cell_fraction` | number | 0..1 | Fraction of cells participating in the competitiveness/competition process per tick. |
 | `unmanaged_cell_takeover_fraction` | number | 0..1 | Fraction of unmanaged/abandoned cells considered for take-over. |
-| `most_competitive_aft_probability` | number | 0..1 | Probability of choosing the best-performing competitor (the Highest utility); otherwise a random competitor is tested. |
+| [`most_competitive_aft_probability`](../1-user-guide/most_competitive_aft_probability-sensitivities.md) | number | 0..1 | Probability of choosing the best-performing competitor (the highest utility); otherwise a random competitor is tested. See the linked SSP370 sensitivity results. |
 | [`marginal_utility_calculations_per_tick`](../1-user-guide/marginal_utility_calculations_per_tick-sensitivities.md) | integer | ≥1 | How many times marginal utility is recalculated per tick; see the linked SSP126 sensitivity results. |
 
 ---
@@ -221,6 +221,7 @@ The former overloaded `seedID` key is deprecated. A legacy value of `rank` is mi
 | Key | Type | Meaning |
 |---|---:|---|
 | `generate_output_files` | boolean | Enable writing output CSV tables. |
+| `generate_land_fragmentation_output` | boolean | Write annual AFT adjacency and connected-patch metrics to `<scenario>-land-fragmentation.csv`. |
 | `output_folder_name` | string | If empty, use a timestamped folder. |
 
 ### 9.2 Charts / plots

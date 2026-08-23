@@ -265,6 +265,33 @@ Output formats are documented in:
 - `user-guide/04-outputs.md`
 - `reference/04-components/outputs.md`
 
+### 11.1 Landscape fragmentation output
+
+When `generate_land_fragmentation_output: true`, CRAFTY writes
+`<scenario>-land-fragmentation.csv` with one row per year:
+
+| Column | Interpretation |
+|---|---|
+| `year` | Simulation year represented by the row. |
+| `total_cells` | Number of spatial cells included. |
+| `aft_classes` | Number of owner/AFT classes present, including unmanaged cells when present. |
+| `adjacent_pairs` | Moore-neighbour cell pairs (shared edge or corner), counted once. |
+| `same_aft_adjacent_pairs` | Moore-neighbour pairs whose cells have the same AFT. |
+| `different_aft_adjacent_pairs` | Moore-neighbour pairs whose cells have different AFTs. |
+| `same_aft_adjacency` | Fraction of adjacent pairs with the same AFT; higher means more aggregation. |
+| `adjacency_clustering_index` | Same-AFT adjacency adjusted for the adjacency expected from current AFT shares; higher means more clustering beyond composition alone. |
+| `boundary_edge_density` | Different-AFT Moore-neighbour pairs per cell; higher means more fragmentation. |
+| `patch_count` | Number of eight-neighbour (Moore) connected same-AFT patches. |
+| `patch_density` | Patch count divided by total cells. |
+| `mean_patch_size_cells` | Mean number of cells per patch. |
+| `largest_patch_size_cells` | Number of cells in the largest patch. |
+| `largest_patch_share` | Fraction of all cells belonging to the largest patch. |
+| `effective_mesh_size_cells` | Area-weighted mean patch size, expressed in cells. |
+| `normalized_effective_mesh_size` | Effective mesh size divided by total cells; higher means larger connected patches. |
+| `shannon_diversity` | Diversity of AFT cell shares, included to distinguish composition change from spatial rearrangement. |
+
+Off-map neighbours are ignored. All cells without an owner form one unmanaged class.
+
 ---
 
 ## 12) Validation tips (recommended before long runs)
