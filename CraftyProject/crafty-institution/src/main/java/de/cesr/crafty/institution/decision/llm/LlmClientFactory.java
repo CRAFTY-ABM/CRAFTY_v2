@@ -25,10 +25,6 @@ public final class LlmClientFactory {
 		case "gpt":
 			return new GptLlmClient();
 
-		case "gemini":
-		case "google":
-			return new GeminiLlmClient();
-
 		case "via_kit":
 		case "kit":
 		case "ki-toolbox":
