@@ -132,7 +132,7 @@ An AFT defines production and behaviour. Typical AFT state includes:
 - optional behaviour model parameters
 
 **Policy**
-- `land_taxes_subsidies[year] -> value` (may be cached per step)
+- land and service policy effects are stored per cell while the cell-level policy mechanism is active
 
 AFT parameters can be time-varying if you provide update files (see below).
 

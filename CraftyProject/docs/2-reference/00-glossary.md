@@ -57,7 +57,7 @@ The winner becomes the new “owner” of the cell (land-use change).
 The main configuration file that controls:
 - where the dataset is (`project_path`)
 - which scenario is run (`scenario`)
-- enabled mechanisms (regionalization, updaters, seeding, output options, etc.)
+- enabled mechanisms (regionalisation, updaters, seeding, output options, etc.)
 - optional path overrides (baseline, capitals, demands, masks, institutions, …)
 
 ---
@@ -173,7 +173,7 @@ Regions can have:
 - their own outputs
 - potentially region-specific parameter sets (dataset-dependent)
 
-In YAML, this is controlled by `regionalization: true/false`.
+In YAML, this is controlled by `regionalisation: true/false`.
 
 ---
 
@@ -200,10 +200,9 @@ A strategy controlling which subset of cells participates in certain processes e
 
 Common modes:
 - `rank`: deterministic ranking-based selection (e.g., lowest utility cells)
-- numeric seed: reproducible pseudo-random selection
-- explicit seed file: user-specified list of cells
+- `random`: reproducible pseudo-random selection
 
-In YAML, controlled via `seedID` .
+In YAML, the mode is controlled by `cell_selection`; `random_seed` controls reproducibility.
 
 ---
 

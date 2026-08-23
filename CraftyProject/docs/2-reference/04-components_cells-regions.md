@@ -5,7 +5,7 @@ how region membership changes (or not), and how cells flow through annual proces
 
 This page complements:
 - `../02-data-model.md` (concepts + input mapping)
-- `../03-config-reference.md` (regionalization config key)
+- `../03-config-reference.md` (regionalisation config key)
 - `../../user-guide/02-running-scenarios.md` (scenario data discovery)
 
 ---
@@ -85,12 +85,12 @@ Region membership is normally **fixed** for the whole run.
 
 ## 4) Regionalisation modes
 
-### 4.1 Non-regional run (`regionalization: false`)
+### 4.1 Non-regional run (`regionalisation: false`)
 - model builds one region (world)
 - demand files are treated as “world demand” (or a single region)
 - outputs are global only
 
-### 4.2 Regionalised run (`regionalization: true`)
+### 4.2 Regionalised run (`regionalisation: true`)
 - model builds multiple named regions
 - each region has its own service demands/weights/taxes
 - allocation decisions are driven by **regional** marginal utility
@@ -149,7 +149,7 @@ The most important cell-handling steps are:
 
 ### 7.1 Seed selection (participating cells)
 Many processes operate only on a subset of cells each year (“seed”).
-Seed selection is controlled by `seedID` and the participating percentage.
+Seed selection is controlled by `cell_selection`, `random_seed`, and the participating fraction.
 
 Seed selection affects:
 - competition workload

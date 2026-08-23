@@ -5,7 +5,7 @@
 #
 # Path handling and priority (typical):
 #   1) CLI overrides (e.g., --project-path, --output-path) if supported by your launcher
-#   2) Explicit paths in this YAML (e.g., BASELINE_path, CAPITALS_directory)
+#   2) Explicit paths in this YAML (e.g., baseline_path, capitals_directory)
 #   3) Auto-discovery from project_path using the default folder conventions
 
 # -------------------------------------------------------------------
@@ -20,7 +20,7 @@ project_path: "C:/Users/<user>/CRAFTY_DATA/CRAFTY-EU-1km"
 scenario: "ssp126"
 
 # Enable regionalised runs (requires: per-region demand files and region mapping tables)
-regionalization: true
+regionalisation: true
 
 
 # -------------------------------------------------------------------
@@ -28,15 +28,13 @@ regionalization: true
 # -------------------------------------------------------------------
 # If you uncomment these, they take priority over auto-discovery.
 
-# metaData_directory: "C:/.../CRAFTY-EU-1km_upscaled/csv"
-# BASELINE_path: "C:/.../CRAFTY-EU-1km_upscaled/worlds/Baseline_map.csv"
-# CAPITALS_directory: "C:/.../CRAFTY-EU-1km_upscaled/worlds/capitals/ssp126"
-# aft_behevoir_directory: "C:/.../CRAFTY-EU-1km_upscaled/AFTs/agents/default_agents"
+# metadata_directory: "C:/.../CRAFTY-EU-1km_upscaled/csv"
+# baseline_path: "C:/.../CRAFTY-EU-1km_upscaled/worlds/Baseline_map.csv"
+# capitals_directory: "C:/.../CRAFTY-EU-1km_upscaled/worlds/capitals/ssp126"
+# aft_behaviour_parameters_directory: "C:/.../CRAFTY-EU-1km_upscaled/AFTs/agents/default_agents"
 # service_demands_path: "C:/.../CRAFTY-EU-1km_upscaled/services/demand/ssp126"
-# service_utility_weight_path: "C:/.../CRAFTY-EU-1km_upscaled/services/Service_Utility_Weights/ssp126_Utility_Weight_EU.csv"
-# services_taxes_subsidies_path: "C:/.../CRAFTY-EU-1km_upscaled/services/services_taxes_subsidies"
-# land_taxes_subsidies_path: "C:/.../CRAFTY-EU-1km_upscaled/AFTs/land_taxes_subsidies/ssp126_land_taxes_subsidies_EU.csv"
-# landControle_directories:
+# service_utility_weights_path: "C:/.../CRAFTY-EU-1km_upscaled/services/Service_Utility_Weights/ssp126_Utility_Weight_EU.csv"
+# land_control_directories:
 #   - "C:/.../CRAFTY-EU-1km_upscaled/worlds/LandUseControl/Urban/ssp126"
 #   - "C:/.../CRAFTY-EU-1km_upscaled/worlds/LandUseControl/Water/ssp126"
 # capital_degradation_directory: "C:/.../CRAFTY-EU-1km_upscaled/worlds/shocksMap"
@@ -51,39 +49,41 @@ initial_demand_supply_equilibrium: true
 # Abandon cell if the current owner competitiveness falls below threshold
 use_abandonment_threshold: true
 
-# If true, create a mutated child agent when a competitor wins competition
-mutate_on_competition_win: false
-mutation_interval: 0.01
-
 # Probability of selecting the highest-utility AFT for a cell during competition
-MostCompetitorAFTProbability: 0.8
+most_competitive_aft_probability: 0.8
 
 # Behaviour model (optional feature)
-use_AFTs_categories_GiveIn: false
+use_category_based_give_in: false
+use_cell_behaviour_model: false
+# category_give_in_distributions_directory: "C:/.../AFTs/behaviour/category_distributions"
+# cell_behaviour_parameters_directory: "C:/.../worlds/behaviour/scenario"
+# cell_behaviour_logistic_steepness: 7
 
 # Neighbour effects (competition candidate filtering)
-use_neighbor_priority: true
-neighbor_priority_probability: 0.95
-neighbor_radius: 2
+use_neighbour_priority: true
+neighbour_priority_probability: 0.95
+neighbour_radius: 2
 
 # -------------------------------------------------------------------
 # 4) Competitiveness and land-change “rates”
 # -------------------------------------------------------------------
 
-# Seed selection strategy for the set of cells that participate in processes:
-# - number: random seed id
-# - path: read seeds from file
-# - "rank": deterministic rank-by-utility selection (recommended for reproducibility)
-seedID: "rank"
+# Cell-selection method, independent of the simulation random seed:
+# - "rank": select the lowest-utility cells
+# - "random": select a deterministic pseudo-random subset
+cell_selection: "rank"
+
+# Root seed used by every stochastic model decision.
+random_seed: 1
 
 # Percentage of land that can be abandoned per tick/year
-land_abandonment_percentage: 0.03
+land_abandonment_fraction: 0.03
 
 # Percentage of cells participating in the competitiveness process per tick/year
-participating_cells_percentage: 0.05
+participating_cell_fraction: 0.05
 
 # Fraction of unmanaged cells that can be taken over per tick/year (project-specific)
-takeOverUnmanageCells_percentage: 0.8
+unmanaged_cell_takeover_fraction: 0.8
 
 # Number of times marginal utility is recalculated per tick/year
 marginal_utility_calculations_per_tick: 5
@@ -100,13 +100,22 @@ generate_output_files: true
 output_folder_name: ""
 
 # Charts/plots (availability depends on build)
-generate_charts_plots_PNG: true
-generate_charts_plots_PDF: false
+generate_chart_plots_png: true
 
 # Map exports can be very heavy on large grids: keep off for parameter sweeps.
 generate_map_output_files: false
-generate_map_plots_tif: false
 map_output_years: [2020, 2025, 2030, 2050, 2100]
+
+# Optional fast-check PNG maps. Behaviour values also work in dual/triple combinations.
+map_png:
+  enabled: false
+  single_value:
+    - owner
+    - behaviour:Attitude_intensification
+  dual_value:
+    - [behaviour:Weight_inertia, behaviour:Weight-social]
+  triple_value:
+    - [behaviour:Attitude_intensification, behaviour:Critical_mass, behaviour:MaxGive_in]
 
 # Tracking adds extra outputs useful for debugging and calibration
 track_changes: false
@@ -116,11 +125,11 @@ track_changes: false
 # -------------------------------------------------------------------
 
 # If true, export a dedicated log file into the run output folder (when supported)
-export_LOGGER: false
-LOGGER_info: true
-LOGGER_warn: true
-LOGGER_trace: false
+export_logger: false
+logger_info: true
+logger_warn: true
+logger_trace: false
 
 # Runtime timing summaries
-printAbstractModelRunnerMeasures: true
-printRegionalModelRunnerMeasures: true
+print_abstract_model_runner_measures: true
+print_regional_model_runner_measures: true

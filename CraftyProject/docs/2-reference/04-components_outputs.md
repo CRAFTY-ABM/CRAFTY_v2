@@ -15,7 +15,7 @@ CRAFTY outputs are designed to support:
 - **reproducibility**: each run has a self-contained folder (config + logs + outputs)
 - **analysis at multiple scales**:
   - global (world)
-  - per-region (if `regionalization: true`)
+  - per-region (if `regionalisation: true`)
   - per-AFT (land-use composition / service composition)
 - **lightweight defaults** for batch runs
 - optional heavy exports (maps) for visual inspection and publications
@@ -59,7 +59,7 @@ CRAFTY outputs can be grouped into 4 main families:
 
 1) **Core tables (CSV)** — always the most important outputs  
 2) **Maps (cell-level snapshots)** — heavy, optional  
-3) **Plots (PNG/PDF)** — optional (depends on build/exporters)  
+3) **Plots (PNG)** — optional
 4) **Diagnostics/logs** — always useful, lightweight  
 
 ---
@@ -101,7 +101,7 @@ These are useful for calibration and stability checking.
 
 When:
 ```yaml
-regionalization: true
+regionalisation: true
 ```
 outputs are often written in one of two styles:
 
@@ -143,13 +143,12 @@ Map exports can dominate runtime and disk usage on large grids. Keep them off fo
 
 ---
 
-## 6) Plot outputs (PNG/PDF)
+## 6) Plot outputs (PNG)
 
 If enabled, CRAFTY can export plots for quick inspection:
 
 ```yaml
-generate_charts_plots_PNG: true
-generate_charts_plots_PDF: false
+generate_chart_plots_png: true
 ```
 
 Common plots:
@@ -175,8 +174,8 @@ This makes runs reproducible and allows debugging months later.
 ### 7.2 Timing/performance measures
 If enabled in config for debuging:
 ```yaml
-printAbstractModelRunnerMeasures: true
-printRegionalModelRunnerMeasures: true
+print_abstract_model_runner_measures: true
+print_regional_model_runner_measures: true
 ```
 you can get:
 - load time
@@ -191,8 +190,7 @@ Minimal outputs for batch experiments:
 ```yaml
 generate_output_files: true
 generate_map_output_files: false
-generate_charts_plots_PNG: false
-generate_charts_plots_PDF: false
+generate_chart_plots_png: false
 track_changes: false
 ```
 
@@ -209,7 +207,7 @@ Publication outputs:
 generate_output_files: true
 generate_map_output_files: true
 map_output_years: [2020, 2050, 2100]
-generate_charts_plots_PNG: true
+generate_chart_plots_png: true
 ```
 
 ---
@@ -227,7 +225,7 @@ generate_charts_plots_PNG: true
 - map exporters disabled or dependencies missing.
 
 ### 9.3 “Outputs differ between runs”
-- random seeding not fixed (`seedID` differs)
+- `random_seed` differs between runs
 - multi-threading changes tie-breaking order
 - input files changed (most common)
 

@@ -40,7 +40,7 @@ CRAFTY maintains:
 - triggers the “service update pipeline” (demand → weights → taxes/subsidies)
 
 ### 1.2 World vs Region meaning
-- **Regional services** drive allocation when `regionalization: true`
+- **Regional services** drive allocation when `regionalisation: true`
 - **World services** are aggregates, mainly for plots and diagnostics
 
 Aggregation rules (world container):
@@ -55,7 +55,7 @@ Aggregation rules (world container):
 Services are driven by **four** input families:
 
 1) **Service metadata** (required)  
-2) **Demands** (required for meaningful runs; and required per region when `regionalization: true`)  
+2) **Demands** (required for meaningful runs; and required per region when `regionalisation: true`)
 3) **Utility weights** (optional; defaults exist)  
 4) **Service taxes/subsidies** (optional; defaults exist)
 
@@ -129,7 +129,7 @@ Weights are optional. If a weight file cannot be found for a region, CRAFTY uses
 ### 4.3 Discovery logic
 Resolved using:
 
-1) `service_utility_weight_path` (if set)
+1) `service_utility_weights_path` (if set)
 2) otherwise: scenario discovery under `Service_Utility_Weights/`
 
 If the configured path is:
@@ -150,19 +150,10 @@ Conceptually:
 
 Exact scaling depends on your runner’s policy formulation (often interacting with gaps and calibration factors).
 
-### 5.2 Defaults (important)
-Taxes/subsidies are optional. If no file is found for a region, CRAFTY uses:
-- **tax/subsidy = 0.0** for all services and all years
+### 5.2 Cell-level policy effects
 
-### 5.3 Discovery logic
-Resolved using:
-
-1) `services_taxes_subsidies_path` (if set)
-2) otherwise: scenario discovery under `services_taxes_subsidies/`
-
-If the configured path is:
-- a **file**: used directly
-- a **directory**: searched for region-specific files containing a region token
+Regional service tax files are no longer loaded. Institution policy effects are stored on individual cells and
+are included only when cell-level taxes are enabled.
 
 ---
 
@@ -226,11 +217,10 @@ scenario: "ssp126"
 
 # optional path overrides
 service_demands_path: ""
-service_utility_weight_path: ""
-services_taxes_subsidies_path: ""
+service_utility_weights_path: ""
 
 # regional mode control
-regionalization: false
+regionalisation: false
 ```
 
 Related keys that interact with service behaviour:
@@ -244,7 +234,7 @@ averaged_residual_demand_per_cell: false
 ## 9) Practical tips
 
 - **Start simple:** run with demands only, no weights, no taxes/subsidies.
-- **Regionalisation sanity check:** confirm every region has a demand file before enabling `regionalization: true`.
+- **Regionalisation sanity check:** confirm every region has a demand file before enabling `regionalisation: true`.
 - **Keep names consistent:** service labels must match metadata and CSV headers exactly.
 - **Use defaults intentionally:** weights default to 1.0 and taxes/subsidies default to 0.0 great for a baseline run.
 - **Avoid “silent mismatch”:** if a CSV column name doesn’t match a service label, it is ignored.

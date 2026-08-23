@@ -135,7 +135,6 @@ public class Competitiveness {
 	}
 
 	private static boolean makeCompetition(Cell c, Aft owner, Aft competitor) {
-
 		if (owner == competitor) {
 			return false;
 		}
@@ -156,7 +155,6 @@ public class Competitiveness {
 			makeCompetition = false;
 		}
 		return makeCompetition;
-
 	}
 
 	private static boolean landUsechange(Cell c, Aft owner, Aft competitor, RegionalModelRunner r) {
@@ -238,7 +236,6 @@ public class Competitiveness {
 				return mean + sd * gaussian;
 			}
 		}
-
 		return owner.getGiveInMean() + owner.getGiveInSD() * gaussian;
 	}
 

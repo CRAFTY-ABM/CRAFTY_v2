@@ -60,12 +60,12 @@ Depending on your dataset/config template, you may override things like:
 Example (typical pattern; keys depend on your config template):
 ```yaml
 # Optional overrides (examples)
-metaData_directory: "/path/to/csv"
-BASELINE_path: "/path/to/worlds/Baseline_map.csv"
-CAPITALS_directory: "/path/to/worlds/capitals/ssp126"
+metadata_directory: "/path/to/csv"
+baseline_path: "/path/to/worlds/Baseline_map.csv"
+capitals_directory: "/path/to/worlds/capitals/ssp126"
 
 institutions_directory: "/path/to/institutions"
-landControle_directories:
+land_control_directories:
   - "/path/to/worlds/LandUseControl/Water/ssp126"
 ```
 
@@ -92,24 +92,13 @@ Resolution logic (conceptual):
 - columns = service names
 - values = yearly demand vector (aligned to model years)
 
-### 3.2 Utility weights (`service_utility_weight_path`)
+### 3.2 Utility weights (`service_utility_weights_path`)
 ```yaml
-service_utility_weight_path: "/path/to/Service_Utility_Weights"   # directory OR file
+service_utility_weights_path: "/path/to/Service_Utility_Weights"   # directory OR file
 ```
 
 If no weights file is found for a region:
 - CRAFTY assigns a default constant weight (typically `1.0`) so the model remains runnable.
-
-### 3.3 Taxes/subsidies (`services_taxes_subsidies_path`)
-```yaml
-services_taxes_subsidies_path: "/path/to/services_taxes_subsidies"  # directory OR file
-```
-
-If no taxes/subsidies file is found for a region:
-- CRAFTY assigns a default constant value (typically `0.0`) so the model remains runnable.
-
-> The exact region-file naming/token conventions depend on your dataset conventions (often a region token embedded in the
-> filename). If regionalisation is enabled and CRAFTY can’t match files to regions, it will log warnings and may fall back.
 
 ---
 
@@ -117,11 +106,11 @@ If no taxes/subsidies file is found for a region:
 
 ### 4.1 Enable / disable
 ```yaml
-regionalization: true
+regionalisation: true
 ```
 
-- If `regionalization: false`, CRAFTY runs everything as one region (“world”).
-- If `regionalization: true`, CRAFTY attempts to build multiple regions (based on GIS/region info in the dataset)
+- If `regionalisation: false`, CRAFTY runs everything as one region (“world”).
+- If `regionalisation: true`, CRAFTY attempts to build multiple regions (based on GIS/region info in the dataset)
   and expects regional service inputs to be available.
 
 ### 4.2 Automatic fallback to single region
@@ -141,24 +130,24 @@ Many CRAFTY processes operate only on a subset of cells per tick (e.g., competit
 - **Which cells participate** (percentages)
 - **How the participating “seed” cells are selected** (seed strategy)
 
-### 5.1 Seed selection strategy (`seedID`)
-Common patterns used in your configs:
+### 5.1 Cell-selection strategy and random seed
 
 ```yaml
-seedID: rank
+cell_selection: rank
+random_seed: 1
 ```
 
 Typical meanings:
-- `rank` → deterministic / ranking-based selection (e.g., lowest-utility cells)
-- integer (e.g., `1234`) → random seed with fixed ID (reproducible randomness)
-- file path / directory → read explicit seed selection from file(s)
+- `cell_selection: rank` → ranking-based selection of the lowest-utility cells
+- `cell_selection: random` → deterministic pseudo-random cell selection
+- `random_seed` → reproducible seed used by selection and other stochastic decisions
 
 ### 5.2 Participation and change rates
 Examples:
 ```yaml
-land_abandonment_percentage: 0.03
-participating_cells_percentage: 0.05
-takeOverUnmanageCells_percentage: 0.8
+land_abandonment_fraction: 0.03
+participating_cell_fraction: 0.05
+unmanaged_cell_takeover_fraction: 0.8
 ```
 
 Practical advice:

@@ -95,17 +95,6 @@ minimal-scenario_data_example
 │   │           demand_<region_2>.csv
 │   │           demand_<region_world>.csv
 │   │
-│   ├───services_taxes_subsidies (optional)
-│   │   ├───<scenario_1>
-│   │   │       services_taxes_subsidies_<region_1>.csv
-│   │   │       services_taxes_subsidies_<region_2>.csv
-│   │   │       services_taxes_subsidies_<region_world>.csv
-│   │   │
-│   │   └───<scenario_2>
-│   │           Utility_Weight_<region_1>.csv
-│   │           Utility_Weight_<region_2>.csv
-│   │           Utility_Weight_<region_world>.csv
-│   │
 │   └───Service_Utility_Weights (optional)
 │       ├───<scenario_1>
 │       │       Utility_Weight_<region_1>.csv

@@ -86,10 +86,9 @@ Conceptual names:
 
 ### 2.4 Seed selection updater
 Selects the set of cells that will participate in processes each year.
-Often controlled by `seedID`:
+Controlled by `cell_selection`:
 - `rank` (lowest-utility cells)
-- numeric seed (pseudo-random)
-- seed file/directory (project-specific)
+- `random` (deterministic pseudo-random selection using `random_seed`)
 
 
 ### 2.5 Process updaters (competition / abandonment / take-over)
@@ -107,7 +106,7 @@ Conceptual names:
 ### 2.6 Output updaters / listeners
 These handle writing:
 - time series CSV tables
-- optional map snapshots (PNG/CSV/GeoTIFF depending on build)
+- optional map snapshots (PNG/CSV)
 - diagnostics and trackers
 
 Conceptual names:
@@ -132,7 +131,7 @@ Order is crucial. Common dependencies:
 
 - You must load **capitals** before computing **productivity**.
 - You must compute **supply** before computing **demand–supply gaps**.
-- You must compute **utility** before `seedID: rank` can select lowest-utility cells.
+- You must compute **utility** before `cell_selection: rank` can select lowest-utility cells.
 - Outputs should run after processes if you want end-of-year snapshots but AFT distribution is capured befor land use change.
 
 **Typical safe order**
@@ -157,22 +156,23 @@ Updaters are often toggled or parameterised via config.
 
 ### 4.1 Input updates
 ```yaml
-CAPITALS_directory: ""
+capitals_directory: ""
 capital_degradation_directory: ""
-landControle_directories: []
+land_control_directories: []
 ```
 
 ### 4.2 Seeding
 ```yaml
-seedID: rank
-participating_cells_percentage: 0.05
+cell_selection: rank
+random_seed: 1
+participating_cell_fraction: 0.05
 ```
 
 ### 4.3 Process rates
 ```yaml
-land_abandonment_percentage: 0.03
-takeOverUnmanageCells_percentage: 0.80
-MostCompetitorAFTProbability: 0.70
+land_abandonment_fraction: 0.03
+unmanaged_cell_takeover_fraction: 0.80
+most_competitive_aft_probability: 0.70
 ```
 
 ### 4.4 Services / utility

@@ -1,6 +1,6 @@
 # PNG Map Outputs from YAML
 
-The `map_png` option allows CRAFTY to export spatial PNG maps directly during a run, without additional post-processing scripts. This is useful for quickly checking cell-level patterns in services, capitals, taxes/subsidies, competitiveness, and owner life counters. It also helps users visually inspect spatial relationships, such as whether a capital is associated with higher service supply, or whether competitiveness is concentrated in specific areas.
+The `map_png` option allows CRAFTY to export spatial PNG maps directly during a run, without additional post-processing scripts. This is useful for quickly checking cell-level patterns in services, capitals, behaviour parameters, taxes/subsidies, competitiveness, and owner life counters. It also helps users visually inspect spatial relationships, such as whether a capital is associated with higher service supply, or whether competitiveness is concentrated in specific areas.
 
 ## How it works
 
@@ -27,15 +27,18 @@ map_png:
     - capital:human
     - land_taxes_subsidies
     - service_taxes_subsidies:Softwood
+    - behaviour:Attitude_intensification
     - competitiveness
     - owners_life_counter
 
   dual_value:
     - [service:Hardwood, capital:human]
+    - [behaviour:Weight_inertia, behaviour:Weight-social]
     - [service:Carbon, service:Softwood]
 
   triple_value:
     - [service:Hardwood, capital:human, service:Carbon]
+    - [behaviour:Attitude_intensification, behaviour:Critical_mass, behaviour:MaxGive_in]
     - [service:Softwood, capital:human, service:Carbon]
     - [service:Softwood, capital:human, service:Hardwood]
 ```
@@ -62,6 +65,24 @@ single_value:
 
 `service:ALL` generates one map for every service. A specific service or capital can also be selected, for example `service:Hardwood` or `capital:human`.
 
+Cell behaviour parameters use the canonical `behaviour:<parameter>` prefix. Supported parameters are:
+
+- `Attitude_intensification`
+- `Weight_inertia`
+- `Weight-social`
+- `Critical_mass`
+- `MaxGive_in`
+- `Neighborhood_size`
+
+For example, `behaviour:Attitude_intensification` creates a single map. `behaviour:ALL` creates one map for
+each supported parameter. The legacy misspelling `beheviour:` is accepted, but `behaviour:` should be used in
+new configurations. Write the colon without a following space, or quote the complete value, so YAML treats it
+as a string: `behaviour:Weight_inertia` or `"behaviour: Weight_inertia"`.
+
+Behaviour data exists for cells loaded from the latest available annual behaviour parameter file. If a later
+year has no file, CRAFTY retains the previous values. Cells without a behaviour entry are rendered as
+transparent/no-data pixels.
+
 ### Dual-value maps
 
 `dual_value` maps combine two cell attributes into one bivariate map.
@@ -71,6 +92,7 @@ Example:
 ```yaml
 dual_value:
   - [service:Hardwood, capital:human]
+  - [behaviour:Attitude_intensification, behaviour:Weight_inertia]
 ```
 
 This helps inspect the spatial link between Hardwood supply and human capital. Each pair must contain exactly two values. `ALL` is not supported here.
@@ -84,6 +106,7 @@ Example:
 ```yaml
 triple_value:
   - [service:Hardwood, capital:human, service:Carbon]
+  - [behaviour:Weight-social, behaviour:Critical_mass, behaviour:MaxGive_in]
 ```
 
 The values are mapped as:

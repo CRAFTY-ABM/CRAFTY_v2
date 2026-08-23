@@ -26,21 +26,13 @@ AFTs appear in outputs as:
 
 ## 1) AFT lifecycle in the model
 
-At runtime, AFTs exist in three layers:
+At runtime, AFTs exist in two layers:
 
 1) **Definitions** (loaded once at startup)  
-2) **Active instances** (used during a run, per region and/or globally)  
-3) **(Optional) mutated variants** created during competition (evolution-style runs)
+2) **Active instances** (used during a run, per region and/or globally)
 
 ### 1.1 Definitions vs instances
 Most runs use a fixed set of AFTs defined at startup.  
-If evolution/mutation is enabled, new variants can appear during the run.
-
-Mutation is controlled by config keys such as:
-```yaml
-mutate_on_competition_win: false
-mutation_interval: 0
-```
 
 ---
 
@@ -173,30 +165,17 @@ IntBF,0.5,0.1,0.6,0.1,0.0,0.2
 ### 6.2 Category-based give-in (optional)
 If enabled:
 ```yaml
-use_AFTs_categories_GiveIn: true
+use_category_based_give_in: true
 ```
 then the give-in logic may restrict candidates based on `Category` labels.
 This is useful when you want “within-category” substitution rather than global substitution.
 
 ---
 
-## 7) AFT-related policy inputs (optional)
+## 7) AFT-related policy inputs
 
-### 7.1 Land taxes/subsidies (AFT-level)
-Some runs include an AFT-level incentive term:
-```yaml
-land_taxes_subsidies_path: "/path/to/land_taxes_subsidies"
-```
-
-This can be:
-- one file for all regions, or
-- one file per region (matched by token)
-
-Defaults:
-- if missing, land taxes/subsidies are treated as `0.0`
-
-### 7.2 Service taxes/subsidies (service-level)
-This is covered in `services.md` but matters for AFTs because it modifies competitiveness via service pathways.
+Regional AFT-level land tax files are no longer supported. Institution policy effects are applied directly to
+the affected cells.
 
 ---
 
@@ -221,18 +200,16 @@ AFT participation is often constrained by:
 
 ```yaml
 # Seeding and annual rates (strongly affects how much AFTs can change the landscape)
-seedID: rank
-participating_cells_percentage: 0.05
-land_abandonment_percentage: 0.03
-takeOverUnmanageCells_percentage: 0.80
+cell_selection: rank
+random_seed: 1
+participating_cell_fraction: 0.05
+land_abandonment_fraction: 0.03
+unmanaged_cell_takeover_fraction: 0.80
 
 # Behaviour switches
 use_abandonment_threshold: true
-use_AFTs_categories_GiveIn: false
+use_category_based_give_in: false
 
-# Mutation/evolution (optional)
-mutate_on_competition_win: false
-mutation_interval: 0
 ```
 
 ---
@@ -265,13 +242,13 @@ mutation_interval: 0
 - The initial supply is 0 for a service that ignores the initial equilibrium.
 
 **Fix**
-- reduce `participating_cells_percentage`
+- reduce `participating_cell_fraction`
 - inspect demands/weights/taxes
-- compare `seedID: rank` vs a reproducible random seed
+- compare `cell_selection: rank` with `cell_selection: random`, using the same `random_seed`
 
 ### 10.4 “No land-use change occurs”
 **Causes**
-- `participating_cells_percentage` too small (or 0)
+- `participating_cell_fraction` too small (or 0)
 - masks block transitions everywhere
 - restrictions forbid all transitions
 

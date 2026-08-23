@@ -181,27 +181,6 @@ Year,Food,Timber,Carbon
 
 ---
 
-## 6) Service taxes/subsidies (`services/services_taxes_subsidies/*.csv`)
-
-**Purpose**
-- apply incentives or penalties per service (EU-level or regional)
-
-**Typical naming**
-- `ssp126_services_taxes_subsidies_EU.csv`,  `ssp126_services_taxes_subsidies_<regionName>.csv`
-
-**Typical structure**
-```text
-Year,Food,Timber,Carbon
-2020,0.0,0.0,0.0
-2021,0.0,0.0,0.0
-...
-```
-
-**Defaults**
-- if missing: taxes/subsidies often default to `0.0`
-
----
-
 ## 7) AFT parameter files (`AFTs/agents/default_agents/*.csv`)
 
 **Purpose**
@@ -248,31 +227,6 @@ Timber,0.0,0.1,0.3,0.2
 
 each AFT has a separet file for sensitivity.
 Always follow the loader expected format for your build.
-
----
-
-## 9) Land taxes/subsidies (`AFTs/land_taxes_subsidies/*.csv`)
-
-**Purpose**
-- apply AFT-level land taxes/subsidies (often EU-level)
-
-**Typical naming**
-- `ssp126_land_taxes_subsidies_EU.csv` , `ssp126_land_taxes_subsidies_<regionName>.csv` 
-
-**Typical structure**
-```text
-Year,IntC3C,ExtBF,Urban
-2020,0.0,0.0,0.0
-2021,0.0,0.0,0.0
-...
-```
-
-Or sometimes:
-```text
-AFT,Tax
-IntC3C,0.0
-...
-```
 
 ---
 
