@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+	xmlns:fx="http://javafx.com/fxml/1"
+	fx:controller="de.cesr.crafty.gui.controller.fxml.SimulationPlotsController"
+	fx:id="TopBox" spacing="6.0">
+	<children>
+		<HBox alignment="CENTER_LEFT" spacing="8.0"
+			styleClass="simulation-chart-key">
+			<children>
+				<Label text="Series:" styleClass="simulation-chart-key-title" />
+				<Region minHeight="3.0" maxHeight="3.0" prefHeight="3.0"
+					minWidth="24.0" maxWidth="24.0" prefWidth="24.0"
+					styleClass="simulation-supply-key" />
+				<Label text="Supply" />
+				<Region minHeight="3.0" maxHeight="3.0" prefHeight="3.0"
+					minWidth="24.0" maxWidth="24.0" prefWidth="24.0"
+					styleClass="simulation-demand-key" />
+				<Label text="Demand" />
+			</children>
+		</HBox>
+		<ScrollPane fx:id="scroll" fitToWidth="true"
+			hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+			VBox.vgrow="ALWAYS" styleClass="responsive-scroll">
+			<GridPane fx:id="gridPaneLinnChart" />
+		</ScrollPane>
+	</children>
+</VBox>

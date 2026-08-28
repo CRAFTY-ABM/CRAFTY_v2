@@ -2,13 +2,16 @@ package de.cesr.crafty.core.output;
 
 import java.io.File;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.crafty.Cell;
+import de.cesr.crafty.core.crafty.CellBehaviour;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
+import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.graphics.Dual_value_PNG;
 import de.cesr.crafty.core.utils.graphics.MapPngExporter;
@@ -30,6 +33,11 @@ public class PngGenerator {
 		}
 
 		@Override
+		public List<String> behaviourParameterNames() {
+			return CellBehaviour.parameterNames();
+		}
+
+		@Override
 		public ToDoubleFunction<Cell> serviceExtractor(String serviceName) {
 			return c -> c.getCurrentProd()[ServiceSet.getServicesList().indexOf(serviceName)];
 		}
@@ -38,6 +46,16 @@ public class PngGenerator {
 		public ToDoubleFunction<Cell> capitalExtractor(String capitalName) {
 			return c -> c.getCapitals().getOrDefault(capitalName, Double.NaN)
 					* (1 + c.getCapitalsAdjusment().getOrDefault(capitalName, 0.));
+		}
+
+		@Override
+		public ToDoubleFunction<Cell> behaviourParameterExtractor(String parameterName) {
+			// Validate the parameter while building the request rather than during pixel export.
+			new CellBehaviour(null).parameterValue(parameterName);
+			return c -> {
+				CellBehaviour behaviour = CellBehaviourUpdater.cellBehaviours.get(c);
+				return behaviour == null ? Double.NaN : behaviour.parameterValue(parameterName);
+			};
 		}
 
 		@Override
@@ -59,21 +77,30 @@ public class PngGenerator {
 		public ToDoubleFunction<Cell> ownerLifeCounterExtractor() {
 			return c -> c.getOwnerLifeCounter();
 		}
+
+		@Override
+		public Function<Cell, String> ownerExtractor() {
+			return c -> c.getOwnerName();
+		}
+
 	};
 	public static MapPngSpecHandler handler = new MapPngSpecHandler(registry);
 
 	public static void generatePNGs() {
 		String outDir = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "MapsPlots");
 
-		MapPngExporter.exportOwnerMapAsPng(new File(outDir), CellsLoader.hashCell, "AFTs_maps");
-
 		List<MapPngSpecHandler.SingleMapRequest> singles = handler
 				.buildSingleRequests(ConfigLoader.config.map_png.single_value);
+
 		if (!singles.isEmpty()) {
 			String singlespath = PathTools.makeDirectory(outDir + File.separator + "singles_value_maps");
 			for (MapPngSpecHandler.SingleMapRequest req : singles) {
-				MapPngExporter.exportNumericCellMapAsPng(new File(singlespath), CellsLoader.hashCell, req.outputName,
-						req.value.extractor);
+				if (!req.outputName.equalsIgnoreCase("owner")) {
+					MapPngExporter.exportNumericCellMapAsPng(new File(singlespath), CellsLoader.hashCell,
+							req.outputName, req.value.doubleExtractor);
+				} else {
+					MapPngExporter.exportOwnerMapAsPng(new File(outDir), CellsLoader.hashCell, "AFTs_maps");
+				}
 			}
 		}
 		List<MapPngSpecHandler.DualMapRequest> duals = handler
@@ -83,7 +110,7 @@ public class PngGenerator {
 			for (MapPngSpecHandler.DualMapRequest req : duals) {
 				Dual_value_PNG.exportBivariateMapAsPng(
 						new File(PathTools.makeDirectory(dualsImage + File.separator + req.outputName)),
-						CellsLoader.hashCell, req.outputName, req.value1.extractor, req.value2.extractor,
+						CellsLoader.hashCell, req.outputName, req.value1.doubleExtractor, req.value2.doubleExtractor,
 						req.value1.label, req.value2.label);
 			}
 		}
@@ -95,8 +122,8 @@ public class PngGenerator {
 			for (MapPngSpecHandler.TripleMapRequest req : triples) {
 				Triple_value_PNG.exportRgbMapAsPng(
 						new File(PathTools.makeDirectory(triplesImage + File.separator + req.outputName)),
-						CellsLoader.hashCell, req.outputName, req.red.extractor, req.green.extractor,
-						req.blue.extractor, req.red.label, req.green.label, req.blue.label);
+						CellsLoader.hashCell, req.outputName, req.red.doubleExtractor, req.green.doubleExtractor,
+						req.blue.doubleExtractor, req.red.label, req.green.label, req.blue.label);
 			}
 		}
 

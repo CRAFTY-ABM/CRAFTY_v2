@@ -8,39 +8,45 @@
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 <?import javafx.scene.control.Tooltip?>
-<?import javafx.scene.layout.BorderPane?>
-<BorderPane xmlns="http://javafx.com/javafx/21"
+<SplitPane xmlns="http://javafx.com/javafx/21"
 	xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="de.cesr.crafty.gui.controller.fxml.TabPaneController"
-	style="-fx-padding: 0;">
-	<left>
-		<SplitPane dividerPositions="0.3" orientation="HORIZONTAL">
-			<items><!---->
-				<VBox>
+	fx:id="workspaceSplit" dividerPositions="0.52"
+	orientation="HORIZONTAL" styleClass="workspace-split">
+	<items>
+		<VBox fx:id="controlsBox" minWidth="420.0">
 					<children>
-						<HBox spacing="15.0">
+						<HBox alignment="CENTER_LEFT" spacing="12.0"
+							styleClass="workspace-toolbar">
 							<children>
-								<CheckBox fx:id="regionalBox" mnemonicParsing="false"
-									onAction="#regionalization" text="Regionalization" />
+								<!-- <CheckBox fx:id="regionalBox" mnemonicParsing="false"
+									onAction="#regionalization" text="Regionalization" /> -->
 								<Label text="Scenario" />
 								<ChoiceBox fx:id="scenarioschoice"
 									onAction="#scenarioschoice" />
-								<Label text=" Current Year" />
-								<ChoiceBox fx:id="yearchoice" onAction="#yearchoice" />
+								<Region HBox.hgrow="ALWAYS" />
+								<ToggleButton fx:id="mapToggle"
+									mnemonicParsing="false" onAction="#toggleMap"
+									selected="true" text="Hide map" />
+								<!-- <Label text=" Current Year" />
+								<ChoiceBox fx:id="yearchoice" onAction="#yearchoice" /> -->
 							</children>
 						</HBox>
-						<TabPane fx:id="tabpane" tabClosingPolicy="UNAVAILABLE">
+						<TabPane fx:id="tabpane" tabClosingPolicy="UNAVAILABLE"
+							VBox.vgrow="ALWAYS">
 							<tabs>
 
-								<Tab text="General View">
-									<!-- <graphic> <FontIcon iconLiteral="fas-home" iconSize="15" /> 
-										</graphic> -->
+								<Tab text="General overview">
+									 <!--<graphic> <FontIcon iconLiteral="fas-home" iconSize="15" /> 
+										</graphic>  -->
 									<tooltip>
-										<Tooltip text="Model General View" />
+										<Tooltip text="Model overview" />
 									</tooltip>
 									<content>
 										<fx:include
@@ -48,7 +54,7 @@
 									</content>
 								</Tab>	<!---->
 
-								<Tab fx:id="dataPane" text="Spatial Data">
+								<Tab fx:id="dataPane" text="Spatial data">
 									<!-- <graphic> <FontIcon iconLiteral="fas-globe-europe" iconSize="15" 
 										/> </graphic> -->
 									<tooltip>
@@ -61,22 +67,22 @@
 									</content>
 								</Tab>
 
-								<Tab fx:id="dataPane" text="Services">
-									<!-- <graphic> <FontIcon iconLiteral="fas-chart-line" iconSize="15" 
-										/> </graphic> -->
+							<!-- 	<Tab fx:id="dataPane" text="Services">
+									<graphic> <FontIcon iconLiteral="fas-chart-line" iconSize="15" 
+										/> </graphic> < !- - - - >
 									<tooltip>
 										<Tooltip text="Input data: Services" />
 									</tooltip>
 									<content>
 										<fx:include source="/fxmlControllers/Services.fxml" />
 									</content>
-								</Tab>
+								</Tab> -->
 
-								<Tab text="AFTs Configuration">
+								<Tab text="AFT configuration">
 									<!-- <graphic> <FontIcon iconLiteral="fas-robot" iconSize="15" /> 
 										</graphic> -->
 									<tooltip>
-										<Tooltip text="AFTs display and settings" />
+										<Tooltip text="AFT display and settings" />
 									</tooltip>
 									<content>
 										<fx:include
@@ -84,48 +90,64 @@
 									</content>
 								</Tab>
 
+								<Tab text="Institutions">
+									<tooltip>
+										<Tooltip text="Institution policies and targets overview" />
+									</tooltip>
+									<content>
+										<fx:include
+											source="/fxmlControllers/InstitutionDashboard.fxml" />
+									</content>
+								</Tab>
 
 								<Tab text="Model runner">
 									<!-- <graphic> <FontIcon iconLiteral="fas-play-circle" iconSize="15" 
 										/> </graphic> -->
 									<tooltip>
-										<Tooltip text="Model configuration and running" />
+										<Tooltip text="Configure and run the model" />
 									</tooltip>
 									<content>
-										<TabPane minHeight="0.0" minWidth="0.0"
-											prefHeight="180.0" prefWidth="200.0">
-											<tabs>
+										<VBox>
+											<children>
+												<fx:include
+													source="/fxmlControllers/ModelRunnerDashboard.fxml" />
+												<TabPane minHeight="0.0" minWidth="0.0"
+													prefHeight="180.0" prefWidth="200.0"
+													VBox.vgrow="ALWAYS">
+													<tabs>
+														<Tab text="Simulation plots">
+															<tooltip>
+															<Tooltip text="Service and AFT simulation plots" />
+															</tooltip>
+															<content>
+																<fx:include
+																	source="/fxmlControllers/SimulationPlots.fxml" />
+															</content>
+														</Tab>
 
+														<Tab text="Targets">
+															<tooltip>
+															<Tooltip text="Target value tracking" />
+															</tooltip>
+															<content>
+																<fx:include
+																	source="/fxmlControllers/TargetsPlot.fxml" />
+															</content>
+														</Tab>
 
-												<Tab text="Run configuration">
-													<!-- style="-fx-background-color: #bddee9;" -->
-													<!-- <graphic> <FontIcon iconLiteral="fas-cogs" iconSize="15" 
-														/> </graphic> -->
-													<tooltip>
-														<Tooltip text="Configuring model running" />
-													</tooltip>
-													<content>
-														<fx:include
-															source="/fxmlControllers/RunCofig.fxml" />
-													</content>
-												</Tab>
-
-
-												<Tab text="Simulation Run and follow-up">
-													<!-- style="-fx-background-color: #bddee9;" -->
-													<!-- <graphic> <FontIcon iconLiteral="far-chart-bar" iconSize="15" 
-														/> </graphic> -->
-													<tooltip>
-														<Tooltip text="Simulation Run and follow-up" />
-													</tooltip>
-													<content>
-														<fx:include
-															source="/fxmlControllers/ModelRunner.fxml" />
-													</content>
-												</Tab>
-
-											</tabs>
-										</TabPane>
+														<Tab text="Policies">
+															<tooltip>
+															<Tooltip text="Policy value tracking" />
+															</tooltip>
+															<content>
+																<fx:include
+																	source="/fxmlControllers/PolicyPlots.fxml" />
+															</content>
+														</Tab>
+													</tabs>
+												</TabPane>
+											</children>
+										</VBox>
 									</content>
 								</Tab>
 
@@ -134,18 +156,10 @@
 							</tabs>
 						</TabPane>
 					</children>
-				</VBox>
-			</items>
-		</SplitPane><!---->
-	</left>
-	<center>
-		<VBox>
-			<VBox fx:id="mapBox">
-				<fx:include source="/fxmlControllers/MapToolsBar.fxml" />
-			</VBox>
+		</VBox>
+		<VBox fx:id="mapBox" minWidth="360.0">
+			<fx:include source="/fxmlControllers/MapToolsBar.fxml" />
 			<!-- <TextArea fx:id="consoleArea" /> -->
 		</VBox>
-	</center>
-
-
-</BorderPane>
+	</items>
+</SplitPane>

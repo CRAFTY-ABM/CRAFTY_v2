@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Cell;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
+import de.cesr.crafty.core.output.CellCsvColumn;
+import de.cesr.crafty.core.updaters.CapitalUpdater;
 
 /**
  * Utility methods for reading, writing, and exporting CSV files used throughout CRAFTY.
@@ -112,40 +116,50 @@ public class CsvTools {
 		return filePaths;
 	}
 
-	public static void exportCellsToCSV(String filePath, ConcurrentHashMap<String, Cell> cells) {
-		LOGGER.info("Processing data to write a csv file...");
-		List<String> serviceImmutableList = Collections.unmodifiableList(ServiceSet.getServicesList());
-		// Process the cells in parallel to transform each Cell into a CSV string
-		Set<String> csvLines = cells.values().stream()/* .parallelStream() */ .map(c -> {
-			String servicesFlattened = flattenHashMap(c, serviceImmutableList);
-
-			return String.join(",", String.valueOf(c.getID()), String.valueOf(c.getX()), String.valueOf(c.getY()),
-					c.getOwner() != null ? c.getOwner().getLabel() : "null", String.valueOf(c.getCurrentUtility()),
-					String.valueOf(c.getOwnerLifeCounter()), servicesFlattened);
-		}).collect(Collectors.toSet());
-
-		LOGGER.info("Writing processed lines to the CSV file : " + filePath);
-		// Write the processed lines to the CSV file
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-			writer.write("ID,X,Y,Agent,Utility,OwnerLifeCounter," + String.join(",", serviceImmutableList) + "\n"); // CSV
-																													// header
-			for (String line : csvLines) {
-				writer.write(line + "\n");
-			}
-
-		} catch (IOException e) {
-			LOGGER.error("Unable to export file: " + filePath + "\n" + e.getMessage());
-		}
-	}
-
-	private static String flattenHashMap(Cell c, List<String> serviceImmutableList) {
-		List<String> service = Collections.synchronizedList(new ArrayList<>());
-		serviceImmutableList.forEach(ServiceName -> {
-			service.add(String.valueOf(c.getCurrentProd()[ServiceSet.getServicesList().indexOf(ServiceName)]));
-		});
-
-		return String.join(",", service);
-	}
+//	public static void exportCellsToCSV(String filePath, ConcurrentHashMap<String, Cell> cells) {
+//		LOGGER.info("Processing data to write a csv file...");
+//		List<String> serviceImmutableList = Collections.unmodifiableList(ServiceSet.getServicesList());
+//		List<String> capitalImmutableList = Collections.unmodifiableList(CapitalUpdater.getCapitalsList());
+//
+//		// Process the cells in parallel to transform each Cell into a CSV string
+//		Set<String> csvLines = cells.values().parallelStream().map(c -> {
+//			String servicesFlattened = flattenHashMapService(c, serviceImmutableList);
+//			String capitalsFlatted = flattenHashMapCapital(c, capitalImmutableList);
+//
+//			return String.join(",", String.valueOf(c.getID()), String.valueOf(c.getX()), String.valueOf(c.getY()),
+//					c.getOwner() != null ? c.getOwner().getLabel() : "null", String.valueOf(c.getCurrentUtility()),
+//					String.valueOf(c.getOwnerLifeCounter()), servicesFlattened, capitalsFlatted);
+//		}).collect(Collectors.toSet());
+//
+//		LOGGER.info("Writing processed lines to the CSV file : " + filePath);
+//		// Write the processed lines to the CSV file
+//		try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+//			writer.write("ID,X,Y,Agent,Utility,OwnerLifeCounter," + String.join(",", serviceImmutableList) + ","
+//					+ String.join(",", capitalImmutableList) + "\n");
+//			for (String line : csvLines) {
+//				writer.write(line + "\n");
+//			}
+//
+//		} catch (IOException e) {
+//			LOGGER.error("Unable to export file: " + filePath + "\n" + e.getMessage());
+//		}
+//	}
+//
+//	private static String flattenHashMapService(Cell c, List<String> serviceImmutableList) {
+//		List<String> service = Collections.synchronizedList(new ArrayList<>());
+//		serviceImmutableList.forEach(ServiceName -> {
+//			service.add(String.valueOf(c.getCurrentProd()[ServiceSet.getServicesList().indexOf(ServiceName)]));
+//		});
+//		return String.join(",", service);
+//	}
+//
+//	private static String flattenHashMapCapital(Cell c, List<String> capitalImmutableList) {
+//		List<String> service = Collections.synchronizedList(new ArrayList<>());
+//		capitalImmutableList.forEach(capitalName -> {
+//			service.add(String.valueOf(c.getCapitals().get(capitalName)));
+//		});
+//		return String.join(",", service);
+//	}
 
 	public static List<List<String>> readCsvFile(Path csvPath) {
 		List<List<String>> rows = new ArrayList<>();
@@ -310,5 +324,5 @@ public class CsvTools {
 		}
 		return null;
 	}
-
+	
 }

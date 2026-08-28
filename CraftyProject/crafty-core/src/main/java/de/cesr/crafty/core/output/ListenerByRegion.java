@@ -46,6 +46,7 @@ public class ListenerByRegion {
 	Region R;
 	private String[][] compositionAftListener;
 	private String[][] servicedemandListener;
+	private String[][] eqServicedemandListener;
 	public String[][] DSEquilibriumListener;
 	public String[][] averageUtilities;
 
@@ -56,13 +57,21 @@ public class ListenerByRegion {
 	public void initializeListeners() {
 		compositionAftListener = new String[Timestep.getSize() + 1][AFTsLoader.getAftHash().size() + 1];
 		servicedemandListener = new String[Timestep.getSize() + 1][ServiceSet.getServicesList().size() * 2 + 1];
+		eqServicedemandListener = new String[Timestep.getSize() + 1][ServiceSet.getServicesList().size() * 2 + 1];
+
 		averageUtilities = new String[compositionAftListener.length][compositionAftListener[0].length];
 
 		servicedemandListener[0][0] = "Year";
+		eqServicedemandListener[0][0] = "Year";
+
 		for (int i = 1; i < ServiceSet.getServicesList().size() + 1; i++) {
 			servicedemandListener[0][i] = "Supply:" + ServiceSet.getServicesList().get(i - 1);
 			servicedemandListener[0][i + ServiceSet.getServicesList().size()] = "Demand:"
 					+ ServiceSet.getServicesList().get(i - 1);
+			eqServicedemandListener[0][i] = "Supply:" + ServiceSet.getServicesList().get(i - 1);
+			eqServicedemandListener[0][i + ServiceSet.getServicesList().size()] = "Demand:"
+					+ ServiceSet.getServicesList().get(i - 1);
+
 		}
 		compositionAftListener[0][0] = "Year";
 		averageUtilities[0][0] = "Year";
@@ -89,10 +98,15 @@ public class ListenerByRegion {
 		AtomicInteger m = new AtomicInteger(1);
 		int y = Timestep.getTick() + 1;
 		servicedemandListener[y][0] = String.valueOf(Timestep.getCurrentYear());
-		ServiceSet.getServicesList().forEach(name -> {
-			servicedemandListener[y][m.get()] = String.valueOf(regionalSupply.get(name));
+		ServiceSet.getServicesList().forEach(serviceName -> {
+			servicedemandListener[y][m.get()] = String.valueOf(regionalSupply.get(serviceName));
 			servicedemandListener[y][m.get() + ServiceSet.getServicesList().size()] = String
-					.valueOf(R.getServicesHash().get(name).getDemands().get(Timestep.getCurrentYear()));
+					.valueOf(R.getServicesHash().get(serviceName).getDemands().get(Timestep.getCurrentYear()));
+			double eq = R.getServicesHash().get(serviceName).getCalibration_Factor();
+			eqServicedemandListener[y][m.get()] = String.valueOf(regionalSupply.get(serviceName) * eq);
+			eqServicedemandListener[y][m.get() + ServiceSet.getServicesList().size()] = String
+					.valueOf(R.getServicesHash().get(serviceName).getDemands().get(Timestep.getCurrentYear()) * eq);
+
 			m.getAndIncrement();
 		});
 	}
@@ -109,7 +123,7 @@ public class ListenerByRegion {
 				if (RegionsModelRunnerUpdater.regionsModelRunner.get(R.getName()).getDistributionMeanY() != null) {
 					averageUtilities[y - 1][Utils.indexof(name, averageUtilities[0])] = String
 							.valueOf(RegionsModelRunnerUpdater.regionsModelRunner.get(R.getName()).getDistributionMean()
-									.get(Timestep.getCurrentYear() - 1).get(aft));
+									.get(Timestep.getCurrentYear() - 1).get(aft.getLabel()));
 				} else {
 					averageUtilities[y - 1][Utils.indexof(name, averageUtilities[0])] = "null";
 				}
@@ -125,6 +139,10 @@ public class ListenerByRegion {
 			CsvTools.writeCSVfile(compositionAftListener, aggregateAFTComposition);
 			Path aggregateServiceDemand = Paths.get(dir + "region_" + R.getName() + "-AggregateServiceDemand.csv");
 			CsvTools.writeCSVfile(servicedemandListener, aggregateServiceDemand);
+
+			Path eqServiceDemand = Paths.get(dir + "region_" + R.getName() + "-equilibred-ServiceDemand.csv");
+			CsvTools.writeCSVfile(eqServicedemandListener, eqServiceDemand);
+
 			Path DSEquilibriumPath = Paths.get(dir + "region_" + R.getName() + "-DemandServicesEquilibrium.csv");
 			CsvTools.writeCSVfile(DSEquilibriumListener, DSEquilibriumPath);
 			Path averageUtilitiesPath = Paths.get(dir + "region_" + R.getName() + "-AverageUtilities.csv");

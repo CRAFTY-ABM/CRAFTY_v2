@@ -1,0 +1,77 @@
+schema_version: 1
+
+targets:
+  - id: agroforestry_area
+    name: agroforestry_area
+    type: AFT
+    crafty_elements: {AF: 1.0}
+
+  - id: high_diversity_agricultural_land
+    name: high_diversity_agricultural_land
+    type: AFT
+    crafty_elements: {ExtC3C: 1, ExtC3oil: 1, ExtC3fruitveg: 1, ExtC3puls: 1, ExtC3star: 1, ExtC4: 1, ExtFodder: 1}
+
+  - id: climate_friendly_food_producers
+    name: climate_friendly_food_producers
+    type: AFT
+    crafty_elements: {ExtC3C: 1, ExtC3oil: 1, ExtC3fruitveg: 1, ExtC3puls: 1, ExtC3star: 1, ExtC4: 1}
+
+  - id: food_crop_supply
+    name: food_crop_supply
+    type: Service
+    crafty_elements: {C3cereals: 1, C3starchyroots: 1, C3oilcrops: 1, C3pulses: 1, C3fruitveg: 1, C4crops: 1}
+
+  - id: employment_in_forestry
+    name: employment_in_forestry
+    type: AFT
+    crafty_elements: {AF: 0.25, IntBF: 1, IntCF: 1, ExtBF: 0.25, ExtCF: 0.25, MW: 0.25, CW: 25}
+
+  - id: vegetation_carbon_supply
+    name: vegetation_carbon_supply
+    type: Service
+    crafty_elements: {Carbon: 1}
+
+  - id: forest_area
+    name: forest_area
+    type: AFT
+    crafty_elements: {AF: 1, IntBF: 1, IntCF: 1, ExtBF: 1, ExtCF: 1, MW: 1, CW: 1}
+
+  - id: timber_supply
+    name: timber_supply
+    type: Service
+    crafty_elements: {Hardwood: 1, Softwood: 1}
+
+  - id: extensive_forest_area
+    name: extensive_forest_area
+    type: AFT
+    crafty_elements: {CW: 1, MW: 1, ExtBF: 1, ExtCF: 1}
+
+  - id: solar_energy_supply
+    name: solar_energy_supply
+    type: Service
+    crafty_elements: {SolarEnergy: 1.0}
+
+  - id: bioenergy_g1_supply
+    name: bioenergy_g1_supply
+    type: Service
+    crafty_elements: {BioenergyG1: 1.0}
+
+  - id: bioenergy_g2_supply
+    name: bioenergy_g2_supply
+    type: Service
+    crafty_elements: {BioenergyG2: 1.0}
+
+  - id: biodiversity_supply
+    name: biodiversity_supply
+    type: Service
+    crafty_elements: {Biodiversity: 1.0}
+
+  - id: pollination_potential_supply
+    name: pollination_potential_supply
+    type: Service
+    crafty_elements: {Pollination_disp: 1}
+
+  - id: conservation_woodland_area
+    name: conservation_woodland_area
+    type: AFT
+    crafty_elements: {CW: 1}

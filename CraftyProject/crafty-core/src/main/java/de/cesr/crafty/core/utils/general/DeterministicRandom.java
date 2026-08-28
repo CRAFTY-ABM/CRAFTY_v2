@@ -46,7 +46,9 @@ public final class DeterministicRandom {
         public static final int GIVE_UP_GAUSSIAN = 9;
         public static final int GIVE_UP_PROBABILITY = 10;
         public static final int GIVE_IN_THRESHOLD = 11;
-        public static final int CELL_SELECTION_TWIN_COMPETITION = 12;
+        public static final int COMPETITION_BATCH_ORDER = 12;
+        public static final int FORCED_MASK_COMPETITOR_PICK = 13;
+        public static final int CELL_SELECTION_TWIN_COMPETITION = 14;
 
         private Process() {
         }
@@ -86,7 +88,7 @@ public final class DeterministicRandom {
      * Stable cell ID from x/y coordinates.
      */
     public static long stableCellId(int x, int y) {
-    	long z = GOLDEN_GAMMA;
+        long z = GOLDEN_GAMMA;
         z = mix64(z ^ (long) x);
         z = mix64(z ^ (long) y);
         return z;
@@ -105,16 +107,16 @@ public final class DeterministicRandom {
     /**
      * Builds a deterministic random key from the full decision context.
      */
-	public static long randomKey(long runSeed, int year, int processCode, long cellId, long aftId, int drawIndex) {
+    public static long randomKey(long runSeed, int year, int processCode, long cellId, long aftId, int drawIndex) {
 
-		long z = mix64(runSeed + GOLDEN_GAMMA);
-		z = mix64(z ^ year);
-		z = mix64(z ^ processCode);
-		z = mix64(z ^ cellId);
-		z = mix64(z ^ aftId);
-		z = mix64(z ^ drawIndex);
-		return z;
-	}
+        long z = mix64(runSeed + GOLDEN_GAMMA);
+        z = mix64(z ^ year);
+        z = mix64(z ^ processCode);
+        z = mix64(z ^ cellId);
+        z = mix64(z ^ aftId);
+        z = mix64(z ^ drawIndex);
+        return z;
+    }
 
     /**
      * Deterministic pseudo-random long for a specific decision context.
@@ -236,7 +238,7 @@ public final class DeterministicRandom {
 
         return randomKey(runSeed, year, Process.TIE_BREAK, cellId, aftId, 0);
     }
-    
+
     /**
      * Deterministic pseudo-random Gaussian ~ N(0,1).
      * Uses Box-Muller with two deterministic uniform draws.

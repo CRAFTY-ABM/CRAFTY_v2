@@ -30,7 +30,7 @@ class FlagUpdaterTest {
 	void resetStaticState() {
 		new ToyData().resetStaticState(tempDir);
 		Path flag = tempDir.resolve("flag.csv");
-		ConfigLoader.config.waitingFlag_directories_path = flag.toString();
+		ConfigLoader.config.waiting_flags_path = flag.toString();
 	}
     @AfterEach
     void tearDown() {

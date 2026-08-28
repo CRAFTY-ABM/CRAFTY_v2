@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ class CellBehaviourUpdaterTest {
     void resetStaticState() {
         // reset updater static state
         CellBehaviourUpdater.behaviourUsed = false;
-        CellBehaviourUpdater.cellsBehevoir.clear();
+        CellBehaviourUpdater.cellBehaviours.clear();
 
         // ensure CellsLoader.hashCell exists & is empty
         if (CellsLoader.hashCell == null) {
@@ -42,9 +43,7 @@ class CellBehaviourUpdaterTest {
 
         // default: categorisation off
         AftCategorised.useCategorisationGivIn = false;
-        if (ConfigLoader.config == null) {
-			ConfigLoader.config = new Config();
-		}
+        ConfigLoader.config = new Config();
     }
 
     @Test
@@ -54,7 +53,7 @@ class CellBehaviourUpdaterTest {
         new CellBehaviourUpdater();
 
         assertFalse(CellBehaviourUpdater.behaviourUsed, "behaviourUsed should stay false");
-        assertTrue(CellBehaviourUpdater.cellsBehevoir.isEmpty(), "cellsBehevoir should stay empty");
+        assertTrue(CellBehaviourUpdater.cellBehaviours.isEmpty(), "cellBehaviours should stay empty");
     }
 
     @Test
@@ -104,10 +103,10 @@ class CellBehaviourUpdaterTest {
             new CellBehaviourUpdater();
 
             assertTrue(CellBehaviourUpdater.behaviourUsed, "behaviourUsed should be true when file is found");
-            assertEquals(2, CellBehaviourUpdater.cellsBehevoir.size(), "Should create behaviour for two rows");
+            assertEquals(2, CellBehaviourUpdater.cellBehaviours.size(), "Should create behaviour for two rows");
 
-            CellBehaviour b12 = CellBehaviourUpdater.cellsBehevoir.get(c12);
-            CellBehaviour b34 = CellBehaviourUpdater.cellsBehevoir.get(c34);
+            CellBehaviour b12 = CellBehaviourUpdater.cellBehaviours.get(c12);
+            CellBehaviour b34 = CellBehaviourUpdater.cellBehaviours.get(c34);
 
             assertNotNull(b12);
             assertNotNull(b34);
@@ -128,7 +127,7 @@ class CellBehaviourUpdaterTest {
 
         new CellBehaviourUpdater().step();
 
-        assertTrue(CellBehaviourUpdater.cellsBehevoir.isEmpty());
+        assertTrue(CellBehaviourUpdater.cellBehaviours.isEmpty());
     }
 
     @Test
@@ -150,7 +149,70 @@ class CellBehaviourUpdaterTest {
 
             new CellBehaviourUpdater().step();
 
-            assertTrue(CellBehaviourUpdater.cellsBehevoir.isEmpty());
+            assertTrue(CellBehaviourUpdater.cellBehaviours.isEmpty());
+        }
+    }
+
+    @Test
+    void step_whenLaterYearHasNoFile_retainsPreviouslyLoadedParametersAndRemainsActive() {
+        AftCategorised.useCategorisationGivIn = true;
+        ConfigLoader.config.use_cell_behaviour_model = true;
+
+        Cell cell = mock(Cell.class);
+        CellsLoader.hashCell.put("1,2", cell);
+
+        Path dummyFolder = Path.of("dummy/behaviour");
+        Path file2000 = dummyFolder.resolve("Cell_behaviour_parameters_2000.csv");
+        Path file2002 = dummyFolder.resolve("Cell_behaviour_parameters_2002.csv");
+        ArrayList<Path> files2000 = new ArrayList<>(List.of(file2000));
+        ArrayList<Path> files2002 = new ArrayList<>(List.of(file2002));
+        AtomicInteger currentYear = new AtomicInteger(2000);
+
+        Map<String, List<String>> csv2000 = behaviourCsv("0.1");
+        Map<String, List<String>> csv2002 = behaviourCsv("0.9");
+
+        try (MockedStatic<ProjectLoader> projectLoader = Mockito.mockStatic(ProjectLoader.class);
+             MockedStatic<Timestep> timestep = Mockito.mockStatic(Timestep.class);
+             MockedStatic<PathTools> pathTools = Mockito.mockStatic(PathTools.class);
+             MockedStatic<CsvProcessors> csvProcessors = Mockito.mockStatic(CsvProcessors.class)) {
+
+            projectLoader.when(ProjectLoader::getScenario).thenReturn("ssp126");
+            timestep.when(Timestep::getCurrentYear).thenAnswer(invocation -> currentYear.get());
+            pathTools.when(() -> PathTools.asFolder("behaviour")).thenReturn(dummyFolder.toString());
+            pathTools.when(() -> PathTools.fileFilter(any(String.class), anyString(),
+                    eq("Cell_behaviour_parameters"), eq("2000.csv"))).thenReturn(files2000);
+            pathTools.when(() -> PathTools.fileFilter(any(String.class), anyString(),
+                    eq("Cell_behaviour_parameters"), eq("2001.csv"))).thenReturn(null);
+            pathTools.when(() -> PathTools.fileFilter(any(String.class), anyString(),
+                    eq("Cell_behaviour_parameters"), eq("2002.csv"))).thenReturn(files2002);
+            csvProcessors.when(() -> CsvProcessors.ReadAsaHash(file2000)).thenReturn(csv2000);
+            csvProcessors.when(() -> CsvProcessors.ReadAsaHash(file2002)).thenReturn(csv2002);
+
+            CellBehaviourUpdater updater = new CellBehaviourUpdater();
+            CellBehaviour loadedIn2000 = CellBehaviourUpdater.cellBehaviours.get(cell);
+
+            assertTrue(CellBehaviourUpdater.behaviourUsed);
+            assertNotNull(loadedIn2000);
+            assertEquals(2000, CellBehaviourUpdater.getLoadedParameterYear());
+
+            currentYear.set(2001);
+            updater.step();
+
+            assertTrue(CellBehaviourUpdater.behaviourUsed,
+                    "A missing later-year file must not disable an active behaviour model");
+            assertSame(loadedIn2000, CellBehaviourUpdater.cellBehaviours.get(cell),
+                    "The latest available parameters must remain unchanged");
+            assertEquals(2000, CellBehaviourUpdater.getLoadedParameterYear());
+
+            currentYear.set(2002);
+            updater.step();
+
+            CellBehaviour loadedIn2002 = CellBehaviourUpdater.cellBehaviours.get(cell);
+            assertTrue(CellBehaviourUpdater.behaviourUsed);
+            assertNotSame(loadedIn2000, loadedIn2002,
+                    "A newly available annual file must replace the retained parameters");
+            assertDoubleProperty(loadedIn2002, 0.9, "attitude_intensification", "attitudeIntensification");
+            assertEquals(2002, CellBehaviourUpdater.getLoadedParameterYear());
         }
     }
 
@@ -161,6 +223,19 @@ class CellBehaviourUpdaterTest {
         Double val = readDouble(obj, baseNames);
         assertNotNull(val, "Could not read double property for: " + Arrays.toString(baseNames));
         assertEquals(expected, val, 1e-9);
+    }
+
+    private static Map<String, List<String>> behaviourCsv(String attitude) {
+        Map<String, List<String>> csv = new HashMap<>();
+        csv.put("X", List.of("1"));
+        csv.put("Y", List.of("2"));
+        csv.put("Attitude_intensification", List.of(attitude));
+        csv.put("Weight_inertia", List.of("0.2"));
+        csv.put("Weight-social", List.of("0.3"));
+        csv.put("Critical_mass", List.of("0.4"));
+        csv.put("Neighborhood_size", List.of("5"));
+        csv.put("MaxGive_in", List.of("0.5"));
+        return csv;
     }
 
     private static void assertIntProperty(Object obj, int expected, String... baseNames) {

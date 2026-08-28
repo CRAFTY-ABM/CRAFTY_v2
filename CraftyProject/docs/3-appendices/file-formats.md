@@ -181,27 +181,6 @@ Year,Food,Timber,Carbon
 
 ---
 
-## 6) Service taxes/subsidies (`services/services_taxes_subsidies/*.csv`)
-
-**Purpose**
-- apply incentives or penalties per service (EU-level or regional)
-
-**Typical naming**
-- `ssp126_services_taxes_subsidies_EU.csv`,  `ssp126_services_taxes_subsidies_<regionName>.csv`
-
-**Typical structure**
-```text
-Year,Food,Timber,Carbon
-2020,0.0,0.0,0.0
-2021,0.0,0.0,0.0
-...
-```
-
-**Defaults**
-- if missing: taxes/subsidies often default to `0.0`
-
----
-
 ## 7) AFT parameter files (`AFTs/agents/default_agents/*.csv`)
 
 **Purpose**
@@ -251,31 +230,6 @@ Always follow the loader expected format for your build.
 
 ---
 
-## 9) Land taxes/subsidies (`AFTs/land_taxes_subsidies/*.csv`)
-
-**Purpose**
-- apply AFT-level land taxes/subsidies (often EU-level)
-
-**Typical naming**
-- `ssp126_land_taxes_subsidies_EU.csv` , `ssp126_land_taxes_subsidies_<regionName>.csv` 
-
-**Typical structure**
-```text
-Year,IntC3C,ExtBF,Urban
-2020,0.0,0.0,0.0
-2021,0.0,0.0,0.0
-...
-```
-
-Or sometimes:
-```text
-AFT,Tax
-IntC3C,0.0
-...
-```
-
----
-
 ## 10) Mask files (`worlds/LandUseControl/...`)
 
 ### 10.1  One file per year (common in your dataset)
@@ -310,6 +264,33 @@ CRAFTY writes CSV outputs such as:
 Output formats are documented in:
 - `user-guide/04-outputs.md`
 - `reference/04-components/outputs.md`
+
+### 11.1 Landscape fragmentation output
+
+When `generate_land_fragmentation_output: true`, CRAFTY writes
+`<scenario>-land-fragmentation.csv` with one row per year:
+
+| Column | Interpretation |
+|---|---|
+| `year` | Simulation year represented by the row. |
+| `total_cells` | Number of spatial cells included. |
+| `aft_classes` | Number of owner/AFT classes present, including unmanaged cells when present. |
+| `adjacent_pairs` | Moore-neighbour cell pairs (shared edge or corner), counted once. |
+| `same_aft_adjacent_pairs` | Moore-neighbour pairs whose cells have the same AFT. |
+| `different_aft_adjacent_pairs` | Moore-neighbour pairs whose cells have different AFTs. |
+| `same_aft_adjacency` | Fraction of adjacent pairs with the same AFT; higher means more aggregation. |
+| `adjacency_clustering_index` | Same-AFT adjacency adjusted for the adjacency expected from current AFT shares; higher means more clustering beyond composition alone. |
+| `boundary_edge_density` | Different-AFT Moore-neighbour pairs per cell; higher means more fragmentation. |
+| `patch_count` | Number of eight-neighbour (Moore) connected same-AFT patches. |
+| `patch_density` | Patch count divided by total cells. |
+| `mean_patch_size_cells` | Mean number of cells per patch. |
+| `largest_patch_size_cells` | Number of cells in the largest patch. |
+| `largest_patch_share` | Fraction of all cells belonging to the largest patch. |
+| `effective_mesh_size_cells` | Area-weighted mean patch size, expressed in cells. |
+| `normalized_effective_mesh_size` | Effective mesh size divided by total cells; higher means larger connected patches. |
+| `shannon_diversity` | Diversity of AFT cell shares, included to distinguish composition change from spatial rearrangement. |
+
+Off-map neighbours are ignored. All cells without an owner form one unmanaged class.
 
 ---
 

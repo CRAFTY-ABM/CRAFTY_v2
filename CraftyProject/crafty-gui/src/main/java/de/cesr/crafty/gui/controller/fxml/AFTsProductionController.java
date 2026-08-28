@@ -13,6 +13,7 @@ import de.cesr.crafty.gui.utils.graphical.Tools;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.utils.general.Utils;
+import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.chart.BarChart;
@@ -23,20 +24,22 @@ import javafx.scene.control.TableView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
 public class AFTsProductionController {
 	@FXML
 	private VBox TopBox;
 	@FXML
 	private BarChart<String, Number> histogramePlevel;
+//	@FXML
+//	private VBox box2;
 	@FXML
-	private VBox box2;
-	@FXML
-	private HBox hbox1;
+	private VBox hbox1;
 
 	Button productionFire = new Button();
 	Button sensitivtyFire = new Button();
-	RadioButton plotInitialDistrebution = new RadioButton("  Distribution map ");
+	RadioButton plotInitialDistrebution = new RadioButton("Distribution map");
 	RadioButton plotOptimalLandon = new RadioButton("Cumulative expected service productivity");
 
 	private static AFTsProductionController instance;
@@ -53,20 +56,23 @@ public class AFTsProductionController {
 		return histogramePlevel;
 	}
 
-	public VBox getBox2() {
-		return box2;
-	}
+//	public VBox getBox2() {
+//		return box2;
+//	}
 
-	public HBox getHBox1() {
+	public VBox getHBox1() {
 		return hbox1;
 	}
 
 	public void initialize() {
 		System.out.println("initialize " + getClass().getSimpleName());
-		Tools.forceResisingWidth(TopBox, box2);
+
+//		Tools.forceResisingWidth(TopBox, box2);
 
 		histogramePlevel.setMinWidth(TopBox.getMinWidth() / 2);
 		hbox1.setMinWidth(TopBox.getMinWidth() / 2);
+//		box2.getChildren().add(new Rectangle(100, 100, Color.BLUE));
+//		hbox1.getChildren().add(new Rectangle(100, 100, Color.RED));
 	}
 
 	public static LineChart<Number, Number> productivitySampleChart(String aftLabel, boolean withShade) {
@@ -76,6 +82,12 @@ public class AFTsProductionController {
 			return null;
 		}
 		LineChart<Number, Number> chart = LineChartTools.createLineChartWithSmoothLines(aftLabel, data, withShade);
+		chart.getStyleClass().add("analysis-chart");
+		chart.setMinWidth(0);
+		chart.setMaxWidth(Double.MAX_VALUE);
+		chart.setMinHeight(260);
+		chart.setPrefHeight(300);
+		chart.setMaxHeight(300);
 		HashMap<String, Consumer<String>> othersMenuItems = new HashMap<>();
 		Consumer<String> relaod = _ -> {
 			Pane parent = (Pane) chart.getParent();
@@ -91,8 +103,11 @@ public class AFTsProductionController {
 
 		othersMenuItems.put("Update and show the " + (!withShade ? " Deviation" : "Original Points"), switchView);
 		chart.setId("productivitySampleChart");
-		
-		MousePressed.mouseControle((Pane) chart.getParent(), chart, othersMenuItems);
+		Platform.runLater(() -> {
+			if (chart.getParent() instanceof Pane parent) {
+				MousePressed.mouseControle(parent, chart, othersMenuItems);
+			}
+		});
 		return chart;
 	}
 

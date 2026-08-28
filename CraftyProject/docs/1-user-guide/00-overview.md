@@ -21,6 +21,8 @@ CRAFTY supports two main use cases:
    - **Quickstart:** [`01-quickstart.md`](01-quickstart.md)
    - **Running scenarios:** [`02-running-scenarios.md`](02-running-scenarios.md)
    - **Outputs:** [`04-outputs.md`](04-outputs.md)
+   - **`marginal_utility_calculations_per_tick` sensitivities:**
+     [`marginal_utility_calculations_per_tick-sensitivities.md`](marginal_utility_calculations_per_tick-sensitivities.md)
    - **Troubleshooting:** [`05-troubleshooting.md`](05-troubleshooting.md)
 
 If you are setting up a new dataset or a new scenario layout, also read:
@@ -130,6 +132,7 @@ See: [`04-outputs.md`](04-outputs.md)
 - **03 Common workflows**: typical recipes (swap input folders, run many scenarios, reproducibility)
 - **04 Outputs**: what files are produced, naming, map export settings
 - **05 Troubleshooting**: missing files, regionalisation fallback, common mistakes
+- **`marginal_utility_calculations_per_tick` sensitivities**: supply-smoothing and demand-tracking results
 
 ---
 

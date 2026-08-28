@@ -6,12 +6,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 
 public final class MapPngSpecHandler {
 
 	public enum ValueType {
-		SERVICE, CAPITAL, SERVICE_TAXES_SUBSIDIES, lAND_TAXES_SUBSIDIES, COMPETITIVENESS, OWNERS_LIFE_COUNTER
+		OWNER, SERVICE, CAPITAL, BEHAVIOUR, SERVICE_TAXES_SUBSIDIES, lAND_TAXES_SUBSIDIES, COMPETITIVENESS,
+		OWNERS_LIFE_COUNTER
 	}
 
 	/**
@@ -20,23 +22,27 @@ public final class MapPngSpecHandler {
 	 */
 	public interface Registry {
 
+		Function<Cell, String> ownerExtractor();
+		
 		List<String> serviceNames();
 
 		List<String> capitalNames();
 
+		List<String> behaviourParameterNames();
+
 		ToDoubleFunction<Cell> serviceExtractor(String serviceName);
 
 		ToDoubleFunction<Cell> capitalExtractor(String capitalName);
+
+		ToDoubleFunction<Cell> behaviourParameterExtractor(String parameterName);
 
 		ToDoubleFunction<Cell> serviceTaxExtractor(String serviceName);
 
 		ToDoubleFunction<Cell> landTaxExtractor();
 
 		ToDoubleFunction<Cell> competitivnessExtractor();
-		
-		ToDoubleFunction<Cell> ownerLifeCounterExtractor();
-		
 
+		ToDoubleFunction<Cell> ownerLifeCounterExtractor();
 	}
 
 	public static final class MapValueSpec {
@@ -55,6 +61,9 @@ public final class MapPngSpecHandler {
 		}
 
 		public String label() {
+			if (type == ValueType.OWNER) {
+				return "owner";
+			}
 			if (type == ValueType.lAND_TAXES_SUBSIDIES) {
 				return "land_taxes_subsidies";
 			}
@@ -79,15 +88,37 @@ public final class MapPngSpecHandler {
 
 	public static final class MapValue {
 		public final MapValueSpec spec;
-		public final ToDoubleFunction<Cell> extractor;
+		public final ToDoubleFunction<Cell> doubleExtractor;
+		public final Function<Cell, String> stringExtractor;
 		public final String label;
 		public final String outputToken;
 
-		private MapValue(MapValueSpec spec, ToDoubleFunction<Cell> extractor) {
+		private MapValue(
+				MapValueSpec spec,
+				ToDoubleFunction<Cell> doubleExtractor,
+				Function<Cell, String> stringExtractor
+		) {
 			this.spec = spec;
-			this.extractor = extractor;
+			this.doubleExtractor = doubleExtractor;
+			this.stringExtractor = stringExtractor;
 			this.label = spec.label();
 			this.outputToken = spec.outputToken();
+		}
+
+		public static MapValue numeric(MapValueSpec spec, ToDoubleFunction<Cell> extractor) {
+			return new MapValue(spec, extractor, null);
+		}
+
+		public static MapValue text(MapValueSpec spec, Function<Cell, String> extractor) {
+			return new MapValue(spec, null, extractor);
+		}
+
+		public boolean isNumeric() {
+			return doubleExtractor != null;
+		}
+
+		public boolean isText() {
+			return stringExtractor != null;
 		}
 	}
 
@@ -109,7 +140,7 @@ public final class MapPngSpecHandler {
 		private DualMapRequest(MapValue value1, MapValue value2) {
 			this.value1 = value1;
 			this.value2 = value2;
-			this.outputName =  value1.outputToken + "__" + value2.outputToken;
+			this.outputName = value1.outputToken + "__" + value2.outputToken;
 		}
 	}
 
@@ -225,18 +256,22 @@ public final class MapPngSpecHandler {
 		if (s.equalsIgnoreCase("land_taxes_subsidies")) {
 			return new MapValueSpec(ValueType.lAND_TAXES_SUBSIDIES, null, raw);
 		}
+		if (s.equalsIgnoreCase("owner")) {
+			return new MapValueSpec(ValueType.OWNER, null, raw);
+		}
 		if (s.equalsIgnoreCase("COMPETITIVENESS")) {
 			return new MapValueSpec(ValueType.COMPETITIVENESS, null, raw);
 		}
 		if (s.equalsIgnoreCase("OWNERS_LIFE_COUNTER")) {
 			return new MapValueSpec(ValueType.OWNERS_LIFE_COUNTER, null, raw);
 		}
-		
+
 		String[] parts = s.split(":", 2);
 
 		if (parts.length != 2) {
 			throw new IllegalArgumentException("Invalid map value specification: '" + raw + "'. "
-					+ "Expected for example: service:s1, capital:c1, service_tax:s1, or land_tax.");
+					+ "Expected for example: service:s1, capital:c1, behaviour:Weight_inertia, "
+					+ "service_tax:s1, or land_tax.");
 		}
 
 		String typeRaw = parts[0].trim().toLowerCase(Locale.ROOT);
@@ -265,11 +300,22 @@ public final class MapPngSpecHandler {
 		case "capitals":
 			return ValueType.CAPITAL;
 
+		case "behaviour":
+		case "behavior":
+		case "beheviour":
+		case "behevoir":
+			return ValueType.BEHAVIOUR;
+
 		case "service_taxes_subsidies":
 		case "service_tax_subsidy":
 		case "services_tax_subsidy":
 		case "services_taxes_subsidies":
 			return ValueType.SERVICE_TAXES_SUBSIDIES;
+		case "owner":
+		case "agents":
+		case "agent":
+		case "aft":
+			return ValueType.OWNER;
 
 		case "land_tax_subsidy":
 		case "land_taxes_subsidies":
@@ -281,7 +327,7 @@ public final class MapPngSpecHandler {
 
 		default:
 			throw new IllegalArgumentException("Unknown map value type: '" + typeRaw + "'. "
-					+ "Supported types: service, capital, service_tax, land_tax.");
+					+ "Supported types: service, capital, behaviour, service_tax, land_tax.");
 		}
 	}
 
@@ -321,6 +367,9 @@ public final class MapPngSpecHandler {
 		case CAPITAL:
 			return nullSafeList(registry.capitalNames());
 
+		case BEHAVIOUR:
+			return nullSafeList(registry.behaviourParameterNames());
+
 		case SERVICE_TAXES_SUBSIDIES:
 			return nullSafeList(registry.serviceNames());
 
@@ -345,6 +394,17 @@ public final class MapPngSpecHandler {
 	// ---------------------------------------------------------------------
 
 	private MapValue resolve(MapValueSpec spec) {
+
+		if (spec.type == ValueType.OWNER) {
+			Function<Cell, String> extractor = registry.ownerExtractor();
+
+			if (extractor == null) {
+				throw new IllegalArgumentException("No extractor found for map value: " + spec);
+			}
+
+			return MapValue.text(spec, extractor);
+		}
+
 		ToDoubleFunction<Cell> extractor;
 
 		switch (spec.type) {
@@ -356,6 +416,10 @@ public final class MapPngSpecHandler {
 			extractor = registry.capitalExtractor(spec.name);
 			break;
 
+		case BEHAVIOUR:
+			extractor = registry.behaviourParameterExtractor(spec.name);
+			break;
+
 		case SERVICE_TAXES_SUBSIDIES:
 			extractor = registry.serviceTaxExtractor(spec.name);
 			break;
@@ -363,9 +427,11 @@ public final class MapPngSpecHandler {
 		case lAND_TAXES_SUBSIDIES:
 			extractor = registry.landTaxExtractor();
 			break;
+
 		case COMPETITIVENESS:
 			extractor = registry.competitivnessExtractor();
 			break;
+
 		case OWNERS_LIFE_COUNTER:
 			extractor = registry.ownerLifeCounterExtractor();
 			break;
@@ -378,7 +444,7 @@ public final class MapPngSpecHandler {
 			throw new IllegalArgumentException("No extractor found for map value: " + spec);
 		}
 
-		return new MapValue(spec, extractor);
+		return MapValue.numeric(spec, extractor);
 	}
 
 	private static String safeFileToken(String s) {

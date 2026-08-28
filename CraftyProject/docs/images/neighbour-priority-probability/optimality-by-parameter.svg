@@ -1,0 +1,118 @@
+﻿<svg xmlns='http://www.w3.org/2000/svg' width='1400' height='620' viewBox='0 0 1400 620'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='700' y='38' text-anchor='middle' font-family='sans-serif' font-size='24' font-weight='bold'>SSP370 neighbour-priority demand-supply optimality</text>
+<text x='700' y='62' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#475569'>Model-aligned relative gaps, 2021-2100; lower gap and higher attainment are better</text>
+<rect x='110' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='110' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Relative gap RMSE</text>
+<line x1='110' y1='505' x2='460' y2='505' stroke='#e5e7eb'/>
+<text x='100' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>10.2%</text>
+<line x1='110' y1='407.5' x2='460' y2='407.5' stroke='#e5e7eb'/>
+<text x='100' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>15.3%</text>
+<line x1='110' y1='310' x2='460' y2='310' stroke='#e5e7eb'/>
+<text x='100' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>20.4%</text>
+<line x1='110' y1='212.5' x2='460' y2='212.5' stroke='#e5e7eb'/>
+<text x='100' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>25.5%</text>
+<line x1='110' y1='115' x2='460' y2='115' stroke='#e5e7eb'/>
+<text x='100' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>30.6%</text>
+<text x='110' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0</text>
+<text x='145' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.1</text>
+<text x='180' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.2</text>
+<text x='215' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.3</text>
+<text x='250' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.4</text>
+<text x='285' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.5</text>
+<text x='320' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.6</text>
+<text x='355' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.7</text>
+<text x='390' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.8</text>
+<text x='425' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.9</text>
+<text x='460' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<polyline points='110,152.74 145,258.33 180,272.84 215,280.46 250,301.93 285,285.73 320,411.9 355,417.57 390,457.02 425,467.26 460,196.56' fill='none' stroke='#2563eb' stroke-width='3'/>
+<circle cx='110' cy='152.741935483871' r='4' fill='#2563eb'/>
+<circle cx='145' cy='258.33275599158' r='4' fill='#2563eb'/>
+<circle cx='180' cy='272.837386809' r='4' fill='#2563eb'/>
+<circle cx='215' cy='280.457248691873' r='4' fill='#2563eb'/>
+<circle cx='250' cy='301.928972531451' r='4' fill='#2563eb'/>
+<circle cx='285' cy='285.725115224224' r='4' fill='#2563eb'/>
+<circle cx='320' cy='411.900285992041' r='4' fill='#2563eb'/>
+<circle cx='355' cy='417.570871461727' r='4' fill='#2563eb'/>
+<circle cx='390' cy='457.01906755892' r='4' fill='#2563eb'/>
+<circle cx='425' cy='467.258064516129' r='4' fill='#2563eb'/>
+<circle cx='460' cy='196.561500546401' r='4' fill='#2563eb'/>
+<text x='285' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>neighbour_priority_probability</text>
+<text x='38' y='310' text-anchor='middle' transform='rotate(-90 38 310)' font-family='sans-serif' font-size='12'>Relative gap</text>
+<rect x='555' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='555' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Mean relative gap</text>
+<line x1='555' y1='505' x2='905' y2='505' stroke='#e5e7eb'/>
+<text x='545' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>6.3%</text>
+<line x1='555' y1='407.5' x2='905' y2='407.5' stroke='#e5e7eb'/>
+<text x='545' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>8.5%</text>
+<line x1='555' y1='310' x2='905' y2='310' stroke='#e5e7eb'/>
+<text x='545' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>10.6%</text>
+<line x1='555' y1='212.5' x2='905' y2='212.5' stroke='#e5e7eb'/>
+<text x='545' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>12.8%</text>
+<line x1='555' y1='115' x2='905' y2='115' stroke='#e5e7eb'/>
+<text x='545' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>14.9%</text>
+<text x='555' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0</text>
+<text x='590' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.1</text>
+<text x='625' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.2</text>
+<text x='660' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.3</text>
+<text x='695' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.4</text>
+<text x='730' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.5</text>
+<text x='765' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.6</text>
+<text x='800' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.7</text>
+<text x='835' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.8</text>
+<text x='870' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.9</text>
+<text x='905' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<polyline points='555,296.41 590,323.12 625,334.71 660,350.55 695,364.61 730,375.79 765,406.07 800,422.36 835,442.98 870,459.77 905,160.23' fill='none' stroke='#dc2626' stroke-width='3'/>
+<circle cx='555' cy='296.408889432332' r='4' fill='#dc2626'/>
+<circle cx='590' cy='323.116508906749' r='4' fill='#dc2626'/>
+<circle cx='625' cy='334.709327170177' r='4' fill='#dc2626'/>
+<circle cx='660' cy='350.547724079666' r='4' fill='#dc2626'/>
+<circle cx='695' cy='364.608970912787' r='4' fill='#dc2626'/>
+<circle cx='730' cy='375.786512326893' r='4' fill='#dc2626'/>
+<circle cx='765' cy='406.067801188328' r='4' fill='#dc2626'/>
+<circle cx='800' cy='422.363049197332' r='4' fill='#dc2626'/>
+<circle cx='835' cy='442.983217513123' r='4' fill='#dc2626'/>
+<circle cx='870' cy='459.765367859186' r='4' fill='#dc2626'/>
+<circle cx='905' cy='160.234632140814' r='4' fill='#dc2626'/>
+<text x='730' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>neighbour_priority_probability</text>
+<text x='483' y='310' text-anchor='middle' transform='rotate(-90 483 310)' font-family='sans-serif' font-size='12'>Relative gap</text>
+<rect x='1000' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='1000' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Objectives within 5%</text>
+<line x1='1000' y1='505' x2='1350' y2='505' stroke='#e5e7eb'/>
+<text x='990' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>45.9%</text>
+<line x1='1000' y1='407.5' x2='1350' y2='407.5' stroke='#e5e7eb'/>
+<text x='990' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>48.8%</text>
+<line x1='1000' y1='310' x2='1350' y2='310' stroke='#e5e7eb'/>
+<text x='990' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>51.7%</text>
+<line x1='1000' y1='212.5' x2='1350' y2='212.5' stroke='#e5e7eb'/>
+<text x='990' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>54.6%</text>
+<line x1='1000' y1='115' x2='1350' y2='115' stroke='#e5e7eb'/>
+<text x='990' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>57.5%</text>
+<text x='1000' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0</text>
+<text x='1035' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.1</text>
+<text x='1070' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.2</text>
+<text x='1105' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.3</text>
+<text x='1140' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.4</text>
+<text x='1175' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.5</text>
+<text x='1210' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.6</text>
+<text x='1245' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.7</text>
+<text x='1280' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.8</text>
+<text x='1315' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>0.9</text>
+<text x='1350' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<polyline points='1000,319.5 1035,308.94 1070,270.95 1105,277.28 1140,226.62 1175,243.51 1210,218.18 1245,188.63 1280,182.29 1315,152.74 1350,467.26' fill='none' stroke='#15803d' stroke-width='3'/>
+<circle cx='1000' cy='319.498809266075' r='4' fill='#15803d'/>
+<circle cx='1035' cy='308.944576748214' r='4' fill='#15803d'/>
+<circle cx='1070' cy='270.949339683914' r='4' fill='#15803d'/>
+<circle cx='1105' cy='277.281879194631' r='4' fill='#15803d'/>
+<circle cx='1140' cy='226.621563108898' r='4' fill='#15803d'/>
+<circle cx='1175' cy='243.508335137476' r='4' fill='#15803d'/>
+<circle cx='1210' cy='218.178177094609' r='4' fill='#15803d'/>
+<circle cx='1245' cy='188.626326044599' r='4' fill='#15803d'/>
+<circle cx='1280' cy='182.293786533882' r='4' fill='#15803d'/>
+<circle cx='1315' cy='152.741935483871' r='4' fill='#15803d'/>
+<circle cx='1350' cy='467.258064516129' r='4' fill='#15803d'/>
+<text x='1175' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>neighbour_priority_probability</text>
+<text x='928' y='310' text-anchor='middle' transform='rotate(-90 928 310)' font-family='sans-serif' font-size='12'>Share of service-years</text>
+</svg>
+
+

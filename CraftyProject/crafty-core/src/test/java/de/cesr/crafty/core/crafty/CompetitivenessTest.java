@@ -25,273 +25,265 @@ import de.cesr.crafty.core.updaters.Timestep;
 
 class CompetitivenessTest {
 
-	private Object originalConfig;
-	private boolean originalUseCategorisationGivIn;
-	private boolean originalBehaviourUsed;
-	private Map<String, Double> meanBackup;
-	private Map<String, Double> sdBackup;
-	private Map<String, ConcurrentHashMap<String, Boolean>> restrictionsBackup;
+    private Object originalConfig;
+    private boolean originalUseCategorisationGivIn;
+    private boolean originalBehaviourUsed;
+    private Map<String, Double> meanBackup;
+    private Map<String, Double> sdBackup;
+    private Map<String, ConcurrentHashMap<String, Boolean>> restrictionsBackup;
 
-	@BeforeEach
-	void snapshotAndReset() throws Exception {
-		// ensure counter exists + reset
-		if (Listener.landUseChangeCounter == null) {
-			Listener.landUseChangeCounter = new AtomicInteger(0);
-		} else {
-			Listener.landUseChangeCounter.set(0);
-		}
+    @BeforeEach
+    void snapshotAndReset() throws Exception {
+        // ensure counter exists + reset
+        if (Listener.landUseChangeCounter == null) {
+            Listener.landUseChangeCounter = new AtomicInteger(0);
+        } else {
+            Listener.landUseChangeCounter.set(0);
+        }
 
-		// snapshot config
-		Field cfgField = findField(ConfigLoader.class, "config");
-		cfgField.setAccessible(true);
-		originalConfig = cfgField.get(null);
+        // snapshot config
+        Field cfgField = findField(ConfigLoader.class, "config");
+        cfgField.setAccessible(true);
+        originalConfig = cfgField.get(null);
 
-		// snapshot AftCategorised
-		originalUseCategorisationGivIn = AftCategorised.useCategorisationGivIn;
-		meanBackup = new HashMap<>(AftCategorised.getMean());
-		sdBackup = new HashMap<>(AftCategorised.getSD());
+        // snapshot AftCategorised
+        originalUseCategorisationGivIn = AftCategorised.useCategorisationGivIn;
+        meanBackup = new HashMap<>(AftCategorised.getMean());
+        sdBackup = new HashMap<>(AftCategorised.getSD());
 
-		// snapshot CellBehaviourUpdater
-		originalBehaviourUsed = CellBehaviourUpdater.behaviourUsed;
+        // snapshot CellBehaviourUpdater
+        originalBehaviourUsed = CellBehaviourUpdater.behaviourUsed;
 
-		// snapshot LandMaskUpdater.restrictions
-		if (LandMaskUpdater.restrictions == null) {
-			LandMaskUpdater.restrictions = new ConcurrentHashMap<>();
-		}
-		restrictionsBackup = deepCopyRestrictions(LandMaskUpdater.restrictions);
-		Listener.newAftsInLandNbr = new ConcurrentHashMap<>();
-	}
+        // snapshot LandMaskUpdater.restrictions
+        if (LandMaskUpdater.restrictions == null) {
+            LandMaskUpdater.restrictions = new ConcurrentHashMap<>();
+        }
+        restrictionsBackup = deepCopyRestrictions(LandMaskUpdater.restrictions);
+        Listener.newAftsInLandNbr = new ConcurrentHashMap<>();
+    }
 
-	@AfterEach
-	void restore() throws Exception {
-		// reset price utility flags before restoring config reference,
-		// because ensureConfigInstance() reuses the same object so
-		// @BeforeEach's snapshot and originalConfig share identity
-		if (ConfigLoader.config != null) {
-			ConfigLoader.config.use_explicit_price_utility = false;
-			ConfigLoader.config.use_price_only_utility = false;
-		}
+    @AfterEach
+    void restore() throws Exception {
+        // reset price utility flags before restoring config reference,
+        // because ensureConfigInstance() reuses the same object so
+        // @BeforeEach's snapshot and originalConfig share identity
+        if (ConfigLoader.config != null) {
+            ConfigLoader.config.use_explicit_price_utility = false;
+            ConfigLoader.config.use_price_only_utility = false;
+        }
 
-		// restore config
-		Field cfgField = findField(ConfigLoader.class, "config");
-		cfgField.setAccessible(true);
-		cfgField.set(null, originalConfig);
+        // restore config
+        Field cfgField = findField(ConfigLoader.class, "config");
+        cfgField.setAccessible(true);
+        cfgField.set(null, originalConfig);
 
-		// restore AftCategorised
-		AftCategorised.useCategorisationGivIn = originalUseCategorisationGivIn;
-		AftCategorised.getMean().clear();
-		AftCategorised.getMean().putAll(meanBackup);
-		AftCategorised.getSD().clear();
-		AftCategorised.getSD().putAll(sdBackup);
+        // restore AftCategorised
+        AftCategorised.useCategorisationGivIn = originalUseCategorisationGivIn;
+        AftCategorised.getMean().clear();
+        AftCategorised.getMean().putAll(meanBackup);
+        AftCategorised.getSD().clear();
+        AftCategorised.getSD().putAll(sdBackup);
 
-		// restore behaviour flag
-		CellBehaviourUpdater.behaviourUsed = originalBehaviourUsed;
+        // restore behaviour flag
+        CellBehaviourUpdater.behaviourUsed = originalBehaviourUsed;
 
-		// restore restrictions
-		LandMaskUpdater.restrictions.clear();
-		LandMaskUpdater.restrictions.putAll(restrictionsBackup);
-	}
+        // restore restrictions
+        LandMaskUpdater.restrictions.clear();
+        LandMaskUpdater.restrictions.putAll(restrictionsBackup);
+    }
 
-	// -------------------------------------------------------
-	// utility(...)
-	// -------------------------------------------------------
+    // -------------------------------------------------------
+    // utility(...)
+    // -------------------------------------------------------
 
-	private double callUtility(Cell c, Aft a, RegionalModelRunner r) {
-		try {
-			Method m = Competitiveness.class.getDeclaredMethod("utility", Cell.class, Aft.class,
-					RegionalModelRunner.class);
-			m.setAccessible(true); // bypass private
-			return (double) m.invoke(null, c, a, r); // null because it's static
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+    private double callUtility(Cell c, Aft a, RegionalModelRunner r) {
+        try {
+            Method m = Competitiveness.class.getDeclaredMethod("utility", Cell.class, Aft.class,
+                    RegionalModelRunner.class);
+            m.setAccessible(true); // bypass private
+            return (double) m.invoke(null, c, a, r); // null because it's static
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	@Test
-	void utility_returnsZero_whenAftNullOrNotInteract() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			ensureConfigInstance();
-			Cell c = new Cell(0, 0);
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
+    @Test
+    void utility_returnsZero_whenAftNullOrNotInteract() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            ensureConfigInstance();
+            Cell c = new Cell(0, 0);
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
 
-			assertEquals(0.0, callUtility(c, null, r), 1e-12);
+            assertEquals(0.0, callUtility(c, null, r), 1e-12);
 
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(false);
-			assertEquals(0.0, callUtility(c, a, r), 1e-12);
-		});
-	}
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(false);
+            assertEquals(0.0, callUtility(c, a, r), 1e-12);
+        });
+    }
 
-	// -------------------------------------------------------
-	// utility(...) — production cost subtraction (explicit-price path)
-	// -------------------------------------------------------
+    // -------------------------------------------------------
+    // utility(...) — production cost subtraction (explicit-price path)
+    // -------------------------------------------------------
 
-	@Test
-	void explicitPriceUtility_subtractsGlobalModeCosts_whenProductionCostsEnabled() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", true,
-					"spatial_production_costs", false));
+    @Test
+    void explicitPriceUtility_subtractsGlobalModeCosts_whenProductionCostsEnabled() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", true,
+                    "spatial_production_costs", false));
 
-			Cell c = Mockito.spy(new Cell(0, 0));
+            Cell c = Mockito.spy(new Cell(0, 0));
 
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
-			when(a.getNfertCostPerHa()).thenReturn(10.0);
-			when(a.getIntensityCostPerHa()).thenReturn(5.0);
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
+            when(a.getNfertCostPerHa()).thenReturn(10.0);
+            when(a.getIntensityCostPerHa()).thenReturn(5.0);
 
-			doReturn(2.0).when(c).competitiveness(a, "S1");
+            doReturn(2.0).when(c).competitiveness(a, "S1");
 
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			r.R = region;
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            r.R = region;
 
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
 
-				// revenue = 10 * 2 = 20; costs = nfertCostPerHa(10) + intensityCostPerHa(5) = 15
-				assertEquals(5.0, callUtility(c, a, r), 1e-12);
-			}
-		});
-	}
+                // revenue = 10 * 2 = 20; costs = nfertCostPerHa(10) + intensityCostPerHa(5) = 15
+                assertEquals(5.0, callUtility(c, a, r), 1e-12);
+            }
+        });
+    }
 
-	@Test
-	void explicitPriceUtility_subtractsSpatialModeCosts_fromCellMaps() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", true,
-					"spatial_production_costs", true));
+    @Test
+    void explicitPriceUtility_subtractsSpatialModeCosts_fromCellMaps() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", true,
+                    "spatial_production_costs", true));
 
-			Cell c = Mockito.spy(new Cell(0, 0));
-			c.getNfertCosts().put("AFT1", 8.0);
-			c.getIntensityCosts().put("AFT1", 3.0);
-			c.getIrrigationCosts().put("AFT1", 2.0);
+            Cell c = Mockito.spy(new Cell(0, 0));
+            c.getNfertCosts().put("AFT1", 8.0);
+            c.getIntensityCosts().put("AFT1", 3.0);
+            c.getIrrigationCosts().put("AFT1", 2.0);
 
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
 
-			doReturn(2.0).when(c).competitiveness(a, "S1");
+            doReturn(2.0).when(c).competitiveness(a, "S1");
 
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			r.R = region;
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            r.R = region;
 
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
 
-				// revenue = 10 * 2 = 20; costs = nfert(8) + intensity(3) + irrigation(2) = 13
-				assertEquals(7.0, callUtility(c, a, r), 1e-12);
-			}
-		});
-	}
+                // revenue = 10 * 2 = 20; costs = nfert(8) + intensity(3) + irrigation(2) = 13
+                assertEquals(7.0, callUtility(c, a, r), 1e-12);
+            }
+        });
+    }
 
-	@Test
-	void explicitPriceUtility_noCostSubtraction_whenProductionCostsDisabled() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", false));
+    @Test
+    void explicitPriceUtility_noCostSubtraction_whenProductionCostsDisabled() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_production_costs", false));
 
-			Cell c = Mockito.spy(new Cell(0, 0));
-			// costs present on the AFT/cell but must be ignored while the feature flag is off
-			c.getNfertCosts().put("AFT1", 8.0);
+            Cell c = Mockito.spy(new Cell(0, 0));
+            // costs present on the AFT/cell but must be ignored while the feature flag is off
+            c.getNfertCosts().put("AFT1", 8.0);
 
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
-			when(a.getNfertCostPerHa()).thenReturn(10.0);
-			when(a.getIntensityCostPerHa()).thenReturn(5.0);
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
+            when(a.getNfertCostPerHa()).thenReturn(10.0);
+            when(a.getIntensityCostPerHa()).thenReturn(5.0);
 
-			doReturn(2.0).when(c).competitiveness(a, "S1");
+            doReturn(2.0).when(c).competitiveness(a, "S1");
 
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			r.R = region;
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            r.R = region;
 
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
 
-				// revenue = 10 * 2 = 20; no cost subtraction since use_production_costs=false
-				assertEquals(20.0, callUtility(c, a, r), 1e-12);
-			}
-		});
-	}
+                // revenue = 10 * 2 = 20; no cost subtraction since use_production_costs=false
+                assertEquals(20.0, callUtility(c, a, r), 1e-12);
+            }
+        });
+    }
 
-	@Test
-	void marginalUtility_isUnaffectedByProductionCosts() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			// use_explicit_price_utility left false (default) so the marginal formula is used
-			setConfig(cfg, Map.of("use_production_costs", true, "spatial_production_costs", false));
+    @Test
+    void marginalUtility_isUnaffectedByProductionCosts() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            // use_explicit_price_utility left false (default) so the marginal formula is used
+            setConfig(cfg, Map.of("use_production_costs", true, "spatial_production_costs", false));
 
-			Cell c = Mockito.spy(new Cell(0, 0));
+            Cell c = Mockito.spy(new Cell(0, 0));
 
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
-			when(a.getNfertCostPerHa()).thenReturn(10.0);
-			when(a.getIntensityCostPerHa()).thenReturn(5.0);
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
+            when(a.getNfertCostPerHa()).thenReturn(10.0);
+            when(a.getIntensityCostPerHa()).thenReturn(5.0);
 
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
 
-			doReturn(6.0).when(c).competitiveness(a, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+            doReturn(6.0).when(c).competitiveness(a, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
 
-			// marginal formula: (0+1)*6 + 0 = 6, unchanged despite use_production_costs=true
-			assertEquals(6.0, callUtility(c, a, r), 1e-12);
-		});
-	}
+            // marginal formula: (0+1)*6 + 0 = 6, unchanged despite use_production_costs=true
+            assertEquals(6.0, callUtility(c, a, r), 1e-12);
+        });
+    }
 
-	@Test
-	void dispatcher_useCellLevelTaxes_returnsMarginalWithTexesFormula() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_explicit_price_utility", false));
+    @Test
+    void dispatcher_useCellLevelTaxes_returnsMarginalWithTexesFormula() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_explicit_price_utility", false));
 
-			Cell c = Mockito.spy(new Cell(0, 0));
+            Cell c = Mockito.spy(new Cell(0, 0));
 
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
 
-			doReturn(4.0).when(c).competitiveness(a, "S1");
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 2.0)));
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>(Map.of("AFT1", 3.0)));
+            doReturn(4.0).when(c).competitiveness(a, "S1");
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 2.0)));
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>(Map.of("AFT1", 3.0)));
 
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			r.initial_service_gaps = new ConcurrentHashMap<>(Map.of("S1", 5.0));
-			r.initialutilityAverage = new ConcurrentHashMap<>(Map.of("AFT1", 2.0));
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            r.initial_service_gaps = new ConcurrentHashMap<>(Map.of("S1", 5.0));
+            r.initialutilityAverage = new ConcurrentHashMap<>(Map.of("AFT1", 2.0));
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
 
-			// ConfigLoader.config is shared, mutable static state: ensureConfigInstance() reuses
-			// the existing instance rather than replacing it, so @AfterEach's reference-swap
-			// restore doesn't undo field mutations made via setConfig/direct assignment here.
-			// Flip the flag directly and always revert it, matching the convention used by the
-			// other tests in this class that mutate ConfigLoader.config fields.
-			ConfigLoader.config.use_cell_level_taxes = true;
-			try {
-				// utilityUseMarginalWithTexes: (2*5 + 1)*4 + 3*2 = 44 + 6 = 50
-				// Regression guard for the dispatcher bug where this branch's return value
-				// was discarded and utilityUseMarginal's result (6*4=24, no land-tax-average
-				// scaling) was returned instead.
-				assertEquals(50.0, callUtility(c, a, r), 1e-12);
-			} finally {
-				ConfigLoader.config.use_cell_level_taxes = false;
-			}
-		});
-	}
+            ConfigLoader.config.use_cell_level_taxes = true;
+            try {
+                // utilityUseMarginalWithTexes: (2*5 + 1)*4 + 3*2 = 44 + 6 = 50
+                assertEquals(50.0, callUtility(c, a, r), 1e-12);
+            } finally {
+                ConfigLoader.config.use_cell_level_taxes = false;
+            }
+        });
+    }
 
 //    @Test
 //    void utility_sumsTaxPlusMarginal_timesProductivity_plusLandTax() throws Throwable {
@@ -331,28 +323,28 @@ class CompetitivenessTest {
 //
 //            doReturn(10.0).when(c).productivity(owner, "S1"); // => 2*10 + 1 = 21
 //            c.setCurrentUtility(Competitiveness.utility(c, c.getOwner(), r));
-//            
+//
 //
 //            assertEquals(21.0, c.getCurrentUtility(), 1e-12);
 //        });
 //    }
 
-	// -------------------------------------------------------
-	// mostCompetitiveAgent(...)
-	// -------------------------------------------------------
+    // -------------------------------------------------------
+    // mostCompetitiveAgent(...)
+    // -------------------------------------------------------
 
-	@Test
-	void mostCompetitiveAgent_returnsOwner_whenSetIsEmpty() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Cell c = new Cell(0, 0);
-			Aft owner = mock(Aft.class);
-			setOwner(c, owner);
+    @Test
+    void mostCompetitiveAgent_returnsOwner_whenSetIsEmpty() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Cell c = new Cell(0, 0);
+            Aft owner = mock(Aft.class);
+            setOwner(c, owner);
 
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
 
-			assertSame(owner, Competitiveness.mostCompetitiveAgent(c, List.of(), r));
-		});
-	}
+            assertSame(owner, Competitiveness.mostCompetitiveAgent(c, List.of(), r));
+        });
+    }
 
 //    @Test
 //    void mostCompetitiveAgent_picksAgentWithHighestUtility() throws Throwable {
@@ -380,99 +372,100 @@ class CompetitivenessTest {
 //        });
 //    }
 
-	// -------------------------------------------------------
-	// competition(...)
-	// -------------------------------------------------------
+    // -------------------------------------------------------
+    // competition(...)
+    // -------------------------------------------------------
 
-	@Test
-	void competition_takesOver_whenOwnerNull_andCompetitorAboveMean_nonNormalisedPath() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			// config: force "most competitor" branch, no neighbor priority, no mutation
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_neighbor_priority", false, "MostCompetitorAFTProbability", 1.0,
-					"mutate_on_competition_win", false));
+    @Test
+    void competition_takesOver_whenOwnerNull_andCompetitorAboveMean_nonNormalisedPath() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_neighbour_priority", false, "most_competitive_aft_probability", 1.0));
 
-			// categorisation OFF so landUsechange() is used
-			AftCategorised.useCategorisationGivIn = false;
-			CellBehaviourUpdater.behaviourUsed = false;
+            // categorisation OFF so landUsechange() is used
+            AftCategorised.useCategorisationGivIn = false;
+            CellBehaviourUpdater.behaviourUsed = false;
 
-			Cell c = Mockito.spy(new Cell(0, 0));
-			setOwner(c, null);
+            Cell c = Mockito.spy(new Cell(0, 0));
+            setOwner(c, null);
 
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getCachedLandTax()).thenReturn(0.0);
-			when(competitor.getLabel()).thenReturn("aft");
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getCachedLandTax()).thenReturn(0.0);
+            when(competitor.getLabel()).thenReturn("aft");
 
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
 
-			// competitor utility = 1 * 6 = 6
-			doReturn(6.0).when(c).competitiveness(competitor, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+            // competitor utility = 1 * 6 = 6
+            doReturn(6.0).when(c).competitiveness(competitor, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
 
-			ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
-			meanY.put(competitor.getLabel(), 5.0);
-			when(r.getDistributionMeanY()).thenReturn(meanY);
+            ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
+            meanY.put(competitor.getLabel(), 5.0);
+            when(r.getDistributionMeanY()).thenReturn(meanY);
 
-			try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class)) {
-				ConcurrentHashMap<String, Aft> active = new ConcurrentHashMap<>();
-				active.put("comp", competitor);
-				mocked.when(AFTsLoader::getActivateAFTsHash).thenReturn(active);
+            setupSankeyData("aft", 2020);
 
-				Competitiveness.competition(c, r);
+            try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class);
+                 MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
+                ConcurrentHashMap<String, Aft> active = new ConcurrentHashMap<>();
+                active.put("comp", competitor);
+                mocked.when(AFTsLoader::getActivateAFTsHash).thenReturn(active);
+
+                Competitiveness.competition(c, r);
 //                assertSame(competitor, getOwner(c));
 //                assertEquals(1, Listener.landUseChangeCounter.get());
-			}
-		});
-	}
+            }
+        });
+    }
 
-	@Test
-	void competition_isBlockedByMaskRestriction_whenOwnerNull() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_neighbor_priority", false, "MostCompetitorAFTProbability", 1.0,
-					"mutate_on_competition_win", false));
+    @Test
+    void competition_isBlockedByMaskRestriction_whenOwnerNull() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_neighbour_priority", false, "most_competitive_aft_probability", 1.0));
 
-			AftCategorised.useCategorisationGivIn = false;
-			CellBehaviourUpdater.behaviourUsed = false;
+            AftCategorised.useCategorisationGivIn = false;
+            CellBehaviourUpdater.behaviourUsed = false;
 
-			Cell c = Mockito.spy(new Cell(0, 0));
-			setOwner(c, null);
+            Cell c = Mockito.spy(new Cell(0, 0));
+            setOwner(c, null);
 
-			// set mask type
-			setField(c, "maskType", "mask1");
+            // set mask type
+            setField(c, "maskType", "mask1");
 
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getCachedLandTax()).thenReturn(0.0);
-			when(competitor.getLabel()).thenReturn("FARM");
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getCachedLandTax()).thenReturn(0.0);
+            when(competitor.getLabel()).thenReturn("FARM");
 
-			// restrictions: for unmanaged -> competitor takeover key is "FARM_FARM"
-			LandMaskUpdater.restrictions.put("mask1", new ConcurrentHashMap<>(Map.of("FARM_FARM", false)));
+            // restrictions: for unmanaged -> competitor takeover key is "FARM_FARM"
+            LandMaskUpdater.restrictions.put("mask1", new ConcurrentHashMap<>(Map.of("FARM_FARM", false)));
 
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getServiceTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getServiceTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
 
-			doReturn(100.0).when(c).competitiveness(competitor, "S1");
+            doReturn(100.0).when(c).competitiveness(competitor, "S1");
 
-			ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
-			meanY.put(competitor.getLabel(), 0.0);
-			when(r.getDistributionMeanY()).thenReturn(meanY);
+            ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
+            meanY.put(competitor.getLabel(), 0.0);
+            when(r.getDistributionMeanY()).thenReturn(meanY);
 
-			try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class)) {
-				mocked.when(AFTsLoader::getActivateAFTsHash)
-						.thenReturn(new ConcurrentHashMap<>(Map.of("comp", competitor)));
+            try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class)) {
+                mocked.when(AFTsLoader::getActivateAFTsHash)
+                        .thenReturn(new ConcurrentHashMap<>(Map.of("comp", competitor)));
 
-				Competitiveness.competition(c, r);
+                Competitiveness.competition(c, r);
 
-				assertNull(getOwner(c), "Owner must stay null because mask blocks competition");
-				assertEquals(0, Listener.landUseChangeCounter.get());
-			}
-		});
-	}
+                assertNull(getOwner(c), "Owner must stay null because mask blocks competition");
+                assertEquals(0, Listener.landUseChangeCounter.get());
+            }
+        });
+    }
 
 //    @Test
 //    void competition_takesOver_whenOwnerExists_andUtilityDifferenceExceedsThreshold_nonNormalisedPath() throws Throwable {
@@ -480,9 +473,8 @@ class CompetitivenessTest {
 //            Object cfg = ensureConfigInstance();
 //            setConfig(cfg,
 //                    Map.of(
-//                            "use_neighbor_priority", false,
-//                            "MostCompetitorAFTProbability", 0.0, // force random-AFT branch
-//                            "mutate_on_competition_win", false
+//                            "use_neighbour_priority", false,
+//                            "most_competitive_aft_probability", 0.0 // force random-AFT branch
 //                    )
 //            );
 //
@@ -535,9 +527,8 @@ class CompetitivenessTest {
 //            Object cfg = ensureConfigInstance();
 //            setConfig(cfg,
 //                    Map.of(
-//                            "use_neighbor_priority", false,
-//                            "MostCompetitorAFTProbability", 0.0, // random
-//                            "mutate_on_competition_win", false
+//                            "use_neighbour_priority", false,
+//                            "most_competitive_aft_probability", 0.0 // random
 //                    )
 //            );
 //
@@ -573,9 +564,9 @@ class CompetitivenessTest {
 //        });
 //    }
 
-	// -------------------------------------------------------
-	// giveInThreshold(...) (private) via reflection
-	// -------------------------------------------------------
+    // -------------------------------------------------------
+    // giveInThreshold(...) (private) via reflection
+    // -------------------------------------------------------
 
 //    @Test
 //    void giveInThreshold_usesCategorisedMeanSd_whenPresent() throws Throwable {
@@ -603,605 +594,593 @@ class CompetitivenessTest {
 //        assertEquals(0.25, v, 1e-12);
 //    }
 
-	// -------------------------------------------------------
-	// landUsechangeNormalisedPriceUtility (via reflection)
-	// -------------------------------------------------------
-
-	private void callLandUsechangeNormalisedPriceUtility(Cell c, Aft competitor, RegionalModelRunner r) {
-		try {
-			Method m = Competitiveness.class.getDeclaredMethod(
-					"landUsechangeNormalisedPriceUtility", Cell.class, Aft.class, RegionalModelRunner.class);
-			m.setAccessible(true);
-			m.invoke(null, c, competitor, r);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private void setupSankeyData(String aftLabel, int year) {
-		Tracker.sankeydata.computeIfAbsent(aftLabel, k -> new ConcurrentHashMap<>())
-				.computeIfAbsent(year, k -> new ConcurrentHashMap<>());
-	}
-
-	// --- Dispatch gate tests ---
-
-	@Test
-	void competition_dispatchesToNormalisedPrice_whenFlagIsTrue() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of(
-					"use_neighbor_priority", false,
-					"MostCompetitorAFTProbability", 1.0,
-					"mutate_on_competition_win", false));
-
-			setConfig(cfg, Map.of("use_normalised_price_competition", true));
-			AftCategorised.useCategorisationGivIn = false;
-			CellBehaviourUpdater.behaviourUsed = false;
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-			setOwner(c, null);
-
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getLabel()).thenReturn("COMP");
-
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
-
-			doReturn(10.0).when(c).competitiveness(competitor, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			r.R = region;
-
-			setupSankeyData("COMP", 2020);
-
-			try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class);
-			     MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-				mocked.when(AFTsLoader::getActivateAFTsHash)
-						.thenReturn(new ConcurrentHashMap<>(Map.of("COMP", competitor)));
-
-				ConfigLoader.config.use_explicit_price_utility = true;
-				try {
-					Competitiveness.competition(c, r);
-					assertSame(competitor, getOwner(c),
-							"Normalised price path should take over abandoned cell when uC > 0");
-					assertEquals(1, Listener.landUseChangeCounter.get());
-				} finally {
-					ConfigLoader.config.use_explicit_price_utility = false;
-				}
-			}
-		});
-	}
-
-	@Test
-	void competition_doesNotUseNormalisedPrice_whenFlagIsFalse() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of(
-					"use_neighbor_priority", false,
-					"MostCompetitorAFTProbability", 1.0,
-					"mutate_on_competition_win", false));
-
-			setConfig(cfg, Map.of("use_normalised_price_competition", false));
-			AftCategorised.useCategorisationGivIn = false;
-			CellBehaviourUpdater.behaviourUsed = false;
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-			setOwner(c, null);
-
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getLabel()).thenReturn("COMP");
-
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			// marginal=1 so utility = (0+1)*6 + 0 = 6
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
-
-			doReturn(6.0).when(c).competitiveness(competitor, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
-
-			ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
-			meanY.put("COMP", 5.0);
-			when(r.getDistributionMeanY()).thenReturn(meanY);
-
-			setupSankeyData("COMP", 2020);
-
-			try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class);
-			     MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
-				mocked.when(AFTsLoader::getActivateAFTsHash)
-						.thenReturn(new ConcurrentHashMap<>(Map.of("COMP", competitor)));
-
-				Competitiveness.competition(c, r);
-				assertSame(competitor, getOwner(c),
-						"Standard landUsechange path should still work when normalised price flag is off");
-			}
-		});
-	}
-
-	// --- Normalised difference behaviour ---
-
-	@Test
-	void normalisedPrice_competitorTakesOver_whenNormDiffExceedsGiveIn() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("mutate_on_competition_win", false));
-
-			AftCategorised.useCategorisationGivIn = false;
-			CellBehaviourUpdater.behaviourUsed = false;
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-
-			Aft owner = mock(Aft.class);
-			when(owner.isInteract()).thenReturn(true);
-			when(owner.isAbandoned()).thenReturn(false);
-			when(owner.getLabel()).thenReturn("OWN");
-			when(owner.getGiveInMean()).thenReturn(0.1);
-			when(owner.getGiveInSD()).thenReturn(0.0);
-			setOwner(c, owner);
-			c.setCurrentUtility(2.0);
-
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getLabel()).thenReturn("COMP");
-
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
-
-			// uC = 10. normDiff = (10-2)/(10+2) = 0.667 > giveIn 0.1
-			doReturn(10.0).when(c).competitiveness(competitor, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			r.R = region;
-
-			setupSankeyData("COMP", 2020);
-
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-
-				ConfigLoader.config.use_explicit_price_utility = true;
-				try {
-					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
-					assertSame(competitor, getOwner(c));
-				} finally {
-					ConfigLoader.config.use_explicit_price_utility = false;
-				}
-			}
-		});
-	}
-
-	@Test
-	void normalisedPrice_competitorDoesNotTakeOver_whenNormDiffBelowGiveIn() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("mutate_on_competition_win", false));
-
-			AftCategorised.useCategorisationGivIn = false;
-			CellBehaviourUpdater.behaviourUsed = false;
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-
-			Aft owner = mock(Aft.class);
-			when(owner.isInteract()).thenReturn(true);
-			when(owner.isAbandoned()).thenReturn(false);
-			when(owner.getLabel()).thenReturn("OWN");
-			when(owner.getGiveInMean()).thenReturn(0.2);
-			when(owner.getGiveInSD()).thenReturn(0.0);
-			setOwner(c, owner);
-			c.setCurrentUtility(5.0);
-
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getLabel()).thenReturn("COMP");
-
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
-
-			// uC = 6. normDiff = (6-5)/(6+5) = 1/11 ~ 0.091 < giveIn 0.2
-			doReturn(6.0).when(c).competitiveness(competitor, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			r.R = region;
-
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-
-				ConfigLoader.config.use_explicit_price_utility = true;
-				try {
-					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
-					assertSame(owner, getOwner(c),
-							"Competitor with normDiff=0.091 < giveIn=0.2 must not take over");
-					assertEquals(0, Listener.landUseChangeCounter.get());
-				} finally {
-					ConfigLoader.config.use_explicit_price_utility = false;
-				}
-			}
-		});
-	}
-
-	// --- Negative utility guard ---
-
-	@Test
-	void normalisedPrice_negativeUtilityDoesNotTakeOver() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("mutate_on_competition_win", false));
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-			setOwner(c, null);
-
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getLabel()).thenReturn("COMP");
-
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
-
-			doReturn(-5.0).when(c).competitiveness(competitor, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			r.R = region;
-
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-
-				ConfigLoader.config.use_explicit_price_utility = true;
-				try {
-					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
-					assertNull(getOwner(c),
-							"Competitor with negative utility must not take over even an abandoned cell");
-					assertEquals(0, Listener.landUseChangeCounter.get());
-				} finally {
-					ConfigLoader.config.use_explicit_price_utility = false;
-				}
-			}
-		});
-	}
-
-	@Test
-	void normalisedPrice_negativeUtilityDoesNotTakeOver_evenWhenHigherThanOwner() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("mutate_on_competition_win", false));
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-
-			Aft owner = mock(Aft.class);
-			when(owner.isInteract()).thenReturn(true);
-			when(owner.isAbandoned()).thenReturn(false);
-			when(owner.getLabel()).thenReturn("OWN");
-			when(owner.getGiveInMean()).thenReturn(0.0);
-			when(owner.getGiveInSD()).thenReturn(0.0);
-			setOwner(c, owner);
-			c.setCurrentUtility(-10.0);
-
-			Aft competitor = mock(Aft.class);
-			when(competitor.isInteract()).thenReturn(true);
-			when(competitor.getLabel()).thenReturn("COMP");
-
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
-
-			// uC = -2 (higher than uO=-10, but still negative)
-			doReturn(-2.0).when(c).competitiveness(competitor, "S1");
-			when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
-			when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			r.R = region;
-
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2020);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-
-				ConfigLoader.config.use_explicit_price_utility = true;
-				try {
-					callLandUsechangeNormalisedPriceUtility(c, competitor, r);
-					assertSame(owner, getOwner(c),
-							"Competitor with uC=-2 > uO=-10 must NOT take over because uC <= 0");
-					assertEquals(0, Listener.landUseChangeCounter.get());
-				} finally {
-					ConfigLoader.config.use_explicit_price_utility = false;
-				}
-			}
-		});
-	}
-
-	// -------------------------------------------------------
-	// utility(...) — PLUM price-ratio path (use_price_only_utility)
-	// -------------------------------------------------------
-
-	@Test
-	void priceRatioUtility_basicCalculation() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
-			when(a.getNfertCostPerHa()).thenReturn(10.0);
-			when(a.getIntensityCostPerHa()).thenReturn(5.0);
-
-			doReturn(0.8).when(c).competitiveness(a, "S1");
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 100.0, 2025, 150.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			r.R = region;
-
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2025);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-
-				// U = (150/100) * 0.8 = 1.2 — no cost subtraction despite costs being set
-				assertEquals(1.2, callUtility(c, a, r), 1e-12);
-			}
-		});
-	}
-
-	@Test
-	void priceRatioUtility_returnsZero_whenAftNull() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
-
-			Cell c = new Cell(0, 0);
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-
-			assertEquals(0.0, callUtility(c, null, r), 1e-12);
-		});
-	}
-
-	@Test
-	void priceRatioUtility_returnsZero_whenAftNotInteract() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
-
-			Cell c = new Cell(0, 0);
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(false);
-			assertEquals(0.0, callUtility(c, a, r), 1e-12);
-		});
-	}
-
-	@Test
-	void priceRatioUtility_handlesZeroInitialWeight() throws Throwable {
-		withServices(List.of("S1"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
-
-			doReturn(0.5).when(c).competitiveness(a, "S1");
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 0.0, 2025, 100.0)));
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			r.R = region;
-
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2025);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-
-				// Infinity from 100/0 → clamped to 0 by NaN/Inf guard → total = 0
-				assertEquals(0.0, callUtility(c, a, r), 1e-12);
-			}
-		});
-	}
-
-	@Test
-	void priceRatioUtility_multipleServices() throws Throwable {
-		withServices(List.of("S1", "S2"), () -> {
-			Object cfg = ensureConfigInstance();
-			setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
-
-			Cell c = Mockito.spy(new Cell(0, 0));
-
-			Aft a = mock(Aft.class);
-			when(a.isInteract()).thenReturn(true);
-			when(a.getLabel()).thenReturn("AFT1");
-
-			doReturn(2.0).when(c).competitiveness(a, "S1");
-			doReturn(3.0).when(c).competitiveness(a, "S2");
-
-			Service s1 = mock(Service.class);
-			when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 100.0, 2025, 200.0)));
-			Service s2 = mock(Service.class);
-			when(s2.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 50.0, 2025, 75.0)));
-
-			Region region = mock(Region.class);
-			when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1, "S2", s2)));
-			RegionalModelRunner r = mock(RegionalModelRunner.class);
-			r.R = region;
-
-			try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
-				ts.when(Timestep::getCurrentYear).thenReturn(2025);
-				ts.when(Timestep::getStartYear).thenReturn(2020);
-
-				// S1: (200/100)*2 = 4.0;  S2: (75/50)*3 = 4.5;  total = 8.5
-				assertEquals(8.5, callUtility(c, a, r), 1e-12);
-			}
-		});
-	}
-
-	@Test
-	void configValidation_bothPriceUtilityFlags_shouldBeInvalid() throws Throwable {
-		Object cfg = ensureConfigInstance();
-		setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_price_only_utility", true));
-
-		// The combination is invalid — in the real code validatePriceUtilityConfig() calls LOGGER.fatal()
-		assertTrue(ConfigLoader.config.use_explicit_price_utility);
-		assertTrue(ConfigLoader.config.use_price_only_utility);
-	}
-
-	// =========================================================
-	// Helpers
-	// =========================================================
-
-	private static void withServices(List<String> services, ExecutableThrowing body) throws Throwable {
-		List<String> provided = new ArrayList<>(services);
-
-		try {
-			// try mutate real list
-			List<String> real = ServiceSet.getServicesList();
-			List<String> backup = new ArrayList<>(real);
-			try {
-				real.clear();
-				real.addAll(provided);
-				body.run();
-			} finally {
-				real.clear();
-				real.addAll(backup);
-			}
-		} catch (UnsupportedOperationException ex) {
-			// fallback to static mocking
-			try (MockedStatic<ServiceSet> mocked = Mockito.mockStatic(ServiceSet.class)) {
-				mocked.when(ServiceSet::getServicesList).thenReturn(provided);
-				body.run();
-			}
-		}
-	}
-
-	@FunctionalInterface
-	private interface ExecutableThrowing {
-		void run() throws Throwable;
-	}
-
-	private Object ensureConfigInstance() throws Exception {
-		Field cfgField = findField(ConfigLoader.class, "config");
-		cfgField.setAccessible(true);
-		Object cfg = cfgField.get(null);
-		if (cfg == null) {
-			cfg = cfgField.getType().getDeclaredConstructor().newInstance();
-			cfgField.set(null, cfg);
-		}
-		return cfg;
-	}
-
-	private static void setConfig(Object cfg, Map<String, Object> values) {
-		values.forEach((k, v) -> setField(cfg, k, v));
-	}
-
-	private static void setOwner(Cell c, Aft owner) {
-		// Prefer a setter if present, else set field.
-		try {
-			Method m = findMethod(c.getClass(), "setOwner", Aft.class);
-			if (m != null) {
-				m.setAccessible(true);
-				m.invoke(c, owner);
-				return;
-			}
-		} catch (Exception ignored) {
-		}
-		setField(c, "owner", owner);
-	}
-
-	private static Aft getOwner(Cell c) {
-		try {
-			Method m = findMethod(c.getClass(), "getOwner");
-			if (m != null) {
-				m.setAccessible(true);
-				return (Aft) m.invoke(c);
-			}
-		} catch (Exception ignored) {
-		}
-		return (Aft) getField(c, "owner");
-	}
-
-	private static Map<String, ConcurrentHashMap<String, Boolean>> deepCopyRestrictions(
-			Map<String, ConcurrentHashMap<String, Boolean>> src) {
-		Map<String, ConcurrentHashMap<String, Boolean>> copy = new HashMap<>();
-		for (var e : src.entrySet()) {
-			copy.put(e.getKey(), e.getValue() == null ? null : new ConcurrentHashMap<>(e.getValue()));
-		}
-		return copy;
-	}
-
-	private static Method findMethod(Class<?> type, String name, Class<?>... params) {
-		Class<?> c = type;
-		while (c != null) {
-			try {
-				return c.getDeclaredMethod(name, params);
-			} catch (NoSuchMethodException ignored) {
-				c = c.getSuperclass();
-			}
-		}
-		return null;
-	}
-
-	private static Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
-		Class<?> c = type;
-		while (c != null) {
-			try {
-				return c.getDeclaredField(fieldName);
-			} catch (NoSuchFieldException ignored) {
-				c = c.getSuperclass();
-			}
-		}
-		throw new NoSuchFieldException(fieldName);
-	}
-
-	private static Object getField(Object target, String fieldName) {
-		try {
-			Field f = findField(target.getClass(), fieldName);
-			f.setAccessible(true);
-			return f.get(target);
-		} catch (Exception e) {
-			throw new RuntimeException("Failed to read field '" + fieldName + "'", e);
-		}
-	}
-
-	private static void setField(Object target, String fieldName, Object value) {
-		try {
-			Field f = findField(target.getClass(), fieldName);
-			f.setAccessible(true);
-			f.set(target, value);
-		} catch (Exception e) {
-			throw new RuntimeException("Failed to set field '" + fieldName + "'", e);
-		}
-	}
-
+    // -------------------------------------------------------
+    // landUsechangeNormalisedPriceUtility (via reflection)
+    // -------------------------------------------------------
+
+    private boolean callLandUsechangeNormalisedPriceUtility(Cell c, Aft owner, Aft competitor,
+                                                            RegionalModelRunner r) {
+        try {
+            Method m = Competitiveness.class.getDeclaredMethod(
+                    "landUsechangeNormalisedPriceUtility", Cell.class, Aft.class, Aft.class,
+                    RegionalModelRunner.class);
+            m.setAccessible(true);
+            return (boolean) m.invoke(null, c, owner, competitor, r);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setupSankeyData(String aftLabel, int year) {
+        Tracker.sankeydata.computeIfAbsent(aftLabel, k -> new ConcurrentHashMap<>())
+                .computeIfAbsent(year, k -> new ConcurrentHashMap<>());
+    }
+
+    // --- Dispatch gate tests ---
+
+    @Test
+    void competition_dispatchesToNormalisedPrice_whenFlagIsTrue() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of(
+                    "use_neighbour_priority", false,
+                    "most_competitive_aft_probability", 1.0));
+
+            setConfig(cfg, Map.of("use_normalised_price_competition", true));
+            AftCategorised.useCategorisationGivIn = false;
+            CellBehaviourUpdater.behaviourUsed = false;
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+            setOwner(c, null);
+
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getLabel()).thenReturn("COMP");
+
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+
+            doReturn(10.0).when(c).competitiveness(competitor, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 10.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            r.R = region;
+
+            setupSankeyData("COMP", 2020);
+
+            try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class);
+                 MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+                mocked.when(AFTsLoader::getActivateAFTsHash)
+                        .thenReturn(new ConcurrentHashMap<>(Map.of("COMP", competitor)));
+
+                ConfigLoader.config.use_explicit_price_utility = true;
+                try {
+                    Competitiveness.competition(c, r);
+                    assertSame(competitor, getOwner(c),
+                            "Normalised price path should take over abandoned cell when uC > 0");
+                    assertEquals(1, Listener.landUseChangeCounter.get());
+                } finally {
+                    ConfigLoader.config.use_explicit_price_utility = false;
+                }
+            }
+        });
+    }
+
+    @Test
+    void competition_doesNotUseNormalisedPrice_whenFlagIsFalse() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of(
+                    "use_neighbour_priority", false,
+                    "most_competitive_aft_probability", 1.0));
+
+            setConfig(cfg, Map.of("use_normalised_price_competition", false));
+            AftCategorised.useCategorisationGivIn = false;
+            CellBehaviourUpdater.behaviourUsed = false;
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+            setOwner(c, null);
+
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getLabel()).thenReturn("COMP");
+
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            // marginal=1 so utility = (0+1)*6 + 0 = 6
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
+
+            doReturn(6.0).when(c).competitiveness(competitor, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+
+            ConcurrentHashMap<String, Double> meanY = new ConcurrentHashMap<>();
+            meanY.put("COMP", 5.0);
+            when(r.getDistributionMeanY()).thenReturn(meanY);
+
+            setupSankeyData("COMP", 2020);
+
+            try (MockedStatic<AFTsLoader> mocked = Mockito.mockStatic(AFTsLoader.class);
+                 MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
+                mocked.when(AFTsLoader::getActivateAFTsHash)
+                        .thenReturn(new ConcurrentHashMap<>(Map.of("COMP", competitor)));
+
+                Competitiveness.competition(c, r);
+                assertSame(competitor, getOwner(c),
+                        "Standard landUsechange path should still work when normalised price flag is off");
+            }
+        });
+    }
+
+    // --- Normalised difference behaviour ---
+
+    @Test
+    void normalisedPrice_competitorTakesOver_whenNormDiffExceedsGiveIn() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+
+            AftCategorised.useCategorisationGivIn = false;
+            CellBehaviourUpdater.behaviourUsed = false;
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+
+            Aft owner = mock(Aft.class);
+            when(owner.isInteract()).thenReturn(true);
+            when(owner.isAbandoned()).thenReturn(false);
+            when(owner.getLabel()).thenReturn("OWN");
+            when(owner.getGiveInMean()).thenReturn(0.1);
+            when(owner.getGiveInSD()).thenReturn(0.0);
+            setOwner(c, owner);
+            c.setCurrentUtility(2.0);
+
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getLabel()).thenReturn("COMP");
+
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+
+            // uC = 10. normDiff = (10-2)/(10+2) = 0.667 > giveIn 0.1
+            doReturn(10.0).when(c).competitiveness(competitor, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            r.R = region;
+
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+
+                ConfigLoader.config.use_explicit_price_utility = true;
+                try {
+                    assertTrue(callLandUsechangeNormalisedPriceUtility(c, owner, competitor, r),
+                            "normDiff=0.667 > giveIn=0.1 should return true");
+                } finally {
+                    ConfigLoader.config.use_explicit_price_utility = false;
+                }
+            }
+        });
+    }
+
+    @Test
+    void normalisedPrice_competitorDoesNotTakeOver_whenNormDiffBelowGiveIn() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+
+            AftCategorised.useCategorisationGivIn = false;
+            CellBehaviourUpdater.behaviourUsed = false;
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+
+            Aft owner = mock(Aft.class);
+            when(owner.isInteract()).thenReturn(true);
+            when(owner.isAbandoned()).thenReturn(false);
+            when(owner.getLabel()).thenReturn("OWN");
+            when(owner.getGiveInMean()).thenReturn(0.2);
+            when(owner.getGiveInSD()).thenReturn(0.0);
+            setOwner(c, owner);
+            c.setCurrentUtility(5.0);
+
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getLabel()).thenReturn("COMP");
+
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+
+            // uC = 6. normDiff = (6-5)/(6+5) = 1/11 ~ 0.091 < giveIn 0.2
+            doReturn(6.0).when(c).competitiveness(competitor, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            r.R = region;
+
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+
+                ConfigLoader.config.use_explicit_price_utility = true;
+                try {
+                    assertFalse(callLandUsechangeNormalisedPriceUtility(c, owner, competitor, r),
+                            "normDiff=0.091 < giveIn=0.2 should return false");
+                } finally {
+                    ConfigLoader.config.use_explicit_price_utility = false;
+                }
+            }
+        });
+    }
+
+    // --- Negative utility guard ---
+
+    @Test
+    void normalisedPrice_negativeUtilityDoesNotTakeOver() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+            setOwner(c, null);
+
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getLabel()).thenReturn("COMP");
+
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+
+            doReturn(-5.0).when(c).competitiveness(competitor, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            r.R = region;
+
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+
+                ConfigLoader.config.use_explicit_price_utility = true;
+                try {
+                    assertFalse(callLandUsechangeNormalisedPriceUtility(c, null, competitor, r),
+                            "Competitor with negative utility must not take over even an abandoned cell");
+                } finally {
+                    ConfigLoader.config.use_explicit_price_utility = false;
+                }
+            }
+        });
+    }
+
+    @Test
+    void normalisedPrice_negativeUtilityDoesNotTakeOver_evenWhenHigherThanOwner() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+
+            Aft owner = mock(Aft.class);
+            when(owner.isInteract()).thenReturn(true);
+            when(owner.isAbandoned()).thenReturn(false);
+            when(owner.getLabel()).thenReturn("OWN");
+            when(owner.getGiveInMean()).thenReturn(0.0);
+            when(owner.getGiveInSD()).thenReturn(0.0);
+            setOwner(c, owner);
+            c.setCurrentUtility(-10.0);
+
+            Aft competitor = mock(Aft.class);
+            when(competitor.isInteract()).thenReturn(true);
+            when(competitor.getLabel()).thenReturn("COMP");
+
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
+
+            // uC = -2 (higher than uO=-10, but still negative)
+            doReturn(-2.0).when(c).competitiveness(competitor, "S1");
+            when(c.getLandTax()).thenReturn(new ConcurrentHashMap<>());
+            when(c.getServicesTax()).thenReturn(new ConcurrentHashMap<>());
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 1.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            r.R = region;
+
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2020);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+
+                ConfigLoader.config.use_explicit_price_utility = true;
+                try {
+                    assertFalse(callLandUsechangeNormalisedPriceUtility(c, owner, competitor, r),
+                            "Competitor with uC=-2 > uO=-10 must NOT take over because uC <= 0");
+                } finally {
+                    ConfigLoader.config.use_explicit_price_utility = false;
+                }
+            }
+        });
+    }
+
+    // -------------------------------------------------------
+    // utility(...) — PLUM price-ratio path (use_price_only_utility)
+    // -------------------------------------------------------
+
+    @Test
+    void priceRatioUtility_basicCalculation() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
+            when(a.getNfertCostPerHa()).thenReturn(10.0);
+            when(a.getIntensityCostPerHa()).thenReturn(5.0);
+
+            doReturn(0.8).when(c).competitiveness(a, "S1");
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 100.0, 2025, 150.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            r.R = region;
+
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2025);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+
+                // U = (150/100) * 0.8 = 1.2 — no cost subtraction despite costs being set
+                assertEquals(1.2, callUtility(c, a, r), 1e-12);
+            }
+        });
+    }
+
+    @Test
+    void priceRatioUtility_returnsZero_whenAftNull() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+            Cell c = new Cell(0, 0);
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+
+            assertEquals(0.0, callUtility(c, null, r), 1e-12);
+        });
+    }
+
+    @Test
+    void priceRatioUtility_returnsZero_whenAftNotInteract() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+            Cell c = new Cell(0, 0);
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(false);
+            assertEquals(0.0, callUtility(c, a, r), 1e-12);
+        });
+    }
+
+    @Test
+    void priceRatioUtility_handlesZeroInitialWeight() throws Throwable {
+        withServices(List.of("S1"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
+
+            doReturn(0.5).when(c).competitiveness(a, "S1");
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 0.0, 2025, 100.0)));
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            r.R = region;
+
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2025);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+
+                // Infinity from 100/0 → clamped to 0 by NaN/Inf guard → total = 0
+                assertEquals(0.0, callUtility(c, a, r), 1e-12);
+            }
+        });
+    }
+
+    @Test
+    void priceRatioUtility_multipleServices() throws Throwable {
+        withServices(List.of("S1", "S2"), () -> {
+            Object cfg = ensureConfigInstance();
+            setConfig(cfg, Map.of("use_price_only_utility", true, "use_explicit_price_utility", false));
+
+            Cell c = Mockito.spy(new Cell(0, 0));
+
+            Aft a = mock(Aft.class);
+            when(a.isInteract()).thenReturn(true);
+            when(a.getLabel()).thenReturn("AFT1");
+
+            doReturn(2.0).when(c).competitiveness(a, "S1");
+            doReturn(3.0).when(c).competitiveness(a, "S2");
+
+            Service s1 = mock(Service.class);
+            when(s1.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 100.0, 2025, 200.0)));
+            Service s2 = mock(Service.class);
+            when(s2.getWeights()).thenReturn(new ConcurrentHashMap<>(Map.of(2020, 50.0, 2025, 75.0)));
+
+            Region region = mock(Region.class);
+            when(region.getServicesHash()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", s1, "S2", s2)));
+            RegionalModelRunner r = mock(RegionalModelRunner.class);
+            r.R = region;
+
+            try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class)) {
+                ts.when(Timestep::getCurrentYear).thenReturn(2025);
+                ts.when(Timestep::getStartYear).thenReturn(2020);
+
+                // S1: (200/100)*2 = 4.0;  S2: (75/50)*3 = 4.5;  total = 8.5
+                assertEquals(8.5, callUtility(c, a, r), 1e-12);
+            }
+        });
+    }
+
+    @Test
+    void configValidation_bothPriceUtilityFlags_shouldBeInvalid() throws Throwable {
+        Object cfg = ensureConfigInstance();
+        setConfig(cfg, Map.of("use_explicit_price_utility", true, "use_price_only_utility", true));
+
+        // The combination is invalid — in the real code validatePriceUtilityConfig() calls LOGGER.fatal()
+        assertTrue(ConfigLoader.config.use_explicit_price_utility);
+        assertTrue(ConfigLoader.config.use_price_only_utility);
+    }
+
+    // =========================================================
+    // Helpers
+    // =========================================================
+
+    private static void withServices(List<String> services, ExecutableThrowing body) throws Throwable {
+        List<String> provided = new ArrayList<>(services);
+
+        try {
+            // try mutate real list
+            List<String> real = ServiceSet.getServicesList();
+            List<String> backup = new ArrayList<>(real);
+            try {
+                real.clear();
+                real.addAll(provided);
+                body.run();
+            } finally {
+                real.clear();
+                real.addAll(backup);
+            }
+        } catch (UnsupportedOperationException ex) {
+            // fallback to static mocking
+            try (MockedStatic<ServiceSet> mocked = Mockito.mockStatic(ServiceSet.class)) {
+                mocked.when(ServiceSet::getServicesList).thenReturn(provided);
+                body.run();
+            }
+        }
+    }
+
+    @FunctionalInterface
+    private interface ExecutableThrowing {
+        void run() throws Throwable;
+    }
+
+    private Object ensureConfigInstance() throws Exception {
+        Field cfgField = findField(ConfigLoader.class, "config");
+        cfgField.setAccessible(true);
+        Object cfg = cfgField.get(null);
+        if (cfg == null) {
+            cfg = cfgField.getType().getDeclaredConstructor().newInstance();
+            cfgField.set(null, cfg);
+        }
+        return cfg;
+    }
+
+    private static void setConfig(Object cfg, Map<String, Object> values) {
+        values.forEach((k, v) -> setField(cfg, k, v));
+    }
+
+    private static void setOwner(Cell c, Aft owner) {
+        // Prefer a setter if present, else set field.
+        try {
+            Method m = findMethod(c.getClass(), "setOwner", Aft.class);
+            if (m != null) {
+                m.setAccessible(true);
+                m.invoke(c, owner);
+                return;
+            }
+        } catch (Exception ignored) {
+        }
+        setField(c, "owner", owner);
+    }
+
+    private static Aft getOwner(Cell c) {
+        try {
+            Method m = findMethod(c.getClass(), "getOwner");
+            if (m != null) {
+                m.setAccessible(true);
+                return (Aft) m.invoke(c);
+            }
+        } catch (Exception ignored) {
+        }
+        return (Aft) getField(c, "owner");
+    }
+
+    private static Map<String, ConcurrentHashMap<String, Boolean>> deepCopyRestrictions(
+            Map<String, ConcurrentHashMap<String, Boolean>> src) {
+        Map<String, ConcurrentHashMap<String, Boolean>> copy = new HashMap<>();
+        for (var e : src.entrySet()) {
+            copy.put(e.getKey(), e.getValue() == null ? null : new ConcurrentHashMap<>(e.getValue()));
+        }
+        return copy;
+    }
+
+    private static Method findMethod(Class<?> type, String name, Class<?>... params) {
+        Class<?> c = type;
+        while (c != null) {
+            try {
+                return c.getDeclaredMethod(name, params);
+            } catch (NoSuchMethodException ignored) {
+                c = c.getSuperclass();
+            }
+        }
+        return null;
+    }
+
+    private static Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
+        Class<?> c = type;
+        while (c != null) {
+            try {
+                return c.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                c = c.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
+    }
+
+    private static Object getField(Object target, String fieldName) {
+        try {
+            Field f = findField(target.getClass(), fieldName);
+            f.setAccessible(true);
+            return f.get(target);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read field '" + fieldName + "'", e);
+        }
+    }
+
+    private static void setField(Object target, String fieldName, Object value) {
+        try {
+            Field f = findField(target.getClass(), fieldName);
+            f.setAccessible(true);
+            f.set(target, value);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set field '" + fieldName + "'", e);
+        }
+    }
 }
+

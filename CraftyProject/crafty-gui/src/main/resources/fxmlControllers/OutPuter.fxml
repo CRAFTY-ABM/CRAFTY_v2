@@ -19,20 +19,23 @@
 	fx:controller="de.cesr.crafty.gui.controller.fxml.OutPuterController"
 	fx:id="TopBox">
 	<children>
-		<VBox spacing="5.0">
+		<VBox spacing="5.0" VBox.vgrow="ALWAYS">
 			<children>
 				<ChoiceBox fx:id="yearChoice" onAction="#yearChoice" />
-				<TabPane minHeight="0.0" minWidth="0.0">
+				<TabPane minHeight="0.0" minWidth="0.0"
+					VBox.vgrow="ALWAYS">
 					<tabs>
-						<Tab text="Supply and Demand Evolution "
+						<Tab text="Supply and demand evolution"
 							style="-fx-background-color: #bddee9;">
 							<!-- <graphic> <FontIcon iconLiteral="fas-chart-pie" iconSize="15" 
 								/> </graphic> -->
 							<tooltip>
-								<Tooltip text="Supply and Demand Evolution" />
+								<Tooltip text="Supply and demand evolution" />
 							</tooltip>
 							<content>
-								<ScrollPane fx:id="scroll">
+								<ScrollPane fx:id="scroll" fitToWidth="true"
+									hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+									styleClass="responsive-scroll">
 									<GridPane fx:id="gridChart" />
 								</ScrollPane>
 							</content>
@@ -45,79 +48,85 @@
 								<Tooltip text="Results analysis" />
 							</tooltip>
 							<content>
+								<ScrollPane fitToWidth="true" hbarPolicy="NEVER"
+									vbarPolicy="AS_NEEDED" styleClass="responsive-scroll">
 								<VBox spacing="5.0" fx:id="borderPane">
 									<HBox spacing="15.0">
-										<Label text="generate a Sankey graph"
-											style="-fx-text-fill: blue;" />
+										<Label text="Generate a Sankey diagram" />
 										<ChoiceBox fx:id="sankeyBox" onAction="#sankeyPlot">
 											<tooltip>
 												<Tooltip
-													text="Create a sankyPlot corresponding to the current year file  and the selected file" />
+													text="Create a Sankey diagram comparing the current-year file with the selected file" />
 											</tooltip>
 										</ChoiceBox>
 										<Button fx:id="saveAllFilAsPNG"
 											onAction="#saveAllFilAsPNGAction" mnemonicParsing="false"
-											text="Snapshots maps and charts as a PNG"
+											text="Save maps and charts as PNG snapshots"
 											styleClass="button-icon">
 											<!-- <graphic> <FontIcon iconLiteral="far-save" iconSize="15" 
 												/> </graphic> -->
 											<tooltip>
-												<Tooltip text="Select Existing Model Result" />
+												<Tooltip text="Save snapshots from the selected model result" />
 											</tooltip>
 										</Button>
 									</HBox>
 								</VBox>
+								</ScrollPane>
 							</content>
 						</Tab>
 						<!--?????? -->
-						<Tab text="Supply and land use change tracker"
+						<Tab text="Supply and land-use change tracker"
 							style="-fx-background-color: #bddee9;">
 							<!-- <graphic> <FontIcon iconLiteral="fas-chart-area" iconSize="15" 
 								/> </graphic> -->
 							<tooltip>
-								<Tooltip text="landuseEvent" />
+								<Tooltip text="Track supply and land-use changes" />
 							</tooltip>
 							<content>
-								<ScrollPane>
+								<ScrollPane fitToWidth="true" hbarPolicy="NEVER"
+									vbarPolicy="AS_NEEDED" styleClass="responsive-scroll">
 									<VBox fx:id="boxTracker" spacing="2.0">
 									</VBox>
 								</ScrollPane>
 							</content>
 						</Tab>
 						<!--?????? -->
-						<Tab fx:id="treeTab" text="Output Files"
+						<Tab fx:id="treeTab" text="Output files"
 							style="-fx-background-color: #bddee9;">
 							<!--< graphic> <FontIcon iconLiteral="fas-map-marked-alt" iconSize="15" 
 								/> </graphic> -->
 							<tooltip>
-								<Tooltip text="tree output Files " />
+								<Tooltip text="Browse output files" />
 							</tooltip>
 							<content>
-								<VBox spacing="2.0" fx:id="treeBox">
+								<VBox spacing="2.0" fx:id="treeBox"
+									VBox.vgrow="ALWAYS">
 								<Button  onAction="#reload" 
-											text="Reload Files">
+											text="Reload files">
 											<!-- <graphic> <FontIcon iconLiteral="far-save" iconSize="15" 
 												/> </graphic> -->
 											<tooltip>
-												<Tooltip text="Reload Files" />
+												<Tooltip text="Reload output files" />
 											</tooltip>
 										</Button>
 								</VBox>
 							</content>
 						</Tab>
 						<!--?????? -->
-						<Tab fx:id="regionTab" text="Regions Output"
+						<Tab fx:id="regionTab" text="Regional output"
 							style="-fx-background-color: #bddee9;">
 							<!--< graphic> <FontIcon iconLiteral="fas-map-marked-alt" iconSize="15" 
 								/> </graphic> -->
 							<tooltip>
-								<Tooltip text="Regional Results " />
+								<Tooltip text="Regional results" />
 							</tooltip>
 							<content>
 								<VBox spacing="2.0">
 									<ChoiceBox fx:id="regionsBox"
 										onAction="#regionsBoxAction" />
-									<ScrollPane fx:id="scrollRegions">
+								<ScrollPane fx:id="scrollRegions" fitToWidth="true"
+									hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+									VBox.vgrow="ALWAYS" styleClass="responsive-scroll">
 										<GridPane fx:id="regionalGridChart"
 											style="-fx-background-color: #edf5f7;" />
 									</ScrollPane>

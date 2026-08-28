@@ -23,8 +23,10 @@ import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.main.MainHeadless;
+import de.cesr.crafty.core.modelRunner.InitialDSEquilibriumManager;
 import de.cesr.crafty.core.modelRunner.ModelRunner;
 import de.cesr.crafty.gui.canvasFx.CellsCanvas;
+import de.cesr.crafty.gui.canvasFx.MapStatisticsPane;
 import de.cesr.crafty.gui.utils.graphical.ColorsTools;
 import de.cesr.crafty.gui.utils.graphical.LineChartTools;
 import de.cesr.crafty.gui.utils.graphical.MousePressed;
@@ -34,6 +36,8 @@ import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.updaters.SupplyUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
+import de.cesr.crafty.gui.institutes.Institutes_Set;
+import de.cesr.crafty.gui.institutes.Targets_Set;
 import de.cesr.crafty.gui.utils.graphical.SaveAs;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -103,14 +107,22 @@ public class ModelRunnerController {
 
 		Collections.synchronizedList(lineChart);
 		ConfigLoader.config.output_folder_name = ProjectLoader.getScenario();
-		initilaseChart(lineChart);
+		if (hasLocalCharts()) {
+			initilaseChart(lineChart);
+		}
 		initialzeRadioColorBox();
-		initializeGridpane(3);
+		if (hasLocalCharts()) {
+			initializeGridpane(3);
+			Tools.forceResisingHeight(1, scroll);
+		}
 		Tools.forceResisingWidth(TopBox);
-		Tools.forceResisingHeight(1, scroll);
 	}
 
-	private void scheduleNextStep(long delayMs) {
+	private boolean hasLocalCharts() {
+		return gridPaneLinnChart != null && scroll != null;
+	}
+
+	protected void scheduleNextStep(long delayMs) {
 		System.out.println("scheduleNextStep: " + delayMs);
 		worker.schedule(this::runOneStep, delayMs, TimeUnit.MILLISECONDS);
 	}
@@ -119,6 +131,7 @@ public class ModelRunnerController {
 	private void runOneStep() {
 		/* 1) END-CONDITION ------------------------------------------- */
 		if (Timestep.getCurrentYear() > Timestep.getEndtYear()) {
+			ModelRunner.exportChartsPlots();
 			System.out.println("------------------------------   End Simulation   ------------------------------");
 			if (ConfigLoader.config.generate_output_files) {
 				Platform.runLater(this::displayRunAsOutput);
@@ -130,7 +143,11 @@ public class ModelRunnerController {
 		/* 2) SIMULATION – core --------------------- */
 		long start = System.nanoTime();
 		System.out.println("step stat... " + Timestep.getCurrentYear());
+		if (shouldRunInstitutions()) {
+			Institutes_Set.stepPolicies();
+		}
 		MainHeadless.runner.step();
+		Targets_Set.recordTargetsValues();
 
 		long simTime = (System.nanoTime() - start) / 1_000_000; // ms
 
@@ -148,11 +165,34 @@ public class ModelRunnerController {
 			return;
 		}
 
+		if (shouldPauseAfterStep()) {
+			Platform.runLater(this::showRunPauseDialog);
+			return;
+		}
+
 		/* 4) SCHEDULE next step -------------------------------------- */
 		long wait = TARGET_PERIOD_MS - simTime;
 		if (wait < 0)
 			wait = 0; // step was slow → start immediately
 		scheduleNextStep(wait);
+	}
+
+	protected boolean shouldPauseAfterStep() {
+		return false;
+	}
+
+	/** Whether a policy decision is required before the first simulation step. */
+	protected boolean shouldPauseBeforeFirstStep() {
+		return false;
+	}
+
+	/** Whether institution policies participate in the current simulation run. */
+	protected boolean shouldRunInstitutions() {
+		return true;
+	}
+
+	protected void showRunPauseDialog() {
+		scheduleNextStep(0);
 	}
 
 	void initializeGridpane(int colmunNBR) {
@@ -191,48 +231,61 @@ public class ModelRunnerController {
 		if (!colorbox.isShowing()) {
 			VBox g = new VBox();
 			g.getChildren().addAll(radioColor);
-			colorbox.creatwindows("Display Services and AFT distribution", g);
+			colorbox.creatwindows("Display services and AFT distribution", g);
 		}
 	}
 
 	@FXML
 	public void oneStep() {
 		LOGGER.info("------------------- Start of Tick  |" + Timestep.getCurrentYear() + "| -------------------");
+		if (shouldRunInstitutions()) {
+			Institutes_Set.stepPolicies();
+		}
 		MainHeadless.runner.step();
+		Targets_Set.recordTargetsValues();
 		Platform.runLater(() -> {
 			renderStep();
 		});
 	}
 
 	private void renderStep() {
-		mapSynchronisation();
+		map_synchronisation();
 		tickTxt.setText(String.valueOf(Timestep.getCurrentYear()));
-		updateSupplyDemandLineChart();
+		if (hasLocalCharts()) {
+			updateSupplyDemandLineChart();
+		}
+		SimulationPlotsController.refreshAll();
+		MapStatisticsPane.refresh(CellsCanvas.getColorType());
+		InstitutionDashboardController.refreshAll();
+		TargetsPlotController.updateAll();
+		PolicyPlotsController.refreshAll();
 	}
 
-	private void mapSynchronisation() {
-		if (Config.mapSynchronisation
-				&& (Timestep.getTick() % Config.mapSynchronisationGap == 0 || Timestep.getTick() == 0)) {
+	private void map_synchronisation() {
+		if (Config.map_synchronisation
+				&& (Timestep.getTick() % Config.map_synchronisation_gap == 0 || Timestep.getTick() == 0)) {
 			CellsCanvas.colorMap(colorDisplay);
 		}
 	}
 
 	private void updateSupplyDemandLineChart() {
-		if (Config.chartSynchronisation && (Timestep.getTick() % Config.chartSynchronisationGap == 0
-				|| Timestep.getCurrentYear() == Timestep.getEndtYear())) {
+		int completedYear = Timestep.getCurrentYear() - 1;
+		if (Config.chart_synchronisation && (Timestep.getTick() % Config.chart_synchronisation_gap == 0
+				|| completedYear == Timestep.getStartYear()
+				|| completedYear == Timestep.getEndtYear())) {
 			AtomicInteger m = new AtomicInteger();
 			ServiceSet.getServicesList().forEach(service -> {
-				lineChart.get(m.get()).getData().get(0).getData().add(new XYChart.Data<>(Timestep.getCurrentYear(),
-						ServiceSet.worldService.get(service).getDemands().get(Timestep.getCurrentYear())));
+				lineChart.get(m.get()).getData().get(0).getData().add(new XYChart.Data<>(completedYear,
+						ServiceSet.worldService.get(service).getDemands().get(completedYear)));
 				lineChart.get(m.get()).getData().get(1).getData()
-						.add(new XYChart.Data<>(Timestep.getCurrentYear(), SupplyUpdater.totalSupply.get(service)));
+						.add(new XYChart.Data<>(completedYear, SupplyUpdater.totalSupply.get(service)));
 				m.getAndIncrement();
 			});
 			ObservableList<Series<Number, Number>> observable = lineChart.get(lineChart.size() - 1).getData();
 			List<String> listofNames = observable.stream().map(Series::getName).collect(Collectors.toList());
 			AFTsLoader.hashAgentNbr.forEach((name, value) -> {
 				observable.get(listofNames.indexOf(name)).getData()
-						.add(new XYChart.Data<>(Timestep.getCurrentYear(), value));
+						.add(new XYChart.Data<>(completedYear, value));
 			});
 		}
 	}
@@ -256,19 +309,27 @@ public class ModelRunnerController {
 		
 
 		if (startRunin || !ConfigLoader.config.generate_output_files) {
-//			MainHeadless.runner.initialzeRun();
-			ModelRunner.demandEquilibrium();
+			InitialDSEquilibriumManager.demandEquilibrium();
 			worker = Executors.newSingleThreadScheduledExecutor(r -> {
 				Thread t = new Thread(r, "simulation-worker");
 				t.setDaemon(true);
 				return t;
 			});
-			scheduleNextStep(0);
+			MapStatisticsPane.setSimulationRunning(true);
+			onRunStarted();
+			if (shouldPauseBeforeFirstStep()) {
+				showRunPauseDialog();
+			} else {
+				scheduleNextStep(0);
+			}
 		}
+	}
+	protected void onRunStarted() {
 	}
 
 	@FXML
 	public void stop() {
+		MapStatisticsPane.setSimulationRunning(false);
 		System.out.println("0. worker.shutdown();");
 		worker.shutdown();
 		try {
@@ -285,22 +346,37 @@ public class ModelRunnerController {
 
 		Platform.runLater(() -> {
 			Timestep.setCurrentYear(Timestep.getStartYear());
+			Timestep.setTick(0);
+			Institutes_Set.resetRuntimeState();
 			// reloadBaseline
-			Path baselinePath = PathTools.fileFilter(PathTools.asFolder("worlds"), "Baseline_map").iterator().next();
-			CsvProcessors.processCSV(baselinePath, CsvKind.BASELINE);
+//			Path baselinePath = PathTools.fileFilter(PathTools.asFolder("worlds"), "Baseline_map").iterator().next();
+//			CsvProcessors.processCSV(baselinePath, CsvKind.BASELINE);
+			MainHeadless.runner.start();
 			run.setDisable(false);
-			gridPaneLinnChart.getChildren().clear();
-			lineChart.clear();
-			initilaseChart(lineChart);
-			int j = 0, k = 0;
-			for (int m = 0; m < lineChart.size(); m++) {
-				gridPaneLinnChart.add(lineChart.get(m), j++, k);
-				if (j % 3 == 0) {
-					k++;
-					j = 0;
+			tickTxt.setText(String.valueOf(Timestep.getStartYear()));
+			if (hasLocalCharts()) {
+				gridPaneLinnChart.getChildren().clear();
+				lineChart.clear();
+				initilaseChart(lineChart);
+				int j = 0, k = 0;
+				for (int m = 0; m < lineChart.size(); m++) {
+					gridPaneLinnChart.add(lineChart.get(m), j++, k);
+					if (j % 3 == 0) {
+						k++;
+						j = 0;
+					}
 				}
 			}
+			SimulationPlotsController.resetAll();
+			InstitutionDashboardController.refreshAll();
+			Targets_Set.resetTargetsValues();
+			TargetsPlotController.resetAll();
+			PolicyPlotsController.resetAll();
+			onSimulationReset();
 		});
+	}
+
+	protected void onSimulationReset() {
 	}
 
 	void initilaseChart(ArrayList<LineChart<Number, Number>> lineChart) {
@@ -350,11 +426,11 @@ public class ModelRunnerController {
 		ConfigLoader.config.generate_map_output_files = true;
 		Listener.initializeListExportingYearsMap();
 		Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-		alert.setHeaderText("Please enter OutPut folder name");
+		alert.setHeaderText("Enter an output folder name");
 		String cofiguration = Listener.exportConfigurationFile();
-		cofiguration = cofiguration + " \n " + "Add any comments \n ";
+		cofiguration = cofiguration + " \n " + "Additional comments:\n";
 		TextField textField = new TextField();
-		textField.setPromptText("Output_Folder_Name (if not specified, a default name will be created)");
+		textField.setPromptText("Output folder name (leave blank to use the default)");
 		Text txt = new Text(ProjectLoader.getProjectPath() + PathTools.asFolder("output") + ProjectLoader.getScenario()
 				+ File.separator + "...");
 		TextArea textArea = new TextArea();

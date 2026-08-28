@@ -1,0 +1,160 @@
+schema_version: 1
+
+institutions:
+  - id: agriculture_and_rural_development
+    name: Agriculture_and_Rural_Development
+    description: >
+      This institute supports sustainable agriculture, rural development,
+      agroforestry, landscape diversity, and food production.
+    schedule: {start_year: 2020, end_year: 2100, interval_years: 1}
+    scope: {type: all_cells}
+    budget: {amount: 1000}
+    targets:
+      - {target: agroforestry_area}
+      - {target: high_diversity_agricultural_land}
+      - {target: climate_friendly_food_producers}
+      - {target: food_crop_supply}
+    policies:
+      - id: subsidies_for_agroforestry_land_users
+        name: subsidies_for_agroforestry_land_users
+        effects: {AFT: {AF: 1.0}}
+        cost: {unit_cost: 250, estimated_quantity: 0.4}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: subsidies_for_agricultural_land_users_with_high_landscape_diversity
+        name: subsidies_for_agricultural_land_users_with_high_landscape_diversity
+        effects: {AFT: {ExtP: 0.88, VExtP: 0.8, AF: 0.6}}
+        cost: {unit_cost: 250, estimated_quantity: 53.6}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: subsidies_for_extensive_food_crop_producers
+        name: subsidies_for_extensive_food_crop_producers
+        effects: {AFT: {ExtC3C: 1.0, ExtC3oil: 1.0, ExtC3fruitveg: 1.0, ExtC3puls: 1.0, ExtC3star: 1.0, ExtC4: 1.0}}
+        cost: {unit_cost: 250, estimated_quantity: 26}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: subsidies_for_food_producing_land_users
+        name: subsidies_for_food_producing_land_users
+        effects: {Service: {C3cereals: 1.0, C3starchyroots: 1.0, C3oilcrops: 1.0, C3pulses: 1.0, C3fruitveg: 1.0, C4crops: 1.0}}
+        cost: {unit_cost: 250, estimated_quantity: 1332}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+    decision_engine: {type: manual}
+
+  - id: bioeconomy_innovations
+    name: bioeconomy_innovations
+    description: >
+      This institute supports innovation in the forest-based bioeconomy,
+      including human capital, extensive forestry, and timber production.
+    schedule: {start_year: 2020, end_year: 2100, interval_years: 1}
+    scope: {type: all_cells}
+    budget: {amount: 1000}
+    targets:
+      - {target: employment_in_forestry}
+      - {target: timber_supply}
+    policies:
+      - id: human_capital_for_extensive_forest_agents
+        name: human_capital_for_extensive_forest_agents
+        effects: {Capital: {"ExtBF:human": 1.0, "ExtCF:human": 1.0, "MW:human": 1.0}}
+        cost: {unit_cost: 200, estimated_quantity: 22.53}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: extensive_forest_subsidy
+        name: extensive_forest_subsidy
+        effects: {AFT: {ExtBF: 1.0, ExtCF: 1.0, MW: 1.0}}
+        cost: {unit_cost: 200, estimated_quantity: 22.53}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: broadleaf_forest_subsidy
+        name: broadleaf_forest_subsidy
+        effects: {Service: {Hardwood: 1.0}}
+        cost: {unit_cost: 200, estimated_quantity: 118.77}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: conifer_forest_subsidy
+        name: conifer_forest_subsidy
+        effects: {Service: {Softwood: 1.0}}
+        cost: {unit_cost: 200, estimated_quantity: 118.77}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: mixed_forest_subsidy
+        name: mixed_forest_subsidy
+        effects: {AFT: {MW: 1.0}}
+        cost: {unit_cost: 200, estimated_quantity: 4.78}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+    decision_engine: {type: manual}
+
+  - id: climate_adaptatio_and_mitigation
+    name: climate_adaptatio_and_mitigation
+    description: >
+      This institute promotes climate adaptation and mitigation through carbon
+      storage, sustainable forestry, solar energy, and bioenergy production.
+    schedule: {start_year: 2020, end_year: 2100, interval_years: 1}
+    scope: {type: all_cells}
+    budget: {amount: 1000}
+    targets:
+      - {target: vegetation_carbon_supply}
+      - {target: extensive_forest_area}
+      - {target: solar_energy_supply}
+      - {target: bioenergy_g1_supply}
+      - {target: bioenergy_g2_supply}
+    policies:
+      - id: vegetation_carbon_subsidy
+        name: vegetation_carbon_subsidy
+        effects: {Service: {Carbon: 1.0}}
+        cost: {unit_cost: 150, estimated_quantity: 158.36}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: extensive_forest_subsidy
+        name: extensive_forest_subsidy
+        effects: {AFT: {ExtCF: 1.0, CW: 1.0, ExtBF: 1.0, MW: 1.0}}
+        cost: {unit_cost: 150, estimated_quantity: 32.3133333333}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: agro_voltaics_subsidy
+        name: agro-voltaics_subsidy
+        effects: {AFT: {Agrovoltaic: 1.0}}
+        cost: {unit_cost: 150, estimated_quantity: 0}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: solar_park_subsidy
+        name: solar_park_subsidy
+        effects: {AFT: {Solar: 1.0}}
+        cost: {unit_cost: 150, estimated_quantity: 0.0066666667}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: bioenergyg1_agent_subsidy
+        name: bioenergyg1_agent_subsidy
+        effects: {Service: {BioenergyG1: 1.0}}
+        cost: {unit_cost: 150, estimated_quantity: 158.36}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: bioenergyg2_agent_subsidy
+        name: bioenergyg2_agent_subsidy
+        effects: {Service: {BioenergyG2: 1.0}}
+        cost: {unit_cost: 150, estimated_quantity: 158.36}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+    decision_engine: {type: manual}
+
+  - id: environment_and_nature_conservation
+    name: environment_and_nature_conservation
+    description: >
+      This institute protects nature by supporting biodiversity, pollination,
+      forest recreation, and conservation woodland.
+    schedule: {start_year: 2020, end_year: 2100, interval_years: 1}
+    scope: {type: all_cells}
+    budget: {amount: 1000}
+    targets:
+      - {target: forest_area}
+      - {target: biodiversity_supply}
+      - {target: pollination_potential_supply}
+      - {target: conservation_woodland_area}
+    policies:
+      - id: conservation_woodland_subsidy
+        name: conservation_woodland_subsidy
+        effects: {AFT: {CW: 1.0}}
+        cost: {unit_cost: 250, estimated_quantity: 1.364}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: forest_subsidy
+        name: forest_subsidy
+        effects: {AFT: {ExtBF: 1.0, ExtCF: 1.0, IntCF: 0.1, IntBF: 0.1, CW: 0.1, MW: 0.1}}
+        cost: {unit_cost: 250, estimated_quantity: 37.672}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: biodiversity_land_subsidy
+        name: biodiversity_land_subsidy
+        effects: {AFT: {CW: 1.0, VExtP: 0.7, ExtBF: 0.5, ExtCF: 0.5, MW: 0.5, AF: 0.5}}
+        cost: {unit_cost: 250, estimated_quantity: 42.528}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+      - id: pollination_land_subsidy
+        name: pollination_land_subsidy
+        effects: {AFT: {VExtP: 1.0, ExtBF: 0.64, IntBF: 0.93, IntCF: 0.39, MW: 0.2}}
+        cost: {unit_cost: 250, estimated_quantity: 54.784}
+        constraints: {value: {min: -1.0e9, max: 1.0e9}}
+    decision_engine: {type: manual}

@@ -1,0 +1,51 @@
+schema_version: 1
+
+institutions:
+  - id: Environment Policy
+    name: Environment Policy
+    description: Deterministic fuzzy institution
+    schedule: {start_year: 2020, end_year: 2100, interval_years: 4}
+    scope: {type: all_cells}
+    budget: {amount: 10000}
+    targets:
+      - target: Biodiversity Supply
+    policies:
+      - id: Biodiversity Subsidy
+        name: Biodiversity Subsidy
+        effects:
+          AFT: {CW: 1.0}
+        cost: {unit_cost: 1.0, estimated_quantity: 1232.0}
+        constraints:
+          value: {min: 0.0, max: 1.0e9}
+    decision_engine:
+      type: fuzzy
+      fuzzy:
+        fcl_file: rules.fcl
+        start_at_first_step: true
+        optimize_budget: true
+        targets:
+          Biodiversity Supply: {desired_value: 1.4}
+        policies:
+          Biodiversity Subsidy:
+            function_block: BIODIVERSITY
+            step_size: 0.1
+            change: {min: -0.25, max: 0.25}
+
+  - id: Food Policy LLM
+    name: Food Policy LLM
+    description: LLM institution sharing the common model
+    schedule: {start_year: 2020, end_year: 2100, interval_years: 4}
+    scope: {type: paradigm, name: EM}
+    budget: {amount: 5000}
+    targets:
+      - target: Food Crop Supply
+    policies:
+      - id: Food Producer Subsidy
+        name: Food Producer Subsidy
+        effects:
+          Service: {C3cereals: 1.0}
+    decision_engine:
+      type: llm
+      llm:
+        prompt_file: food_prompt.yaml
+        retry_count: 4

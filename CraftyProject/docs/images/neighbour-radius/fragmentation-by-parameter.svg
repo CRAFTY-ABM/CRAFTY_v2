@@ -1,0 +1,87 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1400' height='620' viewBox='0 0 1400 620'>
+<rect width='100%' height='100%' fill='white'/>
+<text x='700' y='38' text-anchor='middle' font-family='sans-serif' font-size='24' font-weight='bold'>SSP370 landscape configuration in 2100</text>
+<text x='700' y='62' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#475569'>Eight-neighbour (Moore) fragmentation metrics</text>
+<rect x='110' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='110' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Adjacency clustering</text>
+<line x1='110' y1='505' x2='460' y2='505' stroke='#e5e7eb'/>
+<text x='100' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.308</text>
+<line x1='110' y1='407.5' x2='460' y2='407.5' stroke='#e5e7eb'/>
+<text x='100' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.344</text>
+<line x1='110' y1='310' x2='460' y2='310' stroke='#e5e7eb'/>
+<text x='100' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.38</text>
+<line x1='110' y1='212.5' x2='460' y2='212.5' stroke='#e5e7eb'/>
+<text x='100' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.416</text>
+<line x1='110' y1='115' x2='460' y2='115' stroke='#e5e7eb'/>
+<text x='100' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.452</text>
+<text x='110' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>Off</text>
+<text x='180' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<text x='250' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>2</text>
+<text x='320' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>3</text>
+<text x='390' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>4</text>
+<text x='460' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>5</text>
+<polyline points='110,467.26 180,152.74 250,323.47 320,404.26 390,439.43 460,447.27' fill='none' stroke='#7c3aed' stroke-width='3'/>
+<circle cx='110' cy='467.258064516129' r='4' fill='#7c3aed'/>
+<circle cx='180' cy='152.741935483871' r='4' fill='#7c3aed'/>
+<circle cx='250' cy='323.469678353519' r='4' fill='#7c3aed'/>
+<circle cx='320' cy='404.260678672642' r='4' fill='#7c3aed'/>
+<circle cx='390' cy='439.43097298359' r='4' fill='#7c3aed'/>
+<circle cx='460' cy='447.272393035082' r='4' fill='#7c3aed'/>
+<text x='285' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>neighbour_radius</text>
+<text x='38' y='310' text-anchor='middle' transform='rotate(-90 38 310)' font-family='sans-serif' font-size='12'>Index (higher = clustered)</text>
+<rect x='555' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='555' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Patch density</text>
+<line x1='555' y1='505' x2='905' y2='505' stroke='#e5e7eb'/>
+<text x='545' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.142</text>
+<line x1='555' y1='407.5' x2='905' y2='407.5' stroke='#e5e7eb'/>
+<text x='545' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.181</text>
+<line x1='555' y1='310' x2='905' y2='310' stroke='#e5e7eb'/>
+<text x='545' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.22</text>
+<line x1='555' y1='212.5' x2='905' y2='212.5' stroke='#e5e7eb'/>
+<text x='545' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.259</text>
+<line x1='555' y1='115' x2='905' y2='115' stroke='#e5e7eb'/>
+<text x='545' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.298</text>
+<text x='555' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>Off</text>
+<text x='625' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<text x='695' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>2</text>
+<text x='765' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>3</text>
+<text x='835' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>4</text>
+<text x='905' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>5</text>
+<polyline points='555,152.74 625,467.26 695,341.41 765,257.12 835,217.36 905,197.79' fill='none' stroke='#ea580c' stroke-width='3'/>
+<circle cx='555' cy='152.741935483871' r='4' fill='#ea580c'/>
+<circle cx='625' cy='467.258064516129' r='4' fill='#ea580c'/>
+<circle cx='695' cy='341.409310801137' r='4' fill='#ea580c'/>
+<circle cx='765' cy='257.122372388659' r='4' fill='#ea580c'/>
+<circle cx='835' cy='217.35839642493' r='4' fill='#ea580c'/>
+<circle cx='905' cy='197.793674208734' r='4' fill='#ea580c'/>
+<text x='730' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>neighbour_radius</text>
+<text x='483' y='310' text-anchor='middle' transform='rotate(-90 483 310)' font-family='sans-serif' font-size='12'>Patches per cell (lower = clustered)</text>
+<rect x='1000' y='115' width='350' height='390' fill='white' stroke='#cbd5e1'/>
+<text x='1000' y='97' font-family='sans-serif' font-size='16' font-weight='bold'>Effective mesh size</text>
+<line x1='1000' y1='505' x2='1350' y2='505' stroke='#e5e7eb'/>
+<text x='990' y='509' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.004</text>
+<line x1='1000' y1='407.5' x2='1350' y2='407.5' stroke='#e5e7eb'/>
+<text x='990' y='411.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.009</text>
+<line x1='1000' y1='310' x2='1350' y2='310' stroke='#e5e7eb'/>
+<text x='990' y='314' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.015</text>
+<line x1='1000' y1='212.5' x2='1350' y2='212.5' stroke='#e5e7eb'/>
+<text x='990' y='216.5' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.02</text>
+<line x1='1000' y1='115' x2='1350' y2='115' stroke='#e5e7eb'/>
+<text x='990' y='119' text-anchor='end' font-family='sans-serif' font-size='11' fill='#475569'>0.025</text>
+<text x='1000' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>Off</text>
+<text x='1070' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>1</text>
+<text x='1140' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>2</text>
+<text x='1210' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>3</text>
+<text x='1280' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>4</text>
+<text x='1350' y='527' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#475569'>5</text>
+<polyline points='1000,323.76 1070,303.67 1140,296.24 1210,297.15 1280,305.99 1350,323.21' fill='none' stroke='#0891b2' stroke-width='3'/>
+<circle cx='1000' cy='323.764162130974' r='4' fill='#0891b2'/>
+<circle cx='1070' cy='303.669477274022' r='4' fill='#0891b2'/>
+<circle cx='1140' cy='296.235837869026' r='4' fill='#0891b2'/>
+<circle cx='1210' cy='297.145273160481' r='4' fill='#0891b2'/>
+<circle cx='1280' cy='305.990249243675' r='4' fill='#0891b2'/>
+<circle cx='1350' cy='323.207079214572' r='4' fill='#0891b2'/>
+<text x='1175' y='550' text-anchor='middle' font-family='sans-serif' font-size='12'>neighbour_radius</text>
+<text x='928' y='310' text-anchor='middle' transform='rotate(-90 928 310)' font-family='sans-serif' font-size='12'>Normalized (higher = clustered)</text>
+</svg>
+

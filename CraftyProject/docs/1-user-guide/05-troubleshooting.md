@@ -18,7 +18,7 @@ When reporting an issue (or debugging your own runs), always note:
 **Minimum useful info**
 - `project_path`
 - `scenario`
-- whether `regionalization` is on
+- whether `regionalisation` is on
 - whether outputs/maps are enabled
 
 ---
@@ -87,7 +87,7 @@ When reporting an issue (or debugging your own runs), always note:
 ## 3) Regionalisation expected, but run behaves like “world” only
 
 ### Symptoms
-- You set `regionalization: true`, but outputs show only one region
+- You set `regionalisation: true`, but outputs show only one region
 - No per-region folders in output
 - Logs mention missing regional demand/weights/taxes
 
@@ -112,20 +112,22 @@ If inputs are missing or cannot be matched, CRAFTY may fall back to a single reg
 
 ### Typical causes
 - Percentages/rates are too high for your resolution
-- Using ranking-based selection (`seedID: rank`) with large participating fractions
+- Using ranking-based selection (`cell_selection: rank`) with large participating fractions
 - Degradation or mask logic increases pressure on certain areas
 
 ### What to try
 1. Reduce change rates:
    ```yaml
-   land_abandonment_percentage: 0.01
-   participating_cells_percentage: 0.01
+   land_abandonment_fraction: 0.01
+   participating_cell_fraction: 0.01
    ```
 2. Compare seeding strategies:
    ```yaml
-   seedID: rank
+   cell_selection: rank
+   random_seed: 1
    # vs
-   seedID: 1234
+   cell_selection: random
+   random_seed: 1
    ```
 3. Run a short window (5–10 years) to test sensitivity quickly.
 

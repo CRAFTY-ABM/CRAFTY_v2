@@ -1,0 +1,33 @@
+schema_version: 1
+
+institutions:
+  - id: hardwood_policy_institution
+    name: Hardwood policy institution
+    description: Minimal LLM institution example for the German example paradigm.
+
+    schedule:
+      start_year: 2020
+      end_year: 2100
+      interval_years: 4
+
+    scope:
+      type: paradigm
+      name: example
+
+    budget:
+      amount: 10000
+
+    targets:
+      - target: hardwood_supply
+
+    policies:
+      - id: hardwood_subsidy
+        name: Hardwood subsidy
+        effects:
+          Service:
+            Hardwood: 1.0
+    decision_engine:
+      type: llm
+      llm:
+        prompt_file: prompt.yaml
+        retry_count: 4

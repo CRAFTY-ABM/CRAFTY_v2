@@ -47,8 +47,8 @@ class RegionalModelRunnerTest {
 		regionsField.setAccessible(true);
 		cellsLoaderRegionsBackup = regionsField.get(null);
 
-		// CellsLoader.regionalization backup
-		Field regField = findField(CellsLoader.class, "regionalization");
+		// CellsLoader.regionalisation backup
+		Field regField = findField(CellsLoader.class, "regionalisation");
 		regField.setAccessible(true);
 		cellsLoaderRegionalizationBackup = (boolean) regField.get(null);
 
@@ -76,8 +76,8 @@ class RegionalModelRunnerTest {
 		regionsField.setAccessible(true);
 		regionsField.set(null, cellsLoaderRegionsBackup);
 
-		// restore CellsLoader.regionalization
-		Field regField = findField(CellsLoader.class, "regionalization");
+		// restore CellsLoader.regionalisation
+		Field regField = findField(CellsLoader.class, "regionalisation");
 		regField.setAccessible(true);
 		regField.set(null, cellsLoaderRegionalizationBackup);
 
@@ -125,7 +125,7 @@ class RegionalModelRunnerTest {
 
 			// force the executor path (doesn't matter much; both call
 			// calculateCurrentProductivity)
-			setStaticBoolean(CellsLoader.class, "regionalization", false);
+			setStaticBoolean(CellsLoader.class, "regionalisation", false);
 
 			// Cells
 			Cell c1 = mock(Cell.class);
@@ -154,7 +154,7 @@ class RegionalModelRunnerTest {
 	}
 
 	@Test
-	void utilitytyForAll_setsUtilities_usingServiceTaxAndMarginalAndLandTax() throws Exception {
+	void utilitytyForAll_usesOnlyMarginalUtilityWhenCellTaxesAreDisabled() throws Exception {
 		try (MockedStatic<Timestep> ts = Mockito.mockStatic(Timestep.class);
 				MockedStatic<ServiceSet> ss = Mockito.mockStatic(ServiceSet.class);
 				MockedConstruction<ListenerByRegion> lb = Mockito.mockConstruction(ListenerByRegion.class)) {
@@ -169,7 +169,6 @@ class RegionalModelRunnerTest {
 
 			Aft owner = mock(Aft.class);
 			when(owner.isInteract()).thenReturn(true);
-			when(owner.getCachedLandTax()).thenReturn(5.0);
 
 			setField(c, "owner", owner);
 			setField(cNull, "owner", null);
@@ -185,13 +184,12 @@ class RegionalModelRunnerTest {
 			installRegion("R1", region);
 
 			RegionalModelRunner r = new RegionalModelRunner("R1");
-			r.getServiceTax().put("S1", 1.0);
 			r.getMarginal().put("S1", 0.5);
 
 			invokePrivate(r, "utilitytyForAll");
 
-			// u = landTax + (tax+marg)*prod = 5 + 1.5*10 = 20
-			assertEquals(20.0, c.getCurrentUtility(), 1e-12);
+			// u = marginal * productivity = 0.5 * 10 = 5
+			assertEquals(5.0, c.getCurrentUtility(), 1e-12);
 			assertEquals(0.0, cNull.getCurrentUtility(), 1e-12);
 		}
 	}

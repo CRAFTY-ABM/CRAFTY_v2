@@ -2,11 +2,7 @@ package de.cesr.crafty.core.updaters;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,8 +13,6 @@ import de.cesr.crafty.core.ToyData;
 import de.cesr.crafty.core.cli.Config;
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
-import de.cesr.crafty.core.crafty.Aft;
-import de.cesr.crafty.core.crafty.Region;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 
@@ -26,8 +20,7 @@ import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
  * Unit tests for {@link AftsUpdater}.
  *
  * These tests focus on: - updateAFTProduction(...) + updateSensitivty(...)
- * using a small CSV - useDefaultTS(...) default land tax/subsidy behaviour -
- * landTSPath(...) when an explicit file path is provided in the config
+ * using a small CSV.
  */
 class AftsUpdaterTest {
 
@@ -92,53 +85,4 @@ class AftsUpdaterTest {
 //		// --- Check sensitivities (from Cap1 / Cap2 columns) ---
 //	}
 
-	@Test
-	void useDefaultTS_setsZeroLandTaxesForAllAfts() throws Exception {
-		// Years: 2000–2002 inclusive -> 3 years
-		Timestep.setStartYear(2000);
-		Timestep.setEndtYear(2002);
-		Timestep.setSize(Timestep.getEndtYear() - Timestep.getStartYear()+1);
-
-		// Two AFTs in the active map
-		Aft aft1 = new Aft("A1");
-		Aft aft2 = new Aft("A2");
-
-		ConcurrentHashMap<String, Aft> active = new ConcurrentHashMap<>();
-		active.put("A1", aft1);
-		active.put("A2", aft2);
-		AFTsLoader.getActivateAFTsHash().put("A1", aft1);
-		AFTsLoader.getActivateAFTsHash().put("A2", aft2);
-
-		// Expect each AFT to have land_taxes_subsidies entries
-		// for years 2000, 2001, 2002 all set to 0.0
-		for (Aft a : AFTsLoader.getActivateAFTsHash().values()) {
-			ConcurrentHashMap<Integer, Double> ts = a.getLand_taxes_subsidies();
-//			assertEquals(3, ts.size(), "Should have exactly one entry per year");
-			assertEquals(0.0, ts.getOrDefault(2000,0d), 1e-12);
-			assertEquals(0.0, ts.getOrDefault(2001,0d), 1e-12);
-			assertEquals(0.0, ts.getOrDefault(2002,0d), 1e-12);
-		}
-	}
-
-	@Test
-	void landTSPath_returnsExplicitFileFromConfig() throws Exception {
-		// Create a dummy land_taxes_subsidies CSV file in the temp directory
-		Path landTsFile = tempDir.resolve("land_taxes_R1.csv");
-		Files.write(landTsFile, "dummy".getBytes(StandardCharsets.UTF_8));
-
-		// Point the config directly at this file
-		ConfigLoader.config.land_taxes_subsidies_path = landTsFile.toString();
-
-		Region region = new Region("R1");
-
-		// Call private static landTSPath(Region) via reflection
-		Method m = AftsUpdater.class.getDeclaredMethod("landTSPath", Region.class);
-		m.setAccessible(true);
-
-		Path result = (Path) m.invoke(null, region);
-
-		assertNotNull(result, "landTSPath should not return null when config points to a file");
-		assertEquals(landTsFile.toAbsolutePath().normalize(), result.toAbsolutePath().normalize(),
-				"landTSPath should return the explicit file path from config when it is a file");
-	}
 }

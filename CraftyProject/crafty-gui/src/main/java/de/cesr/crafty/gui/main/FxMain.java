@@ -1,10 +1,10 @@
 package de.cesr.crafty.gui.main;
 
-import java.io.InputStream;
 import java.net.URL;
 
+import de.cesr.crafty.gui.logging.GuiLogAppender;
 import de.cesr.crafty.gui.utils.graphical.CraftyLogoNode;
-import de.cesr.crafty.gui.utils.graphical.Tools;
+import de.cesr.crafty.gui.utils.graphical.GuiActionGuard;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -12,6 +12,8 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -35,25 +37,43 @@ public class FxMain extends Application {
 		URL fxml = FxMain.class.getResource("/fxmlControllers/MenuBar.fxml");
 		topLevelBox.getChildren().add(FXMLLoader.load(fxml));
 		topLevelBox.getChildren().add(anchor);
+		VBox.setVgrow(anchor, Priority.ALWAYS);
+		anchor.setMinSize(0, 0);
 		addLogo();
-		scene = new Scene(new Group(topLevelBox));
+		scene = new Scene(topLevelBox, 1280, 800);
 		scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
-//		new GuiScaler(primaryStage, anchor);
-		primaryStage.setTitle(" CRAFTY User Interface ");
+		GuiActionGuard.install(scene);
+		primaryStage.setTitle("CRAFTY User Interface");
 		primaryStage.setScene(scene);
+		primaryStage.setMinWidth(900);
+		primaryStage.setMinHeight(650);
 		primaryStage.setMaximized(true);
 		primaryStage.show();
+		GuiScaler.reScale(primaryStage);
+		GuiLogAppender.install(primaryStage);
 		primaryStage.setOnCloseRequest(_ -> Platform.exit());
 	}
 
+	@Override
+	public void stop() {
+		GuiLogAppender.uninstall();
+	}
+
 	private void addLogo() {
-		InputStream imageStream = getClass().getResourceAsStream("/graphic/CRAFTY_logo_modern3.png");
-		logo = Tools.logo(imageStream, 1);
 		CraftyLogoNode logoD = new CraftyLogoNode();
+		logoD.setManaged(true);
 		logoD.playEntry();
 		logoD.playLoading();
 		GuiScaler.scaleLogoD(logoD);
-		anchor.getChildren().add(logoD);
+
+		// Scale the wrapper instead of the animated logo. The entry animation changes
+		// the logo's own scale, while this wrapper keeps the final display at 50%.
+		Group logoWrapper = new Group(logoD);
+		logoWrapper.setScaleX(0.7);
+		logoWrapper.setScaleY(0.7);
+		StackPane welcomePane = new StackPane(logoWrapper);
+		welcomePane.getStyleClass().add("welcome-pane");
+		anchor.setCenter(welcomePane);
 	}
 
 	public static void main(String[] args) {

@@ -14,7 +14,7 @@
 	fx:controller="de.cesr.crafty.gui.controller.fxml.MenuBarController">
 	<Menu text="File">
 		<items>
-			<MenuItem text="Open Projects From File Systeme..."
+			<MenuItem text="Open project from file system..."
 				accelerator="Ctrl+Alt+O" onAction="#open">
 			<!-- 	 <graphic>
 					<FontIcon iconLiteral="far-folder" iconSize="15" />
@@ -26,7 +26,7 @@
 				</graphic>  -->
 			</Menu>
 			<SeparatorMenuItem />
-			<MenuItem text="Restart" onAction="#resrart" />
+			<MenuItem text="Restart" onAction="#restart" />
 			<MenuItem text="Exit" onAction="#Exit" />
 		</items>
 	</Menu>
@@ -39,10 +39,15 @@
 			</graphic> -->
 		</MenuItem>
 	</Menu>
-<!-- 	<Menu text="View">
-		<MenuItem text="Map Color Palettes" onAction="#colorPallet" />
-	</Menu> -->
+	<Menu text="View">
+		<MenuItem text="Increase text size" accelerator="Ctrl+PLUS"
+			onAction="#increaseTextSize" />
+		<MenuItem text="Decrease text size" accelerator="Ctrl+MINUS"
+			onAction="#decreaseTextSize" />
+		<MenuItem text="Reset text size" accelerator="Ctrl+0"
+			onAction="#resetTextSize" />
+	</Menu>
 	<Menu text="Help">
-		<MenuItem text="CRAFTY Website" onAction="#welcome" />
+		<MenuItem text="CRAFTY website" onAction="#welcome" />
 	</Menu>
 </MenuBar>

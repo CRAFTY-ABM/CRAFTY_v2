@@ -2,11 +2,17 @@ package de.cesr.crafty.core.modelRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -164,7 +170,7 @@ class ModelRunnerTest {
 		ConfigLoader.config.initial_demand_supply_equilibrium = false;
 
 		// Call the static method
-		ModelRunner.demandEquilibrium();
+		InitialDSEquilibriumManager.demandEquilibrium();
 	}
 
     @Test
@@ -187,14 +193,18 @@ class ModelRunnerTest {
         //  - Finally, it replaces calibration_factor for "no initial supply"
         //    services with the average:
         //      R1: unchanged (no services marked)
-        //      R2: S1 set to 1.0, S2 unchanged (6.0)
+        //      R2: S1 set to 1.5, S2 unchanged (6.0)
 
+		Method method = InitialDSEquilibriumManager.class
+				.getDeclaredMethod("RegionalDemandEquilibrium_calculation");
+		method.setAccessible(true);
+		method.invoke(null);
 
         // Check final calibration factors
         assertEquals(2.0, region1.getServicesHash().get("S1").getCalibration_Factor(), 1e-12);
         assertEquals(4.0, region1.getServicesHash().get("S2").getCalibration_Factor(), 1e-12);
 
-        assertEquals(1.0, region2.getServicesHash().get("S1").getCalibration_Factor(), 1e-12,
+        assertEquals(1.5, region2.getServicesHash().get("S1").getCalibration_Factor(), 1e-12,
                 "Zero-supply service S1 in R2 should receive average calibration factor");
         assertEquals(6.0, region2.getServicesHash().get("S2").getCalibration_Factor(), 1e-12,
                 "Service S2 in R2 should remain unchanged");
@@ -216,7 +226,7 @@ class ModelRunnerTest {
         assertNotNull(runner2.listner.DSEquilibriumListener);
 
         // Call private static initialTotalDSEquilibriumListrner()
-        Method m = ModelRunner.class.getDeclaredMethod("initialTotalDSEquilibriumListrner");
+        Method m = InitialDSEquilibriumManager.class.getDeclaredMethod("initialTotalDSEquilibriumListrner");
         m.setAccessible(true);
         m.invoke(null);
 
@@ -248,4 +258,80 @@ class ModelRunnerTest {
         assertEquals(String.valueOf(region2.getServicesHash().get("S2").getCalibration_Factor()),
                 eq2[idxS2 + 1][1]);
     }
+
+	@Test
+	void validateInitialEquilibrium_acceptsDemandCalculatedFromFinalInitialSupply() {
+		ServiceSet.getServicesList().clear();
+		ServiceSet.getServicesList().add("S1");
+		CellsLoader.regions.clear();
+		CellsLoader.regions.put("R1", region1);
+		RegionsModelRunnerUpdater.regionsModelRunner.clear();
+		RegionsModelRunnerUpdater.regionsModelRunner.put("R1", runner1);
+
+		region1.getServicesHash().get("S1").getDemands().put(Timestep.getStartYear(), 50.0);
+		runner1.setRegionalSupply(new ConcurrentHashMap<>(Map.of("S1", 50.0)));
+
+		assertDoesNotThrow(InitialDSEquilibriumManager::validateInitialEquilibrium);
+	}
+
+	@Test
+	void validateInitialEquilibrium_rejectsSupplyChangedAfterCalibration() {
+		ServiceSet.getServicesList().clear();
+		ServiceSet.getServicesList().add("S1");
+		CellsLoader.regions.clear();
+		CellsLoader.regions.put("R1", region1);
+		RegionsModelRunnerUpdater.regionsModelRunner.clear();
+		RegionsModelRunnerUpdater.regionsModelRunner.put("R1", runner1);
+
+		region1.getServicesHash().get("S1").getDemands().put(Timestep.getStartYear(), 50.0);
+		runner1.setRegionalSupply(new ConcurrentHashMap<>(Map.of("S1", 40.0)));
+
+		assertThrows(IllegalStateException.class, InitialDSEquilibriumManager::validateInitialEquilibrium);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	void firstStep_skipsInitialInputsThatWereAppliedBeforeCalibration() throws Exception {
+		ModelRunner modelRunner = new ModelRunner();
+		AtomicInteger inputSteps = new AtomicInteger();
+		AtomicInteger regularSteps = new AtomicInteger();
+		ModelState initialInput = countingState(inputSteps);
+		ModelState regularState = countingState(regularSteps);
+
+		modelRunner.getScheduled().add(initialInput);
+		modelRunner.getScheduled().add(regularState);
+
+		Field initialUpdatersField = ModelRunner.class.getDeclaredField("initialStateUpdaters");
+		initialUpdatersField.setAccessible(true);
+		((List<ModelState>) initialUpdatersField.get(modelRunner)).add(initialInput);
+
+		Field preparedField = ModelRunner.class.getDeclaredField("initialStatePrepared");
+		preparedField.setAccessible(true);
+		preparedField.setBoolean(modelRunner, true);
+
+		modelRunner.step();
+		assertEquals(0, inputSteps.get());
+		assertEquals(1, regularSteps.get());
+
+		modelRunner.step();
+		assertEquals(1, inputSteps.get());
+		assertEquals(2, regularSteps.get());
+	}
+
+	private static ModelState countingState(AtomicInteger counter) {
+		return new ModelState() {
+			@Override
+			public void setup(AbstractModelRunner modelRunner) {
+			}
+
+			@Override
+			public void toSchedule() {
+			}
+
+			@Override
+			public void step() {
+				counter.incrementAndGet();
+			}
+		};
+	}
 }

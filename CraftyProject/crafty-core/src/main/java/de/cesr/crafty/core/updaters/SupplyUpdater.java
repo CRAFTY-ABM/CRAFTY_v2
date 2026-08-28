@@ -1,5 +1,6 @@
 package de.cesr.crafty.core.updaters;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 /**
  * Computes and maintains the aggregated (world-level) supply of each ecosystem service for the current model year.
@@ -31,9 +32,11 @@ public class SupplyUpdater extends AbstractUpdater {
 	public void step() {
 		
 		totalSupply.clear();
-		RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(RegionalRunner -> {
+		RegionsModelRunnerUpdater.regionsModelRunner.entrySet().stream().sorted(Map.Entry.comparingByKey())
+				.map(Map.Entry::getValue).forEach(RegionalRunner -> {
 			RegionalRunner.regionalSupply();
-			RegionalRunner.getRegionalSupply().forEach((key, value) -> totalSupply.merge(key, value, Double::sum));
+			RegionalRunner.getRegionalSupply().entrySet().stream().sorted(Map.Entry.comparingByKey())
+					.forEach(entry -> totalSupply.merge(entry.getKey(), entry.getValue(), Double::sum));
 		});
 	}
 }

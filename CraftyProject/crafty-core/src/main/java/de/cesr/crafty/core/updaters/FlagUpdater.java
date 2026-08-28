@@ -22,7 +22,7 @@ import java.nio.file.Paths;
  * file/folder flag becomes available.
  *
  * This updater reads a {@code waitingFlags.csv} configuration (either from
- * {@code ConfigLoader.config.waitingFlag_directories_path} if it points to a file, or from the default
+ * {@code ConfigLoader.config.waiting_flags_path} if it points to a file, or from the default
  * {@code config/waitingFlags.csv} found in the project structure).
  * The CSV is expected to contain:
  * - {@code Year}: the simulation year when the model should pause
@@ -47,8 +47,8 @@ public class FlagUpdater extends AbstractUpdater {
 		checkCLIforAnnualFlags();
 		if (flags.isEmpty()) {
 			Path csv;
-			if (Paths.get(ConfigLoader.config.waitingFlag_directories_path).toFile().isFile()) {
-				csv = Paths.get(ConfigLoader.config.waitingFlag_directories_path);
+			if (Paths.get(ConfigLoader.config.waiting_flags_path).toFile().isFile()) {
+				csv = Paths.get(ConfigLoader.config.waiting_flags_path);
 			} else {
 				ArrayList<Path> matches = PathTools.fileFilter(PathTools.asFolder("config"), "waitingFlags.csv");
 				csv = (matches != null && !matches.isEmpty()) ? matches.get(0) : null;

@@ -109,9 +109,9 @@ Tip: even with deterministic `rank` seeding, some components may still be stocha
 
 ### 4.1 The “template config + small edits” pattern
 Keep a `config.template.yaml`, then produce per-run configs by replacing a few lines, e.g.:
-- `land_abandonment_percentage`
-- `participating_cells_percentage`
-- `seedID`
+- `land_abandonment_fraction`
+- `participating_cell_fraction`
+- `cell_selection` and `random_seed`
 - map output flags
 
 **Simple sweep in Bash (example)**
@@ -120,7 +120,7 @@ for AB in 0.01 0.03 0.05; do
   for COMP in 0.01 0.05; do
     OUT=/scratch/$USER/crafty/sweep_ab${AB}_c${COMP}
     mkdir -p "$OUT"
-    yq ".land_abandonment_percentage=$AB | .participating_cells_percentage=$COMP" \
+    yq ".land_abandonment_fraction=$AB | .participating_cell_fraction=$COMP" \
       config.template.yaml > "$OUT/config.yaml"
 
     java -jar "$JAR" --config-file "$OUT/config.yaml" --output-path "$OUT"
@@ -150,8 +150,8 @@ Use this when you want a controlled experiment.
 
 Examples (keys depend on your template):
 ```yaml
-BASELINE_path: "/path/to/Baseline_map.csv"
-CAPITALS_directory: "/path/to/capitals/ssp126_variantA"
+baseline_path: "/path/to/Baseline_map.csv"
+capitals_directory: "/path/to/capitals/ssp126_variantA"
 ```
 
 ### 5.3 Add or swap masks / land-use control
@@ -161,7 +161,7 @@ Typical uses:
 - test “urban mask” variants
 
 ```yaml
-landControle_directories:
+land_control_directories:
   - "/path/to/LandUseControl/UrbanMask/ssp126"
   - "/path/to/LandUseControl/ProtectedAreas/all"
 ```
@@ -192,8 +192,8 @@ If outcomes differ dramatically, check if the degradation intensity/scaling is r
 
 ### 6.4 Compare “rank” vs “random” seeding
 If you suspect selection bias, compare:
-- `seedID: rank` (systematic)
-- `seedID: 1234` (reproducible random)
+- `cell_selection: rank` with a fixed `random_seed` (systematic)
+- `cell_selection: random` with the same `random_seed` (reproducible random)
 
 Keep everything else constant and compare outputs.
 
@@ -203,12 +203,12 @@ Keep everything else constant and compare outputs.
 
 ### 7.1 Start in single-region mode
 ```yaml
-regionalization: false
+regionalisation: false
 ```
 
 ### 7.2 Then enable regionalisation
 ```yaml
-regionalization: true
+regionalisation: true
 ```
 
 Make sure region-level service inputs exist (especially demands).  

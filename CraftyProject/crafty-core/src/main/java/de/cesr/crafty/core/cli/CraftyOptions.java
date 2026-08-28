@@ -59,11 +59,11 @@ public class CraftyOptions {
 		this.scenario_Name = scenario_Name;
 	}
 
-	public String getOutput_path() {
+	public String getOutputPath() {
 		return output_path;
 	}
 
-	public void setOutput_path(String output_path) {
+	public void setOutputPath(String output_path) {
 		this.output_path = output_path;
 	}
 

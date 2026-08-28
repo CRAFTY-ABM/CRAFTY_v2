@@ -48,7 +48,7 @@ public abstract class AbstractModelRunner {
 		scheduled.add(s);
 	}
 
-	private final StepProfiler profiler = new StepProfiler(ConfigLoader.config.printAbstractModelRunnerMeasures);
+	private final StepProfiler profiler = new StepProfiler(ConfigLoader.config.print_abstract_model_runner_measures);
 
 	public void step() {
 		profiler.reset();

@@ -154,6 +154,7 @@ class ListenerByRegionTest {
 			assertEquals("Demand:S1", serviceDemand[0][3]);
 			assertEquals("Demand:S2", serviceDemand[0][4]);
 
+
 			// Check composition & averageUtilities headers
 			assertEquals("Year", composition[0][0]);
 			assertEquals("A1", composition[0][1]);
@@ -242,10 +243,13 @@ class ListenerByRegionTest {
 
 			// Years 2000..2001 (2 years) so method indices work for year 2000
 			timestepMock.when(Timestep::getStartYear).thenReturn(2000);
+			timestepMock.when(Timestep::getCurrentYear).thenReturn(2000);
 			timestepMock.when(Timestep::getEndtYear).thenReturn(2001);
 			timestepMock.when(Timestep::getSize).thenReturn(2);
 
 			serviceSetMock.when(ServiceSet::getServicesList).thenReturn(Collections.singletonList("S1"));
+			
+//			R.getServicesHash().get(serviceName).getDemands().get(Timestep.getCurrentYear()) 
 
 			// AFTs only needed for initializeListeners sizing
 			Map<String, Object> aftMap = new ConcurrentHashMap<>();
@@ -273,7 +277,7 @@ class ListenerByRegionTest {
 			listener.initializeListeners();
 
 			// Act: export for year 2000 (y = 1)
-
+			
 			listener.exportFiles(regionalSupply);
 
 			// Assertions / verifications:
@@ -283,7 +287,7 @@ class ListenerByRegionTest {
 
 			// CSV should be written 4 times (AFT composition, service demand,
 			// DS equilibrium, average utilities)
-			csvToolsMock.verify(() -> CsvTools.writeCSVfile(any(String[][].class), any(Path.class)), Mockito.times(4));
+			csvToolsMock.verify(() -> CsvTools.writeCSVfile(any(String[][].class), any(Path.class)), Mockito.times(5));
 
 			// The output_folder_name should be used to build the directory path
 			String dirFromConfig = (String) getConfigField("output_folder_name");

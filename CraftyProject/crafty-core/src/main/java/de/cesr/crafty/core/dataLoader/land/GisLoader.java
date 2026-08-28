@@ -22,13 +22,15 @@ public class GisLoader {
 		try {
 
 			Path path;
-			if (Paths.get(ConfigLoader.config.gisPath).toFile().isFile()) {
-				path = Paths.get(ConfigLoader.config.gisPath);
+			if (Paths.get(ConfigLoader.config.gis_path).toFile().isFile()) {
+				path = Paths.get(ConfigLoader.config.gis_path);
 			} else {
 				path = PathTools.fileFilter(true, File.separator + "GIS" + File.separator).get(0);
 			}
 			ProjectLoader.WorldName = path.toFile().getName().replace("_Regions", "").replace(".csv", "");
 			LOGGER.info("WorldName = " + ProjectLoader.WorldName);
+			LOGGER.info("Read GIS data = " + path);
+			
 			CsvReadOptions options = CsvReadOptions.builder(path.toFile()).separator(',').build();
 			Table T = Table.read().usingOptions(options);
 			AtomicInteger count = new AtomicInteger();
@@ -50,7 +52,7 @@ public class GisLoader {
 				}
 			}
 		} catch (NullPointerException | IOException e) {
-			CellsLoader.regionalization = false;
+			CellsLoader.regionalisation = false;
 			LOGGER.warn(
 					"The Regionalization File is not Found in the GIS Folder, this Data Will be Ignored - No Regionalization Will be Possible.");
 

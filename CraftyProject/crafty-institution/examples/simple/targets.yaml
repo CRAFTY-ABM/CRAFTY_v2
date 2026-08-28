@@ -1,0 +1,10 @@
+schema_version: 1
+
+targets:
+  - id: biodiversity_supply
+    name: Biodiversity supply
+    type: External
+    crafty_elements: {msa: 1.0}
+    normalization: baseline_ratio
+    goals:
+      realist: {2020: 1.0, 2030: 1.2}

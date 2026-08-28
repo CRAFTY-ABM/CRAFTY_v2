@@ -28,6 +28,28 @@ A mask is not just a map layer—it is a combination of:
 
 ---
 
+## Mask metadata (required)
+
+Masks are enabled only when the project contains `csv/LandUseControl-metadata.csv`. If this file is missing or invalid, CRAFTY logs a warning and disables all masks. A discovered or YAML-configured mask that has no metadata row is ignored.
+
+```csv
+name,isForced,Priority
+Urban,TRUE,1
+Water,TRUE,2
+pa-not-strict,FALSE,3
+pa-strict,FALSE,4
+```
+
+- `name` matches the folder directly below `worlds/LandUseControl`.
+- `isForced` accepts `true`/`false`, `1`/`0`, or `yes`/`no` (case-insensitive).
+- Smaller `Priority` values win when masks overlap.
+- If `Priority` is empty or invalid, its 1-based row order is used.
+- Forced behavior is not inferred from mask or AFT names. Allowed target AFTs come from the restriction matrix columns containing an allowed (`1`) transition. With one target, ownership is assigned directly. With multiple targets, CRAFTY uses `most_competitive_aft_probability` to choose between the most competitive allowed AFT and a deterministic pseudo-random allowed AFT. Neighbor filtering is intentionally skipped for forced masks.
+
+YAML-configured paths and automatic discovery use the same indexing logic. A configured path may point at either the mask folder or its scenario folder.
+
+---
+
 ## 1) Two parts of mask inputs
 
 ### 1.1 Mask activation layers (where/when a mask applies)
@@ -99,22 +121,17 @@ A common pattern is:
 
 ---
 
-## 4) Multiple masks and stacking
+## 4) Multiple masks and priority
 
 CRAFTY supports multiple land-use control directories:
 
 ```yaml
-landControle_directories:
+land_control_directories:
   - "/path/to/LandUseControl/UrbanMask/ssp126"
   - "/path/to/LandUseControl/ProtectedAreas/all"
 ```
 
-When multiple masks apply to the same cell and year, the result depends on the implementation:
-- “last one wins” (maskType overwritten)
-
-**Practical recommendation**
-- Order mask directories from **weakest to strongest**, so strong restrictions override weaker ones.
-- Avoid overlapping masks.
+When multiple masks apply to the same cell and year, the metadata entry with the smallest `Priority` wins. Equal priorities are resolved by metadata file order and then mask name. The result is deterministic and independent of map iteration or YAML directory order.
 
 ---
 
@@ -195,7 +212,7 @@ Masks therefore influence:
 ## 9) Config keys related to masks (quick reference)
 
 ```yaml
-landControle_directories:
+land_control_directories:
   - "/path/to/LandUseControl/UrbanMask/ssp126"
   - "/path/to/LandUseControl/ProtectedAreas/all"
 ```
@@ -205,7 +222,7 @@ landControle_directories:
 
 ### 10.1 “Mask has no effect”
 **Causes**
-- mask directory not included in `landControle_directories`
+- mask directory not included in `land_control_directories`
 - Year column name does not match expected format (`Year_2020`)
 - values are not interpreted as active (`1` missing)
 - X/Y coordinates mismatch (different grid/resolution)

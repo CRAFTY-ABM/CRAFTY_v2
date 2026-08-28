@@ -74,7 +74,7 @@ public class PathTools {
 				}
 			}
 		} catch (NullPointerException e) {
-//			LOGGER.fatal(" \n Fatal error. Project folder Path not fund " + folder + ":  " + e.getMessage());
+//			LOGGER.fatal(" \n Fatal error. Project folder Path not found " + folder + ":  " + e.getMessage());
 		}
 	}
 

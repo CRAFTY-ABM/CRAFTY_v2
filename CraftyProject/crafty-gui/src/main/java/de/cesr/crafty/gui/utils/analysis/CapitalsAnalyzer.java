@@ -3,13 +3,12 @@ package de.cesr.crafty.gui.utils.analysis;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.ProjectLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.modelRunner.ModelRunner;
@@ -17,13 +16,10 @@ import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.CsvTools;
 import de.cesr.crafty.gui.utils.graphical.LineChartTools;
-import de.cesr.crafty.gui.utils.graphical.MousePressed;
-import de.cesr.crafty.gui.utils.graphical.SaveAs;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChart.Series;
-import javafx.scene.layout.Pane;
 
 public class CapitalsAnalyzer {
 
@@ -36,6 +32,8 @@ public class CapitalsAnalyzer {
 
 	static ConcurrentHashMap<String, Double> mapToValues(int year) {
 		Timestep.setCurrentYear(year);
+		System.out.println(ConfigLoader.config.scenario + " scenario is running for year: " + year);
+		ModelRunner.capitalUpdater = new CapitalUpdater();
 		ModelRunner.capitalUpdater.step();
 		ConcurrentHashMap<String, Double> capiHash = new ConcurrentHashMap<>();
 
@@ -100,12 +98,6 @@ public class CapitalsAnalyzer {
 		double minY = getMinimumValue(data);
 		double maxY = getMaximumValue(data);
 		LineChartTools.configurexYxis(chart, minY, maxY);
-		String ItemName = "Save as CSV";
-		Consumer<String> action = _ -> {
-			SaveAs.exportLineChartDataToCSV(chart);
-		};
-		HashMap<String, Consumer<String>> othersMenuItems = new HashMap<>();
-		othersMenuItems.put(ItemName, action);
 		return chart;
 	}
 
@@ -137,8 +129,6 @@ public class CapitalsAnalyzer {
 			}
 			k.getAndIncrement();
 		});
-
-		MousePressed.mouseControle((Pane) lineChart.getParent(), lineChart, titel);
 
 		LineChartTools.addSeriesTooltips(lineChart);
 	}

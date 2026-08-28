@@ -6,20 +6,27 @@
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 
-<VBox xmlns="http://javafx.com/javafx/21"
+<ScrollPane xmlns="http://javafx.com/javafx/21"
 	xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="de.cesr.crafty.gui.controller.fxml.CapitalsController"
-	fx:id="TopBox">
+	fitToHeight="false" fitToWidth="true" pannable="true"
+	hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+	styleClass="responsive-scroll capitals-scroll">
+	<content>
+	<VBox fx:id="TopBox">
 	<children>
-		<TitledPane animated="true"
-			text="Capitals, AFTs Distribution and GIS Data">
+<!-- 		<TitledPane animated="true"
+			text="Capital values, AFT distribution, and GIS data">
 			<content>
 				<HBox fx:id="hbox">
 					<children>
 						<VBox fx:id="vboxForSliderColors" />
 						<BarChart fx:id="histogramCapitals"
-							title="Frequency of appearance of capital values (%)">
+							title="Frequency distribution of capital values (%)">
 							<xAxis>
 								<CategoryAxis />
 							</xAxis>
@@ -28,7 +35,7 @@
 							</yAxis>
 						</BarChart>
 						<BarChart fx:id="hServiceSensitivity"
-							title="The aggregate sensitivity of capital on production of services">
+							title="Aggregate sensitivity of service production to capital">
 							<xAxis>
 								<CategoryAxis />
 							</xAxis>
@@ -37,7 +44,7 @@
 							</yAxis>
 						</BarChart>
 						<BarChart fx:id="hAftSensitivity"
-							title="The aggregate sensitivity of capital on production by AFTs">
+							title="Aggregate sensitivity of AFT production to capital">
 							<xAxis>
 								<CategoryAxis />
 							</xAxis>
@@ -48,12 +55,33 @@
 					</children>
 				</HBox>
 			</content>
-		</TitledPane>
-		<TitledPane animated="true"
-			text="Capitals average trends through Scenarios">
+		</TitledPane> -->
+		<TitledPane animated="false" text="Capital map">
 			<content>
-				<VBox fx:id="vboxAnaliser" />
+				<VBox spacing="8.0">
+					<children>
+						<HBox alignment="CENTER_LEFT" spacing="8.0">
+							<children>
+								<Label text="Capital" />
+								<ChoiceBox fx:id="capitalChoice" prefWidth="220.0" />
+								<Label text="Display year" />
+								<ChoiceBox fx:id="capitalYearChoice" prefWidth="110.0" />
+							</children>
+						</HBox>
+						<Label fx:id="capitalMapStatus"
+							text="Select a capital and year to display." />
+					</children>
+				</VBox>
+			</content>
+		</TitledPane>
+		<TitledPane animated="false"
+			text="Average capital trends across scenarios">
+			<content>
+				<VBox fx:id="vboxAnaliser" >
+				</VBox>
 			</content>
 		</TitledPane>
 	</children>
-</VBox>
+	</VBox>
+	</content>
+</ScrollPane>

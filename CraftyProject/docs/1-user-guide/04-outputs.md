@@ -89,6 +89,7 @@ Typical content (depends on enabled modules):
 - **AFT composition** over time (area per AFT, land-use transitions)
 - **Service supply and demand** time series
 - **Marginal utilities** 
+- **Landscape fragmentation and AFT clustering** when `generate_land_fragmentation_output: true`
 - **Summary diagnostics** (land use event counts, competitiveness outcomes, etc.)
 
 ### 4.1 File naming
@@ -105,7 +106,7 @@ Projects often store these in a consistent in outputFiles subfolder, e.g.:
 
 ## 5) Per-region outputs (optional)
 
-If `regionalization: true` and per-region outputs are enabled, you typically get:
+If `regionalisation: true` and per-region outputs are enabled, you typically get:
 
 ```text
 <run_id>/
@@ -122,7 +123,7 @@ Region outputs are useful for:
 - diagnosing “one region dominates” behaviour
 
 > If you expected region outputs but only see “world” outputs, check:
-> - regionalization settings
+> - regionalisation settings
 > - whether regional service demands exist and were matched correctly
 
 ---

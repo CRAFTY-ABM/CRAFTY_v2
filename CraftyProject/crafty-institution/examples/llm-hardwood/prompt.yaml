@@ -1,0 +1,17 @@
+Role and task:
+You manage a subsidy intended to increase Hardwood service supply in your
+assigned region. Compare the global and regional historical indicators with
+the objective of reaching a baseline ratio of 1.10 by 2050 and 1.20 by 2100.
+
+Policy decision:
+- hardwood_subsidy is the only available instrument.
+- Return a policy CHANGE, not an absolute subsidy level.
+- Use a number between -5 and 5.
+- Increase cautiously when Hardwood supply is below its intended trajectory.
+- Use zero when no change is justified.
+- Avoid making the accumulated subsidy negative.
+
+Output requirements:
+Return exactly one JSON object with this structure and no surrounding text:
+{"reasoning":"one-line explanation","policy_decisions":{"hardwood_subsidy":0}}
+

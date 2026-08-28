@@ -34,7 +34,7 @@ public class SplitByRegions {
 
 	static HashMap<String, String> countryToG = new HashMap<>();
 
-	static String[] G = {  "Northern","Western","Southern", "Estern" };
+	static String[] G = { "finland-eu"/* ,"Western","Southern", "Estern" */ };
 	static String[] DataFolderPath = new String[G.length];
 
 	public static void main(String[] args) {
@@ -56,14 +56,14 @@ public class SplitByRegions {
 
 	private static void groups() {
 
-		String[] g0 = {"NO", "SE", "FI","DK","UK", "IE", "EE", "LV", "LT"};
+		String[] g0 = { /* "NO", "SE", */ "FI"/* ,"DK","UK", "IE", "EE", "LV", "LT" */};
 		initialGroup(G[0], g0);
-		String[] g1 = {"FR",  "DE", "BE", "NL","CH","AT", "LU"};
-		initialGroup(G[1], g1);
-		String[] g2 = { "ES","PT",  "MT",  "HR", "SI", "CY"};
-		initialGroup(G[2], g2);
-		String[] g3 = {"PL","CZ", "SK", "HU", "RO", "BG"};//, "EL"
-		initialGroup(G[3], g3);
+//		String[] g1 = {"FR",  "DE", "BE", "NL","CH","AT", "LU"};
+//		initialGroup(G[1], g1);
+//		String[] g2 = { "ES","PT",  "MT",  "HR", "SI", "CY"};
+//		initialGroup(G[2], g2);
+//		String[] g3 = {"PL","CZ", "SK", "HU", "RO", "BG"};//, "EL"
+//		initialGroup(G[3], g3);
 	}
 
 	static void MapsSpliter(String folderPath) {
@@ -112,6 +112,10 @@ public class SplitByRegions {
 			int x = (int) (Utils.sToD(reader.get("X").get(i)));
 			int y = (int) (Utils.sToD(reader.get("Y").get(i)));
 			Cell c = CellsLoader.getCell(x, y);
+			if (c == null) {
+				System.out.println("Cell not found for X: " + x + " Y: " + y);
+				continue;
+			}
 			String country = c.getCurrentRegion();
 //			find the country in which group
 			int index = Utils.indexof(countryToG.get(country), G);

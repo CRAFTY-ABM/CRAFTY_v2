@@ -42,7 +42,6 @@ import de.cesr.crafty.gui.utils.graphical.SankeyChart;
 import de.cesr.crafty.gui.utils.graphical.Tools;
 import de.cesr.crafty.gui.utils.graphical.WarningWindowes;
 import de.cesr.crafty.gui.main.FxMain;
-import de.cesr.crafty.gui.main.GuiScaler;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.gui.utils.graphical.SaveAs;
 import de.cesr.crafty.core.utils.general.Utils;
@@ -71,6 +70,8 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.Priority;
 
 public class OutPuterController {
 	@FXML
@@ -125,7 +126,10 @@ public class OutPuterController {
 			regionsBox.setValue(regionsBox.getItems().get(0));
 		}
 		Tools.forceResisingWidth(TopBox, boxTracker);
-		boxTracker.getChildren().add(boxAverageAndLAndEvent);
+//		boxAverageAndLAndEvent.setSpacing(8);
+//		boxAverageAndLAndEvent.setFillHeight(true);
+//		boxAverageAndLAndEvent.setMaxWidth(Double.MAX_VALUE);
+//		boxTracker.getChildren().add(boxAverageAndLAndEvent);
 
 		PlotLandEventNbr();
 		plotAverageUtility();
@@ -136,9 +140,10 @@ public class OutPuterController {
 	private void treeFiles() {
 		System.out.println(outputpath);
 		tree = FileTreeView.build(outputpath, ".csv", "-Cell-", -1);
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (1.2 * GuiScaler.graphicScaleY);
-		tree.setMaxHeight(scaleY);
-		tree.setMinHeight(scaleY);
+		tree.setMinHeight(0);
+		tree.setPrefHeight(Region.USE_COMPUTED_SIZE);
+		tree.setMaxHeight(Double.MAX_VALUE);
+		VBox.setVgrow(tree, Priority.ALWAYS);
 		treeBox.getChildren().add(tree);
 		mouseTreeFiles(tree);
 	}
@@ -218,11 +223,7 @@ public class OutPuterController {
 	}
 
 	private void forceResizing() {
-		double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (GuiScaler.graphicScaleY * 1.1);
-		scroll.setMaxHeight(scaleY);
-		scroll.setMinHeight(scaleY);
-		scrollRegions.setMaxHeight(scaleY);
-		scrollRegions.setMinHeight(scaleY);
+		Tools.forceResisingHeight(1, scroll, scrollRegions);
 	}
 
 	void initialiseregionBox() {
@@ -234,7 +235,7 @@ public class OutPuterController {
 		});
 		if (regionsBox.getItems().size() == 0) {
 			regionTab.setDisable(true);
-			regionTab.getTooltip().setText("Output Files by regions are Not Available For This Simulation ");
+			regionTab.getTooltip().setText("Regional output files are unavailable for this simulation.");
 		}
 	}
 
@@ -464,9 +465,9 @@ public class OutPuterController {
 	}
 
 	private void updateSankeyPlots(Set<String> setManagers) {
-		Text txt = new Text("Create a Sankey diagram for  ");
+		Text txt = new Text("Create a Sankey diagram from ");
 		Text txt2 = Tools.text(new File(yearChoice.getValue()).getName(), Color.BLUE);
-		Text txt3 = new Text("  To  ");
+		Text txt3 = new Text(" to ");
 		Text txt4 = Tools.text(new File(sankeyBox.getValue()).getName(), Color.RED);
 		borderPane.getChildren().clear();
 		HashMap<String, Color> colors = new HashMap<>();
@@ -499,9 +500,9 @@ public class OutPuterController {
 
 			borderPane.getChildren().add(grid);
 		} else {
-			double scaleY = GuiScaler.lastScreen.getBounds().getHeight() / (GuiScaler.graphicScaleY * 1.2);
-			sankeyAfts.setMaxHeight(scaleY);
-			sankeyAfts.setMinHeight(scaleY);
+			sankeyAfts.setMinHeight(320);
+			sankeyAfts.setPrefHeight(480);
+			sankeyAfts.setMaxHeight(Double.MAX_VALUE);
 		}
 
 	}
@@ -594,9 +595,8 @@ public class OutPuterController {
 
 	void Graphs(GridPane gridPane, String serviceDemand, String aftComposition) {
 		gridPane.getChildren().clear();
+		configureThreeColumnGrid(gridPane);
 		ArrayList<LineChart<Number, Number>> lineChart = new ArrayList<>();
-		gridPane.setHgap(10);
-		gridPane.setVgap(10);
 		ArrayList<Path> servicespath = PathTools.fileFilter(outputpath.toString(), serviceDemand);
 		Map<String, List<String>> reder = CsvProcessors.ReadAsaHash(servicespath.get(0));
 
@@ -625,20 +625,19 @@ public class OutPuterController {
 				new NumberAxis(Timestep.getStartYear(), Timestep.getEndtYear(), 5), new NumberAxis());
 		chart.setTitle("Land use trends");
 		lineChart.add(chart);
-		int j = 0, k = 0;
 		for (int i = 0; i < has.size(); i++) {
 			LineChart<Number, Number> Ch = lineChart.get(i);
-			new LineChartTools().lineChart((Pane) Ch.getParent(), Ch, has.get(i));
+			new LineChartTools().lineChart(gridPane, Ch, has.get(i));
+			configureOutputChart(Ch);
 			// this for coloring the Chart by the AFTs color after the creation of the chart
 			if (i == has.size() - 1) {
 				coloringChartByAFts(Ch);
 			}
-			gridPane.add(Tools.vBox(Ch), j++, k);
-			MousePressed.mouseControle((Pane) Ch.getParent(), Ch);
-			if (j % 3 == 0) {
-				k++;
-				j = 0;
-			}
+			VBox container = Tools.vBox(Ch);
+			container.setMaxWidth(Double.MAX_VALUE);
+			VBox.setVgrow(Ch, Priority.ALWAYS);
+			GridPane.setHgrow(container, Priority.ALWAYS);
+			gridPane.add(container, i % 3, i / 3);
 
 			String ItemName = "Save as CSV";
 			Consumer<String> action = _ -> {
@@ -646,8 +645,32 @@ public class OutPuterController {
 			};
 			HashMap<String, Consumer<String>> othersMenuItems = new HashMap<>();
 			othersMenuItems.put(ItemName, action);
-			MousePressed.mouseControle((Pane) Ch.getParent(), Ch, othersMenuItems);
+			MousePressed.mouseControle(container, Ch, othersMenuItems, Ch.getTitle());
 		}
+	}
+
+	private void configureThreeColumnGrid(GridPane grid) {
+		grid.setHgap(8);
+		grid.setVgap(8);
+		grid.setMaxWidth(Double.MAX_VALUE);
+		grid.getColumnConstraints().clear();
+		for (int column = 0; column < 3; column++) {
+			ColumnConstraints constraints = new ColumnConstraints();
+			constraints.setPercentWidth(100.0 / 3.0);
+			constraints.setHgrow(Priority.ALWAYS);
+			constraints.setFillWidth(true);
+			grid.getColumnConstraints().add(constraints);
+		}
+	}
+
+	private void configureOutputChart(Region chart) {
+		chart.getStyleClass().add("analysis-chart");
+		chart.setMinWidth(0);
+		chart.setPrefWidth(280);
+		chart.setMaxWidth(Double.MAX_VALUE);
+		chart.setMinHeight(190);
+		chart.setPrefHeight(230);
+		chart.setMaxHeight(Double.MAX_VALUE);
 	}
 
 	private void coloringChartByAFts(LineChart<Number, Number> Ch) {
@@ -694,8 +717,6 @@ public class OutPuterController {
 						.orElse(pathsList.get(0));
 				GridPane grid = gridHisto(path);
 				boxTracker.getChildren().add(grid);
-				grid.setMinWidth(TopBox.getMinWidth());
-				Tools.forceResisingHeight(1.4, grid);
 			});
 			filesDispo.setValue(pathsList.iterator().next().getFileName().toString());
 		}
@@ -706,7 +727,8 @@ public class OutPuterController {
 		HashMap<String, Double> rawData = CsvProcessors.readCsvToMatrixMap(path);
 		GridPane grid = new GridPane();
 		grid.setId("grid");
-		AtomicInteger i = new AtomicInteger(), j = new AtomicInteger();
+		configureThreeColumnGrid(grid);
+		AtomicInteger chartIndex = new AtomicInteger();
 		ServiceSet.getServicesList().forEach(serviceName -> {
 			BarChart<String, Number> histogram = new BarChart<>(new CategoryAxis(), new NumberAxis());
 			Map<String, Double> data = new HashMap<>();
@@ -715,16 +737,14 @@ public class OutPuterController {
 					data.put(aftName, rawData.get(aftName + "|" + serviceName));
 			});
 			Histogram.histo(serviceName + " supply", histogram, data);
-			HBox box = new HBox(histogram);
+			configureOutputChart(histogram);
+			VBox box = new VBox(histogram);
+			box.setMaxWidth(Double.MAX_VALUE);
+			GridPane.setHgrow(box, Priority.ALWAYS);
 			MousePressed.mouseControle(box, histogram);
 			if (histogram != null && data.size() > 0) {
-				if (i.get() % 5 == 0) {
-					i.set(0);
-					j.getAndIncrement();
-				}
-				i.getAndIncrement();
-				grid.add(box, i.get(), j.get());
-				box.setMaxWidth(TopBox.getMinWidth() / 5);
+				int index = chartIndex.getAndIncrement();
+				grid.add(box, index % 3, index / 3);
 			}
 		});
 		return grid;
@@ -747,7 +767,10 @@ public class OutPuterController {
 			data.remove("year");
 
 			AreaChart<Number, Number> chart = AftAnalyzer.generateAreaChart("land EventCounter", data);
+			configureOutputChart(chart);
 			VBox vbox = new VBox(chart);
+			vbox.setMaxWidth(Double.MAX_VALUE);
+			HBox.setHgrow(vbox, Priority.ALWAYS);
 			boxAverageAndLAndEvent.getChildren().add(vbox);
 			MousePressed.mouseControle(vbox, chart);
 		}
@@ -763,12 +786,14 @@ public class OutPuterController {
 			data.remove("Year");
 
 			LineChart<Number, Number> chart = new LineChart<>(new NumberAxis(), new NumberAxis());
-			new LineChartTools().lineChart((Pane) chart.getParent(), chart, data);
+			new LineChartTools().lineChart(boxAverageAndLAndEvent, chart, data);
+			configureOutputChart(chart);
 
 //			AreaChart<Number, Number> chart = AftAnalyzer.generateAreaChart("landEventCounter", m);
 			VBox vbox = new VBox(chart);
 			boxAverageAndLAndEvent.getChildren().add(vbox);
-			vbox.setMinWidth(TopBox.getMinWidth() * 2 / 3);
+			vbox.setMaxWidth(Double.MAX_VALUE);
+			HBox.setHgrow(vbox, Priority.ALWAYS);
 			MousePressed.mouseControle(vbox, chart);
 		}
 

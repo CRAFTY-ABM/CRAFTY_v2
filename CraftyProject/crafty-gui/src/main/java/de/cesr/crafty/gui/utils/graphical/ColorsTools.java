@@ -132,7 +132,7 @@ public class ColorsTools {
 		});
 
 		v.getChildren().add(legendPane);
-		win.creatwindows("Color Palette", v, stage -> {
+		win.creatwindows("Color palette", v, stage -> {
 			stage.setOpacity(0.7);
 			// stage.initStyle(StageStyle.TRANSPARENT);
 

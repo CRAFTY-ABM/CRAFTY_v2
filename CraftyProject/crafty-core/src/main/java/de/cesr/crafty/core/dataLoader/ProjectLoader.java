@@ -28,7 +28,7 @@ import java.util.Optional;
  *   simulation time window in {@link Timestep}.
  *
  * Metadata discovery:
- * The loader first uses {@code config.metaData_directory}. If that path is not a directory, it attempts
+ * The loader first uses {@code config.metadata_directory}. If that path is not a directory, it attempts
  * to auto-detect a suitable folder under the project directory (e.g., "csv" or "metaData"). If metadata
  * files cannot be found, it terminates the run via {@link CustomLogger#fatal(String)}.
  *
@@ -61,7 +61,7 @@ public final class ProjectLoader {
 	public static String WorldName = "";
 
 	private static void fillefAllMetaDataFilesAreFound() {
-		String d = ConfigLoader.config.metaData_directory;
+		String d = ConfigLoader.config.metadata_directory;
 		if (!Paths.get(d).toFile().isDirectory()) {
 			Optional<File> p = PathTools.detectFolders(projectPath.toString()).stream().filter(f -> {
 				return f.getName().equalsIgnoreCase("csv") || f.getName().equalsIgnoreCase("metaData");
@@ -69,7 +69,7 @@ public final class ProjectLoader {
 			if (!p.isEmpty() && p.get().isDirectory()) {
 				d = p.get().toString();
 			} else {
-				LOGGER.fatal("metaData_directory not found, check config.yaml or/and input structure " + d);
+				LOGGER.fatal("metadata_directory not found, check config.yaml or/and input structure " + d);
 			}
 		}
 		// Go to the folder and fill CSVs as path or retun fatal if any one missing
@@ -91,9 +91,9 @@ public final class ProjectLoader {
 		allfilePathsInDataDirectory = PathTools.findAllFilePaths(projectPath);
 		initialSenarios();
 		ProjectLoader.setScenario(ConfigLoader.config.scenario);
-		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.Output_path);
+		String generatedPath = PathTools.makeDirectory(ConfigLoader.config.output_path);
 		Listener.outputfolderPath(generatedPath, ConfigLoader.config.output_folder_name);
-		if (ConfigLoader.config.export_LOGGER) {
+		if (ConfigLoader.config.export_logger) {
 			CustomLogger.configureLoggers(Path.of(ConfigLoader.config.output_folder_name));
 		}
 		LOGGER.info("Output Path =" + ConfigLoader.config.output_folder_name);
@@ -104,6 +104,10 @@ public final class ProjectLoader {
 
 		Map<String, List<String>> hash = CsvProcessors.ReadAsaHash(scenarioMetaData);
 		setScenariosList(hash.get("Name"));
+		if(ConfigLoader.config.scenario == null || ConfigLoader.config.scenario.isEmpty() || !scenariosList.contains(ConfigLoader.config.scenario)) {
+			LOGGER.warn("Scenario not specified or not found in the metadata. Defaulting to the first scenario.");
+			ConfigLoader.config.scenario = scenariosList.get(0);
+		}
 		for (String scenario : scenariosList) {
 			try {
 				scenariosHash.put(scenario, hash.get("startYear").get(hash.get("Name").indexOf(scenario)) + "_"

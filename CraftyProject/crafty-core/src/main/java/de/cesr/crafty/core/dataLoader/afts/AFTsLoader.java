@@ -5,12 +5,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
@@ -23,6 +23,7 @@ import de.cesr.crafty.core.updaters.AftsUpdater;
 import de.cesr.crafty.core.updaters.Timestep;
 import de.cesr.crafty.core.utils.file.PathTools;
 import de.cesr.crafty.core.utils.general.Utils;
+import de.cesr.crafty.core.utils.general.DeterministicRandom;
 
 /**
  * Loads, initializes, and provides global access to the set of Agent Functional Types (AFTs) used in a run.
@@ -72,7 +73,7 @@ public class AFTsLoader extends HashSet<Aft> {
 	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> hashAgentNbrRegions = new ConcurrentHashMap<>();
 
 	public static Map<String, Map<String, Path>> aft_production_paths = new HashMap<>();// <aftName,default/year,path>
-	public static Map<String, Map<String, Path>> aft_behevoir_paths = new HashMap<>();;
+	public static Map<String, Map<String, Path>> aft_behaviour_paths = new HashMap<>();;
 
 	public AFTsLoader() {
 		initializeAFTs();
@@ -85,20 +86,20 @@ public class AFTsLoader extends HashSet<Aft> {
 		LOGGER.info("Active AFTs: " + activateAFTsHash.keySet());
 
 		hashAFTs.forEach((l, a) -> {
-			LOGGER.info("AFT Lifecycle: " + l + ": max= " + a.getMax_life_cycle() + ", min= " + a.getMin_life_cycle());
+			LOGGER.trace("AFT Lifecycle: " + l + ": max= " + a.getMax_life_cycle() + ", min= " + a.getMin_life_cycle());
 		});
 	}
 
 	void initializeAFTs() {
 		initializeAftList();
 		AftCategorised.CategoriesLoader();
-		AftCategorised.initializeBehevoirByCategories();
+		AftCategorised.initializeBehaviourByCategories();
 		aft_production_paths.clear();
-		aft_behevoir_paths.clear();
+		aft_behaviour_paths.clear();
 		aft_production_paths = production_paths();
-		aft_behevoir_paths = behavior_paths();
+		aft_behaviour_paths = behaviourPaths();
 		LOGGER.trace("production, files: " + aft_production_paths);
-		LOGGER.trace("behevoir, files: " + aft_behevoir_paths);
+		LOGGER.trace("behaviour, files: " + aft_behaviour_paths);
 
 		hashAFTs.forEach((aftName, a) -> {
 			LOGGER.trace("Import Production and behaviour for AFT: " + aftName);
@@ -106,19 +107,22 @@ public class AFTsLoader extends HashSet<Aft> {
 				Path pFile = getInitailPaths("production", aftName);
 				AftsUpdater.updateAFTProduction(hashAFTs.get(pFile.toFile().getName().replace(".csv", "")), pFile);
 				LOGGER.info("production file for (" + aftName + "): " + pFile);
-				Path bFile = getInitailPaths("behevoir", aftName);
-				initializeAFTBehevoir(bFile);
+				Path bFile = getInitailPaths("behaviour", aftName);
+				initializeAFTBehaviour(bFile);
 				LOGGER.trace("giveIn-giveUp file for (" + aftName + "): " + bFile);
 			}
 		});
 	}
 
 	public static Path getPath(String BorP, String aftName) {
-		Path configPath = BorP == "production" ? Paths.get(ConfigLoader.config.aft_production_directory)
-				: Paths.get(ConfigLoader.config.aft_behevoir_directory);
-		Map<String, Path> hash = BorP == "production" ? aft_production_paths.get(aftName)
-				: aft_behevoir_paths.get(aftName);
-		if (configPath.toFile().isDirectory()) {
+		boolean production = "production".equals(BorP);
+		String configuredDirectory = production ? ConfigLoader.config.aft_production_parameters_directory
+				: ConfigLoader.config.aft_behaviour_parameters_directory;
+		Path configPath = configuredDirectory == null || configuredDirectory.isBlank() ? null
+				: Paths.get(configuredDirectory);
+		Map<String, Path> hash = production ? aft_production_paths.get(aftName)
+				: aft_behaviour_paths.get(aftName);
+		if (configPath != null && configPath.toFile().isDirectory()) {
 			if (hash.keySet().contains(String.valueOf(Timestep.getCurrentYear()))) {
 				return hash.get(String.valueOf(Timestep.getCurrentYear()));
 			}
@@ -131,16 +135,19 @@ public class AFTsLoader extends HashSet<Aft> {
 	}
 
 	private static Path getInitailPaths(String BorP, String aftName) {
-		Path configPath = BorP == "production" ? Paths.get(ConfigLoader.config.aft_production_directory)
-				: Paths.get(ConfigLoader.config.aft_behevoir_directory);
-		Map<String, Path> hash = BorP == "production" ? aft_production_paths.get(aftName)
-				: aft_behevoir_paths.get(aftName);
-		if (configPath.toFile().isDirectory()) {
+		boolean production = "production".equals(BorP);
+		String configuredDirectory = production ? ConfigLoader.config.aft_production_parameters_directory
+				: ConfigLoader.config.aft_behaviour_parameters_directory;
+		Path configPath = configuredDirectory == null || configuredDirectory.isBlank() ? null
+				: Paths.get(configuredDirectory);
+		Map<String, Path> hash = production ? aft_production_paths.get(aftName)
+				: aft_behaviour_paths.get(aftName);
+		if (configPath != null && configPath.toFile().isDirectory()) {
 			if (hash.keySet().contains("default_")) {
 				return hash.get("default_");
 			} else {
 				LOGGER.fatal("Unable to find  default or " + Timestep.getStartYear() + " " + BorP
-						+ " parameters file for AFT: " + aftName + "; " + configPath);
+						+ " parameters file for AFT: " + aftName + "; " + configuredDirectory);
 			}
 		} else {
 			if (hash.keySet().contains(ProjectLoader.getScenario())) {
@@ -158,7 +165,7 @@ public class AFTsLoader extends HashSet<Aft> {
 	Map<String, Map<String, Path>> production_paths() {
 		Map<String, Map<String, Path>> data = new HashMap<>(); // <aftName,default_/Year/scenario,path>
 
-		Path configPath = Paths.get(ConfigLoader.config.aft_production_directory);
+		Path configPath = Paths.get(ConfigLoader.config.aft_production_parameters_directory);
 		if (configPath.toFile().isDirectory()) {
 			ArrayList<Path> folder = PathTools.findAllFilePaths(configPath);
 			hashAFTs.keySet().forEach(aftName -> {
@@ -226,10 +233,12 @@ public class AFTsLoader extends HashSet<Aft> {
 		return data;
 	}
 
-	Map<String, Map<String, Path>> behavior_paths() {
+	Map<String, Map<String, Path>> behaviourPaths() {
 		Map<String, Map<String, Path>> data = new HashMap<>(); // <aftName,default_/Year/scenario,path>
-		Path configPath = Paths.get(ConfigLoader.config.aft_behevoir_directory);
-		if (configPath.toFile().isDirectory()) {
+		String configuredDirectory = ConfigLoader.config.aft_behaviour_parameters_directory;
+		Path configPath = configuredDirectory == null || configuredDirectory.isBlank() ? null
+				: Paths.get(configuredDirectory);
+		if (configPath != null && configPath.toFile().isDirectory()) {
 			ArrayList<Path> folder = PathTools.findAllFilePaths(configPath);
 			hashAFTs.keySet().forEach(aftName -> {
 				data.put(aftName, new HashMap<>());
@@ -290,14 +299,15 @@ public class AFTsLoader extends HashSet<Aft> {
 		return data;
 	}
 
-	private void initializeAFTBehevoir(Path aftPath) {
+	private void initializeAFTBehaviour(Path aftPath) {
 		Aft a = hashAFTs.get(aftPath.toFile().getName().replace(".csv", "").replace("AftParams_", ""));
-		AftsUpdater.updateAFTBehevoir(a, aftPath);
+		AftsUpdater.updateAFTBehaviour(a, aftPath);
 	}
 
 	private void initializeAftList() {// create AFts list, //
 		hashAFTs.clear();
 		Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
+		int indexBackUp = 0;
 		if (csv.get("Type") != null) {
 			for (int i = 0; i < csv.get("Label").size(); i++) {
 				String label = csv.get("Label").get(i);
@@ -307,6 +317,11 @@ public class AFTsLoader extends HashSet<Aft> {
 					a.setCompleteName(csv.get("Name").get(i));
 				} else {
 					a.setCompleteName("-");
+				}
+				if (csv.keySet().contains("ID")) {
+					a.setId(Utils.sToI(csv.get("ID").get(i)));
+				} else {
+					a.setId(indexBackUp++);
 				}
 				hashAFTs.put(label, a);
 				switch (csv.get("Type").get(i)) {
@@ -457,17 +472,17 @@ public class AFTsLoader extends HashSet<Aft> {
 		return activateAFTsHash;
 	}
 
-	public static Aft getRandomAFT() {
-		return getRandomAFT(activateAFTsHash.values());
-	}
-
-	public static Aft getRandomAFT(Collection<Aft> afts) {
-		if (afts.size() != 0) {
-			int index = ThreadLocalRandom.current().nextInt(afts.size());
-			Aft aft = afts.stream().skip(index).findFirst().orElse(null);
-			return aft;
+	public static Aft getDeterministicRandomAFT(Collection<Aft> afts, long runSeed, int year, long cellId,
+			long decisionContext, int drawIndex) {
+		if (afts == null || afts.isEmpty()) {
+			return null;
 		}
-		return null;
+
+		List<Aft> ordered = new ArrayList<>(afts);
+		ordered.sort(Comparator.comparing(Aft::getLabel));
+		int index = DeterministicRandom.randomInt(runSeed, year, DeterministicRandom.Process.NON_NEIGHBOR_PICK,
+				cellId, decisionContext, drawIndex, ordered.size());
+		return ordered.get(index);
 	}
 
 }

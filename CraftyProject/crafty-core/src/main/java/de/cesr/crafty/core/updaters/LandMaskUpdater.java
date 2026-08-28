@@ -8,100 +8,70 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.cli.CustomLogger;
 import de.cesr.crafty.core.crafty.Aft;
 import de.cesr.crafty.core.crafty.Cell;
-import de.cesr.crafty.core.dataLoader.ProjectLoader;
+import de.cesr.crafty.core.crafty.Competitiveness;
+import de.cesr.crafty.core.crafty.RegionalModelRunner;
 import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.afts.AftCategorised;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.land.MaskLoader;
+import de.cesr.crafty.core.dataLoader.land.MaskMetadata;
 import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.utils.file.CsvTools;
+import de.cesr.crafty.core.utils.general.DeterministicRandom;
 import de.cesr.crafty.core.utils.general.Utils;
 
-/**
- * Updater responsible for applying land-use control masks and their associated restriction rules.
- *
- * This component manages two related concepts:
- * - Masks: spatial (cell-level) flags that assign a {@code maskType} to cells for a given year, and can
- *   optionally force ownership to a specific {@link Aft} (via {@link #maskToOwner()}).
- * - Restrictions: a boolean compatibility matrix per mask type controlling which owner to competitor
- *   transitions are permitted under that mask (used by {@link Competitiveness}).
- *
- * Initialisation:
- * - Calls {@link MaskLoader#initialize()} to resolve available mask and restriction files from config and/or
- *   scenario structure.
- * - Loads the initial restriction matrix for each mask (prefer the start-year file; otherwise fall back to
- *   the default restriction file keyed by year {@code 0}) into {@link #restrictions}.
- *
- * Per-tick/year behavior ({@link #step()}):
- * - For every configured {@code maskType}:
- *   1) Applies the mask map for the current year via {@link #cellOneMaskUpdater()}.
- *      This reads the mask CSV in a streaming manner (BufferedReader) to avoid loading the full file into
- *      memory, detects {@code X}/{@code Y} columns plus any {@code Year_*} columns, clears any previously
- *      assigned occurrences of this mask (via {@link #cleanMaskType(String)}), and assigns the mask to cells
- *      whose row indicates activity (a {@code Year_*} column containing "1").
- *   2) Updates the restriction matrix for that mask type (if a year-specific restriction file exists).
- *   
- * Restriction matrix format:
- * - Read as a CSV table where the first row provides competitor headers and the first column provides
- *   current-owner headers. Each cell is interpreted as {@code true} if it contains "1".
- * - Stored as a flat key {@code "<owner>_<competitor>"} to {@code Boolean} in {@link #restrictions}.
- *
- * Notes / assumptions:
- * - Masks are re-applied each year; cleaning resets the mask flag and may clear ownership if the mask name
- *   implies ownership.
- * - Mask-to-owner assignment is currently based on string containment of an AFT label in {@code maskType}
- *   (see {@link #maskToOwner(Cell, String)}), and should be revisited if mask naming conventions change.
- */
-
-/**
- * @author Mohamed Byari
- *
- */
+/** Applies metadata-approved land-use masks, priorities, and restrictions. */
 public class LandMaskUpdater extends AbstractUpdater {
 
 	private static final CustomLogger LOGGER = new CustomLogger(LandMaskUpdater.class);
 
 	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Boolean>> restrictions = new ConcurrentHashMap<>();
-	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Set<Cell>>> cellsMasked = new ConcurrentHashMap<>();// <region,categoryName,cell>
+	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Set<Cell>>> cellsMasked = new ConcurrentHashMap<>();
+	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Cell>> cellsForecedToChange = new ConcurrentHashMap<>();
+	static ConcurrentHashMap<String, List<String>> forcedAllowedAftLabels = new ConcurrentHashMap<>();
+	private static final Set<String> warnedForcedMasks = ConcurrentHashMap.newKeySet();
+	private static final ConcurrentHashMap<String, Path> loadedRestrictionPaths = new ConcurrentHashMap<>();
 
-	public static ConcurrentHashMap<String, ConcurrentHashMap<String, Cell>> cellsForecedToChange = new ConcurrentHashMap<>();// <maskType,cell_coor,cell>
-
-	private void initzializeCellsMasked() {
+	private void initializeCellsMasked() {
 		cellsMasked.clear();
-		CellsLoader.regions.keySet().forEach(r -> {
-			cellsMasked.put(r, new ConcurrentHashMap<>());
-			AftCategorised.aftCategories.forEach((categoryName, afts) -> {
-				cellsMasked.get(r).put(categoryName, Collections.synchronizedSet(new HashSet<>()));
-			});
+		CellsLoader.regions.keySet().forEach(region -> {
+			cellsMasked.put(region, new ConcurrentHashMap<>());
+			AftCategorised.aftCategories.forEach((categoryName, afts) -> cellsMasked.get(region).put(categoryName,
+					Collections.synchronizedSet(new HashSet<>())));
 		});
 	}
 
 	public LandMaskUpdater() {
 		MaskLoader.initialize();
-		initzializeCellsMasked();
-		if (MaskLoader.restriction_paths.size() > 0) {
-			MaskLoader.restriction_paths.keySet().forEach(maskName -> {
-				Path initialRestection = MaskLoader.restriction_paths.get(maskName).get(Timestep.getStartYear());
-				Path defRestriction = MaskLoader.restriction_paths.get(maskName).get(0);
-				if (initialRestection != null) {
-					restrictions.put(maskName, importResrection(initialRestection));
-				} else if (defRestriction != null) {
-					restrictions.put(maskName, importResrection(defRestriction));
-				} else {
-					LOGGER.error("Restriction file not found : " + maskName);
-				}
-			});
+		initializeCellsMasked();
+		restrictions.clear();
+		forcedAllowedAftLabels.clear();
+		cellsForecedToChange.clear();
+		warnedForcedMasks.clear();
+		loadedRestrictionPaths.clear();
+
+		for (MaskMetadata metadata : MaskLoader.orderedMetadata()) {
+			String maskName = metadata.name();
+			cellsForecedToChange.put(maskName, new ConcurrentHashMap<>());
+			Path initial = MaskLoader.resolveRestrictionPath(maskName, Timestep.getStartYear());
+			if (initial != null) {
+				loadRestriction(maskName, initial);
+			} else {
+				LOGGER.warn("No year, scenario, or default restriction file found for: " + maskName);
+			}
 		}
-		MaskLoader.restriction_paths.keySet().forEach(maskType -> {
-			cellsForecedToChange.put(maskType, new ConcurrentHashMap<>());
-		});
 	}
 
 	@Override
@@ -111,182 +81,325 @@ public class LandMaskUpdater extends AbstractUpdater {
 
 	@Override
 	public void step() {
-		initzializeCellsMasked();
-		MaskLoader.mask_paths.keySet().forEach(maskType -> {
-			cellOneMaskUpdater(maskType, Timestep.getCurrentYear());
-			updateRestrections(maskType);
-		});
+		initializeCellsMasked();
+		for (MaskMetadata metadata : MaskLoader.orderedMetadata()) {
+			updateRestrections(metadata.name());
+		}
+		applyMasks(Timestep.getCurrentYear());
 	}
 
 	public static void updateRestrections(String maskType) {
-		// check if the restriction is not null or 0 size (else error)
-		if (MaskLoader.restriction_paths.get(maskType).size() == 0) {
-			LOGGER.fatal("No restrection file fund: " + maskType);
+		Path updated = MaskLoader.resolveRestrictionPath(maskType, Timestep.getCurrentYear());
+		if (updated == null) {
+			LOGGER.warn("No restriction file found: " + maskType);
 			return;
 		}
-		// if there is a corespondanet year use it
-		Path updatedRestection = MaskLoader.restriction_paths.get(maskType).get(Timestep.getCurrentYear());
-		if (updatedRestection != null) {
-			restrictions.put(maskType, importResrection(updatedRestection));
-			LOGGER.info("restrection updated for  (" + maskType + ") : " + updatedRestection);
-
-		} else {
-			LOGGER.info("No Resrection Update for: " + maskType);
+		if (!updated.equals(loadedRestrictionPaths.get(maskType))) {
+			loadRestriction(maskType, updated);
+			LOGGER.info("Restriction updated for " + maskType + ": " + updated);
 		}
 	}
 
-	private static ConcurrentHashMap<String, Boolean> importResrection(Path path) {
-		LOGGER.info("Import Resrection: " + path);
-		ConcurrentHashMap<String, Boolean> restric = new ConcurrentHashMap<>();
+	private static void loadRestriction(String maskType, Path path) {
+		RestrictionImport imported = importRestriction(path);
+		if (imported == null) {
+			return;
+		}
+		restrictions.put(maskType, imported.values());
+		loadedRestrictionPaths.put(maskType, path);
+		MaskMetadata metadata = MaskLoader.metadata(maskType);
+		if (metadata == null || !metadata.forced()) {
+			forcedAllowedAftLabels.remove(maskType);
+			return;
+		}
+		if (!imported.allowedTargets().isEmpty()) {
+			forcedAllowedAftLabels.put(maskType, imported.allowedTargets().stream().sorted().toList());
+			warnedForcedMasks.remove(maskType);
+		} else {
+			forcedAllowedAftLabels.remove(maskType);
+			LOGGER.warn("Forced mask " + maskType + " has no allowed target AFT in its restriction map");
+		}
+	}
+
+	private static RestrictionImport importRestriction(Path path) {
+		LOGGER.info("Import restriction: " + path);
 		String[][] matrix = CsvTools.csvReader(path);
-		if (matrix != null) {
-			for (int i = 1; i < matrix.length; i++) {
-				for (int j = 1; j < matrix[0].length; j++) {
-					restric.put(matrix[i][0] + "_" + matrix[0][j], matrix[i][j].contains("1"));
+		if (matrix == null || matrix.length < 2 || matrix[0].length < 2) {
+			LOGGER.warn("Invalid restriction matrix: " + path);
+			return null;
+		}
+		ConcurrentHashMap<String, Boolean> values = new ConcurrentHashMap<>();
+		Set<String> allowedTargets = new LinkedHashSet<>();
+		for (int row = 1; row < matrix.length; row++) {
+			if (matrix[row] == null || matrix[row].length == 0) {
+				continue;
+			}
+			for (int column = 1; column < matrix[0].length; column++) {
+				if (column >= matrix[row].length) {
+					continue;
+				}
+				boolean allowed = isActive(matrix[row][column]);
+				values.put(matrix[row][0] + "_" + matrix[0][column], allowed);
+				if (allowed) {
+					allowedTargets.add(matrix[0][column]);
 				}
 			}
-			return restric;
-		} else
-			return null;
+		}
+		return new RestrictionImport(values, allowedTargets);
 	}
 
-	public static void cellOneMaskUpdater(String maskType, int year) {
-		Path path = MaskLoader.mask_paths.get(maskType).get(year);
-
-		if (path == null) {
-			LOGGER.info("Mask file not found for  [" + maskType + " for the year:" + year
-					+ "]  use the latest year available");
+	/** Resolves all active masks together so overlap priority is deterministic. */
+	public static void applyMasks(int year) {
+		List<MaskMetadata> ordered = MaskLoader.orderedMetadata();
+		if (ordered.isEmpty()) {
 			return;
 		}
 
-		if (!Files.exists(path)) {
-			LOGGER.warn("Cannot find the mask files..." + path);
-			return;
+		Map<Cell, MaskMetadata> winners = new LinkedHashMap<>();
+		for (MaskMetadata metadata : ordered) {
+			Path path = maskPath(metadata.name(), year);
+			if (path == null) {
+				LOGGER.info("No mask file available for " + metadata.name() + " at year " + year);
+				continue;
+			}
+			for (Cell cell : readActiveCells(path)) {
+				winners.putIfAbsent(cell, metadata);
+			}
 		}
 
-		LOGGER.info("Reading mask (streaming): " + path);
+		Set<String> managedNames = new HashSet<>(MaskLoader.mask_metadata.keySet());
+		for (Cell cell : CellsLoader.hashCell.values()) {
+			if (containsIgnoreCase(managedNames, cell.getMaskType())) {
+				cell.setMaskType(null);
+			}
+		}
 
-		try (BufferedReader br = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+		for (Map.Entry<Cell, MaskMetadata> winner : winners.entrySet()) {
+			Cell cell = winner.getKey();
+			MaskMetadata metadata = winner.getValue();
+			cell.setMaskType(metadata.name());
+			if (metadata.forced()) {
+				forceSingleAllowedOwner(cell, metadata.name());
+			}
+		}
+		LOGGER.info("Applied " + winners.size() + " prioritized mask assignments for year " + year);
+	}
 
-			String headerLine = br.readLine();
+	private static Path maskPath(String maskType, int year) {
+		TreeMap<Integer, Path> paths = MaskLoader.mask_paths.get(maskType);
+		if (paths == null || paths.isEmpty()) {
+			return null;
+		}
+		Path exact = paths.get(year);
+		if (exact != null) {
+			return exact;
+		}
+		Map.Entry<Integer, Path> latest = paths.floorEntry(year);
+		return latest == null ? null : latest.getValue();
+	}
+
+	private static Set<Cell> readActiveCells(Path path) {
+		Set<Cell> activeCells = new LinkedHashSet<>();
+		if (!Files.isRegularFile(path)) {
+			LOGGER.warn("Cannot find mask file: " + path);
+			return activeCells;
+		}
+		try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+			String headerLine = reader.readLine();
 			if (headerLine == null) {
 				LOGGER.warn("Empty mask file: " + path);
-				return;
+				return activeCells;
 			}
-
 			String[] headers = CsvTools.parseCsvLine(headerLine);
-
-			int xIdx = -1;
-			int yIdx = -1;
-			List<Integer> yearIdxs = new ArrayList<>();
-
+			int xIndex = -1;
+			int yIndex = -1;
+			List<Integer> yearIndexes = new ArrayList<>();
 			for (int i = 0; i < headers.length; i++) {
-				String h = headers[i];
-				if ("X".equalsIgnoreCase(h))
-					xIdx = i;
-				else if ("Y".equalsIgnoreCase(h))
-					yIdx = i;
-				else if (h != null && h.contains("Year_"))
-					yearIdxs.add(i);
+				String header = headers[i] == null ? "" : headers[i].trim();
+				if ("X".equalsIgnoreCase(header)) {
+					xIndex = i;
+				} else if ("Y".equalsIgnoreCase(header)) {
+					yIndex = i;
+				} else if (header.regionMatches(true, 0, "Year_", 0, 5)) {
+					yearIndexes.add(i);
+				}
 			}
-
-			if (xIdx < 0 || yIdx < 0) {
+			if (xIndex < 0 || yIndex < 0) {
 				LOGGER.error("Mask CSV missing X or Y columns: " + path);
-				return;
+				return activeCells;
 			}
-			// only clean after we confirm file is readable
-			cleanMaskType(maskType);
-
 			String line;
-			while ((line = br.readLine()) != null) {
-				if (line.isEmpty())
+			while ((line = reader.readLine()) != null) {
+				if (line.isBlank()) {
 					continue;
+				}
 				String[] values = CsvTools.parseCsvLine(line);
-
-				if (xIdx >= values.length || yIdx >= values.length) {
-					// Row malformed; skip
+				if (xIndex >= values.length || yIndex >= values.length || !active(values, yearIndexes)) {
 					continue;
 				}
-				int x;
-				int y;
-				try {
-					x = (int) Utils.sToD(values[xIdx]);
-					y = (int) Utils.sToD(values[yIdx]);
-				} catch (Exception ex) {
-					// Bad coordinate row; skip
-					continue;
-				}
-				Cell c = CellsLoader.getCell(x, y);
-				if (c == null)
-					continue;
-				boolean shouldApply = false;
-				for (int idx : yearIdxs) {
-					if (idx < values.length) {
-						String v = values[idx];
-						if (v != null && v.contains("1")) {
-							shouldApply = true;
-							break;
-						}
-					}
-				}
-				if (shouldApply) {
-					c.setMaskType(maskType);
-					maskToOwner(c, maskType);
+				int x = (int) Utils.sToD(values[xIndex]);
+				int y = (int) Utils.sToD(values[yIndex]);
+				Cell cell = CellsLoader.getCell(x, y);
+				if (cell != null) {
+					activeCells.add(cell);
 				}
 			}
-			LOGGER.info("Update Mask: " + maskType + "[" + path + "]");
-		} catch (IOException e) {
-			LOGGER.error("Error reading mask file: " + path + " :: " + e.getMessage());
+		} catch (IOException | RuntimeException e) {
+			LOGGER.warn("Error reading mask file " + path + ": " + e.getMessage());
+		}
+		return activeCells;
+	}
+
+	private static boolean active(String[] values, List<Integer> indexes) {
+		for (int index : indexes) {
+			if (index < values.length && isActive(values[index])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean isActive(String value) {
+		if (value == null) {
+			return false;
+		}
+		String normalized = value.trim();
+		return normalized.equals("1") || normalized.equals("1.0") || normalized.equalsIgnoreCase("true");
+	}
+
+	/** Applies one mask for compatibility with existing callers and focused tests. */
+	public static void cellOneMaskUpdater(String maskType, int year) {
+		MaskMetadata metadata = MaskLoader.metadata(maskType);
+		if (metadata == null) {
+			LOGGER.warn("Mask is absent from LandUseControl metadata and is ignored: " + maskType);
+			return;
+		}
+		Path path = maskPath(metadata.name(), year);
+		if (path == null) {
+			return;
+		}
+		cleanMaskType(metadata.name());
+		for (Cell cell : readActiveCells(path)) {
+			MaskMetadata current = MaskLoader.metadata(cell.getMaskType());
+			if (current != null && MaskMetadata.PRIORITY_ORDER.compare(current, metadata) < 0) {
+				continue;
+			}
+			cell.setMaskType(metadata.name());
+			if (metadata.forced()) {
+				forceSingleAllowedOwner(cell, metadata.name());
+			}
 		}
 	}
 
 	public static void cleanMaskType(String maskType) {
-		CellsLoader.hashCell.values()/**/ .parallelStream().forEach(c -> {
-			if (c.getMaskType() != null && c.getMaskType().equals(maskType)) {
-				c.setMaskType(null);
-				if (c.getOwner() != null && maskType.contains(c.getOwner().getLabel())) {
-					c.setOwner(null);
-//					CellsUpdater.decesionsNewOwner.put(c, AFTsLoader.getAftHash().get("Abandoned"));
-				}
-			}
-		});
-	}
-
-	private static void maskToOwner(Cell c, String maskType) {// need to be rewied
-		boolean shoudlReturn = false;
-		for (Aft a : AFTsLoader.getAftHash().values()) {
-			boolean isExactName = maskType.equalsIgnoreCase(a.getLabel());
-			boolean ifContainName = maskType.contains(a.getLabel());
-
-			if (ifContainName) {
-				if ((c.getOwner() == null) || (c.getOwner() != null && !a.getLabel().equals(c.getOwner().getLabel()))) {
-					Tracker.sankeydata.get(a.getLabel()).get(Timestep.getCurrentYear())
-							.merge((c.getOwner() != null ? c.getOwner().getLabel() : "Abandoned"), 1, Integer::sum);
-				}
-				c.setOwner(a);
-//				CellsUpdater.decesionsNewOwner.put(c, a);
-				cellsForecedToChange.get(maskType).put(c.getX() + "," + c.getY(), c);
-				shoudlReturn = true;
-				if (isExactName) {
-					return;
-				}
+		for (Cell cell : CellsLoader.hashCell.values()) {
+			if (cell.getMaskType() != null && cell.getMaskType().equalsIgnoreCase(maskType)) {
+				cell.setMaskType(null);
 			}
 		}
-		if (shoudlReturn) {
+	}
+
+	private static void forceSingleAllowedOwner(Cell cell, String maskType) {
+		List<String> allowedLabels = forcedAllowedAftLabels.get(maskType);
+		if (allowedLabels == null || allowedLabels.isEmpty()) {
+			if (warnedForcedMasks.add(maskType)) {
+				LOGGER.warn("Forced mask has no allowed target AFT from its restriction map: " + maskType);
+			}
 			return;
 		}
-
-		AftCategorised.aftCategories.forEach((categoryName, afts) -> {
-			if (maskType.contains(categoryName)) {
-				if ((c.getOwner() != null && c.getOwner().getCategory() != null
-						&& !c.getOwner().getCategory().getName().equals(categoryName)) || (c.getOwner() == null)) {
-					cellsMasked.get(ProjectLoader.WorldName).get(categoryName).add(c);
-					c.setOwner(null);
-//					CellsUpdater.decesionsNewOwner.put(c, AFTsLoader.getAftHash().get("Abandoned"));
-					return;
-				}
+		if (allowedLabels.size() != 1) {
+			return; // resolved after regional utilities are available
+		}
+		Aft target = findAft(allowedLabels.get(0));
+		if (target == null) {
+			if (warnedForcedMasks.add(maskType)) {
+				LOGGER.warn("Forced target AFT '" + allowedLabels.get(0) + "' is not loaded for mask " + maskType);
 			}
-		});
+			return;
+		}
+		applyForcedOwner(cell, maskType, target);
 	}
 
+	/**
+	 * Resolves multi-target forced masks using normal competitor-selection settings,
+	 * but deliberately without neighbor filtering.
+	 *
+	 * @return number of ownership changes
+	 */
+	public static int applyForcedMasks(RegionalModelRunner regionalRunner) {
+		int changes = 0;
+		for (Cell cell : regionalRunner.R.getCells().values()) {
+			MaskMetadata metadata = MaskLoader.metadata(cell.getMaskType());
+			if (metadata == null || !metadata.forced()) {
+				continue;
+			}
+			List<String> labels = forcedAllowedAftLabels.get(metadata.name());
+			if (labels == null || labels.size() <= 1) {
+				continue;
+			}
+			Aft selected = selectForcedOwner(cell, metadata.name(), regionalRunner);
+			if (selected != null && applyForcedOwner(cell, metadata.name(), selected)) {
+				changes++;
+			}
+		}
+		return changes;
+	}
+
+	static Aft selectForcedOwner(Cell cell, String maskType, RegionalModelRunner regionalRunner) {
+		List<String> labels = forcedAllowedAftLabels.get(maskType);
+		if (labels == null || labels.isEmpty()) {
+			return null;
+		}
+		List<Aft> candidates = labels.stream().map(LandMaskUpdater::findAft)
+				.filter(aft -> aft != null && aft.isInteract()).toList();
+		if (candidates.isEmpty()) {
+			return null;
+		}
+
+		long cellId = DeterministicRandom.stableCellKey(cell);
+		long maskId = DeterministicRandom.hashString64(maskType);
+		boolean chooseMostCompetitive = DeterministicRandom.randomBoolean(ConfigLoader.config.random_seed,
+				Timestep.getCurrentYear(),
+				DeterministicRandom.Process.FORCED_MASK_COMPETITOR_PICK, cellId, maskId, 0,
+				ConfigLoader.config.most_competitive_aft_probability);
+		if (chooseMostCompetitive) {
+			return Competitiveness.mostCompetitiveAgent(cell, candidates, regionalRunner);
+		}
+		return AFTsLoader.getDeterministicRandomAFT(candidates,
+				ConfigLoader.config.random_seed, Timestep.getCurrentYear(), cellId, maskId, 0);
+	}
+
+	private static Aft findAft(String label) {
+		return AFTsLoader.getAftHash().values().stream().filter(aft -> label.equalsIgnoreCase(aft.getLabel())).findFirst()
+				.orElse(null);
+	}
+
+	private static boolean applyForcedOwner(Cell cell, String maskType, Aft target) {
+		Aft oldOwner = cell.getOwner();
+		if (oldOwner == target || oldOwner != null && target.getLabel().equals(oldOwner.getLabel())) {
+			return false;
+		}
+		trackForcedChange(maskType, target, oldOwner, cell);
+		cell.setOwner(target);
+		return true;
+	}
+
+	private static void trackForcedChange(String maskType, Aft target, Aft oldOwner, Cell cell) {
+		Map<Integer, Map<String, Integer>> byYear = Tracker.sankeydata.get(target.getLabel());
+		if (byYear != null) {
+			Map<String, Integer> changes = byYear.get(Timestep.getCurrentYear());
+			if (changes != null) {
+				changes.merge(oldOwner == null ? "Abandoned" : oldOwner.getLabel(), 1, Integer::sum);
+			}
+		}
+		cellsForecedToChange.computeIfAbsent(maskType, ignored -> new ConcurrentHashMap<>())
+				.put(cell.getX() + "," + cell.getY(), cell);
+	}
+
+	private static boolean containsIgnoreCase(Set<String> values, String candidate) {
+		return candidate != null && values.stream().anyMatch(value -> value.equalsIgnoreCase(candidate));
+	}
+
+	private record RestrictionImport(ConcurrentHashMap<String, Boolean> values, Set<String> allowedTargets) {
+	}
 }

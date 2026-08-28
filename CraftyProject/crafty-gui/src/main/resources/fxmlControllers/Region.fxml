@@ -29,7 +29,7 @@
 
 				<!-- sample tabs — replace / add as needed -->
 				<tabs>
-					<Tab text="General View">
+					<Tab text="General overview">
 						<content>
 							<VBox spacing="5.0" fx:id="generalVbox" />
 						</content>
@@ -41,14 +41,14 @@
 							<VBox spacing="5.0" fx:id="runVbox">
 								<HBox spacing="15.0">
 									<children>
-										<Button mnemonicParsing="false" text="One Step"
+										<Button mnemonicParsing="false" text="One step"
 											styleClass="button-icon">
 											<!-- <graphic>
 												<FontIcon iconLiteral="fas-step-forward"
 													iconSize="20" />
 											</graphic> -->
 										</Button>
-										<Button mnemonicParsing="false" text="RUN"
+										<Button mnemonicParsing="false" text="Run"
 											styleClass="button-icon">
 											<!-- <graphic>
 												<FontIcon iconLiteral="far-play-circle"
@@ -62,7 +62,7 @@
 													iconSize="22" />
 											</graphic> -->
 										</Button>
-										<Button text="Display a serivce"
+										<Button text="Display a service"
 											styleClass="button-icon">
 											<!-- <graphic>
 												<FontIcon iconLiteral="fas-list-ul" iconSize="20" />

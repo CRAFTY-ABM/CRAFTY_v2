@@ -8,28 +8,43 @@ import de.cesr.crafty.gui.canvasFx.MapPane.MouseMode;
 import de.cesr.crafty.gui.utils.graphical.ColorsTools;
 import de.cesr.crafty.gui.utils.graphical.NewWindow;
 import de.cesr.crafty.gui.main.FxMain;
-import de.cesr.crafty.gui.utils.graphical.SaveAs;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Button;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 
 import javafx.util.Duration;
 
 public class MapToolsBarController {
 
 	@FXML
-	private Button mousePointer, hand, colorPallet, zoom, /* zoomIn, zoomOut, */ earth, gis, png;
+	private Button colorPallet, center;
+	@FXML
+	private ToggleButton hand, zoom, earth, gis;
+
+	private final ToggleGroup interactionModes = new ToggleGroup();
+	private final ToggleGroup mapViews = new ToggleGroup();
 
 	@FXML
 	private void initialize() {
+		hand.setToggleGroup(interactionModes);
+		zoom.setToggleGroup(interactionModes);
+		earth.setToggleGroup(mapViews);
+		gis.setToggleGroup(mapViews);
+		hand.setSelected(true);
+		earth.setSelected(true);
 
-		hand.getTooltip().setShowDelay(Duration.millis(100));
-//		zoomIn.getTooltip().setShowDelay(Duration.millis(100));
-		zoom.getTooltip().setShowDelay(Duration.millis(100));
-//		zoomOut.getTooltip().setShowDelay(Duration.millis(100));
-		earth.getTooltip().setShowDelay(Duration.millis(100));
-		gis.getTooltip().setShowDelay(Duration.millis(100));
-		png.getTooltip().setShowDelay(Duration.millis(100));
-		colorPallet.getTooltip().setShowDelay(Duration.millis(100));
+		for (Button button : new Button[] { colorPallet, center }) {
+			button.getTooltip().setShowDelay(Duration.millis(100));
+		}
+		for (ToggleButton button : new ToggleButton[] { hand, zoom, earth, gis }) {
+			button.getTooltip().setShowDelay(Duration.millis(100));
+		}
+
+		MapPane.mouseMode = MouseMode.PAN;
+		if (CellsCanvas.getCanvas() != null) {
+			CellsCanvas.colorMap("AFT");
+		}
 
 	}
 
@@ -43,6 +58,7 @@ public class MapToolsBarController {
 	// Event Listener on Button[#handButton].onAction
 	@FXML
 	public void handleHandAction(ActionEvent event) {
+		hand.setSelected(true);
 		MapPane.mouseMode = MouseMode.PAN;
 		FxMain.scene.setCursor(Cursor.OPEN_HAND);
 	}
@@ -50,6 +66,7 @@ public class MapToolsBarController {
 	// Event Listener on Button[#zoomButton].onAction
 	@FXML
 	public void zoomAction(ActionEvent event) {
+		zoom.setSelected(true);
 		MapPane.mouseMode = MouseMode.ZOOM;
 		FxMain.scene.setCursor(Cursor.CROSSHAIR);
 	}
@@ -71,22 +88,24 @@ public class MapToolsBarController {
 	// Event Listener on Button[#earthButton].onAction
 	@FXML
 	public void handleearthAction(ActionEvent event) {
+		earth.setSelected(true);
 		FxMain.scene.setCursor(Cursor.DEFAULT);
-		MapPane.fitMapInWindow();
 		CellsCanvas.colorMap("AFT");
+		MapPane.fitMapInWindow();
 	}
 
 	// Event Listener on Button[#eyeButton].onAction
 	@FXML
 	public void gisAction(ActionEvent event) {
+		gis.setSelected(true);
 		FxMain.scene.setCursor(Cursor.DEFAULT);
 		CellsCanvas.colorMap("Region_Code");
 	}
 
 	@FXML
-	public void handlePNGAction(ActionEvent event) {
+	public void centerMap(ActionEvent event) {
 		FxMain.scene.setCursor(Cursor.DEFAULT);
-		SaveAs.png("", CellsCanvas.getCanvas());
+		MapPane.fitMapInWindow();
 	}
 
 	@FXML

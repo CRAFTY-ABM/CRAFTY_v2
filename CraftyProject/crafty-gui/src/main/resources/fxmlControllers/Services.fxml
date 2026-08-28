@@ -19,7 +19,7 @@
 					<children>
 						<VBox fx:id="vboxForSliders" />
 						<BarChart fx:id="histoCapitalS"
-							title="The aggregate sensitivity of services to capitals values">
+							title="Aggregate sensitivity of services to capital values">
 							<xAxis>
 								<CategoryAxis />
 							</xAxis>
@@ -28,7 +28,7 @@
 							</yAxis>
 						</BarChart>
 						<BarChart fx:id="histoAftSensitivity"
-							title="The aggregate sensitivity of service  for each AFT">
+							title="Aggregate service sensitivity for each AFT">
 							<xAxis>
 								<CategoryAxis />
 							</xAxis>
@@ -37,7 +37,7 @@
 							</yAxis>
 						</BarChart>
 						<BarChart fx:id="histoAftProductivity"
-							title="Optimal productivity level for each AFT">
+							title="Optimal productivity levels for each AFT">
 							<xAxis>
 								<CategoryAxis />
 							</xAxis>
@@ -50,10 +50,10 @@
 			</content>
 		</TitledPane>
 		<TitledPane animated="true"
-			text="Demands">
+			text="Demand">
 			<content>
 				<HBox fx:id="hboxDemandWeight">
-					<LineChart fx:id="demandsChart" title="Demands for all services">
+					<LineChart fx:id="demandsChart" title="Demand for all services">
 						<xAxis>
 							<NumberAxis side="BOTTOM" />
 						</xAxis>

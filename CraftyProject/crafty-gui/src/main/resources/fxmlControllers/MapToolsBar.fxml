@@ -1,86 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.control.ToolBar?>
+
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.VBox?>
-<?import org.kordamp.ikonli.javafx.FontIcon?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.FlowPane?>
 
-<VBox xmlns="http://javafx.com/javafx/8"
+<FlowPane xmlns="http://javafx.com/javafx/21"
 	xmlns:fx="http://javafx.com/fxml/1"
-	fx:controller="de.cesr.crafty.gui.controller.fxml.MapToolsBarController">
-	<ToolBar>
-		<Button fx:id="colorPallet" text="Color Pallet"
-			onAction="#colorPallet">
-			<!-- <graphic> <FontIcon iconLiteral="fas-list-ul" iconSize="15" /> </graphic> -->
+	fx:controller="de.cesr.crafty.gui.controller.fxml.MapToolsBarController"
+	alignment="CENTER_LEFT" hgap="6.0" vgap="6.0"
+	styleClass="map-toolbar">
+	<children>
+		<Button fx:id="colorPallet" mnemonicParsing="false"
+			onAction="#colorPallet" styleClass="map-tool-button"
+			text="Continuous palette">
 			<tooltip>
-				<Tooltip text="Select colour Pallet" />
-			</tooltip>
-		</Button>
-<!-- 		<Button fx:id="mousePointer" onAction="#pointer"
-			text="Selecet Tool">
-			<graphic> <FontIcon iconLiteral="fas-mouse-pointer" iconSize="15" 
-				/> </graphic>
-			<tooltip>
-				<Tooltip text=" " />
-			</tooltip>
-		</Button> -->
-		<Button fx:id="hand" onAction="#handleHandAction"
-			text="Hand Tool">
-			<tooltip>
-				<Tooltip
-					text=" Pan around the Map &#10;Second Line&#10;Third Line" />
-			</tooltip>
-			<!-- <graphic> <FontIcon iconLiteral="far-hand-paper" iconSize="15" /> 
-				</graphic> -->
-		</Button>
-		<Button fx:id="zoom" onAction="#zoomAction" text="Marquee Zoom">
-			<!-- <graphic> <FontIcon iconLiteral="fas-search" iconSize="15" /> </graphic> -->
-			<tooltip>
-				<Tooltip text=" Zoom &#10;" />
-			</tooltip>
-		</Button>
-		<!-- <Button fx:id="zoomIn" onAction="#handleZoomInAction"
-			text="Zoom In">
-			<graphic> <FontIcon iconLiteral="fas-search-plus" iconSize="15" /> 
-				styleClass="button-icon" </graphic>
-			<tooltip>
-				<Tooltip text="Zoom In &#10;" />
-			</tooltip>
-		</Button>
-		<Button fx:id="zoomOut" onAction="#handleZoomOutAction"
-			text="Zoom Out">
-			<graphic> <FontIcon iconLiteral="fas-search-minus" iconSize="15" 
-				styleClass="button-icon" /> </graphic>
-			<tooltip>
-				<Tooltip text="Zoom Out &#10;" />
-			</tooltip>
-		</Button> -->
-		<Button fx:id="earth" onAction="#handleearthAction"
-			text="AFTs distribution map">
-			<!-- <graphic> <FontIcon iconLiteral="fas-globe-africa" iconSize="15" 
-				styleClass="button-icon" /> </graphic> -->
-			<tooltip>
-				<Tooltip text="Default map view#10;" />
-			</tooltip>
-		</Button>
-		<Button fx:id="gis" onAction="#gisAction"
-			text="color by regions">
-			<!-- styleClass="button-icon"> -->
-			<!-- <graphic> <FontIcon iconLiteral="far-map" iconSize="15" /> </graphic> -->
-			<tooltip>
-				<Tooltip text="Display Regions &#10;" />
-			</tooltip>
-		</Button>
-		<Button fx:id="png" onAction="#handlePNGAction" text="Save as PNG">
-			<!-- <graphic> <FontIcon iconLiteral="fas-camera" iconSize="15" /> </graphic> -->
-			<tooltip>
-				<Tooltip text="Save Map as PNG &#10;" />
+				<Tooltip text="Choose the color palette used by continuous capital and service maps." />
 			</tooltip>
 		</Button>
 
-		<!-- Additional toolbar items here -->
-	</ToolBar>
-	<!-- Additional layout here -->
-</VBox>
+		<ToggleButton fx:id="hand" mnemonicParsing="false" selected="true"
+			onAction="#handleHandAction" styleClass="map-tool-button"
+			text="Pan">
+			<tooltip>
+				<Tooltip text="Drag the map to move the current view." />
+			</tooltip>
+		</ToggleButton>
+
+		<ToggleButton fx:id="zoom" mnemonicParsing="false"
+			onAction="#zoomAction" styleClass="map-tool-button"
+			text="Zoom to area">
+			<tooltip>
+				<Tooltip text="Drag a rectangle around an area to zoom in." />
+			</tooltip>
+		</ToggleButton>
+
+		<Button fx:id="center" mnemonicParsing="false"
+			onAction="#centerMap" styleClass="map-center-button"
+			text="Center map">
+			<tooltip>
+				<Tooltip text="Fit the entire map in the available space and center it." />
+			</tooltip>
+		</Button>
+
+		<ToggleButton fx:id="earth" mnemonicParsing="false" selected="true"
+			onAction="#handleearthAction" styleClass="map-tool-button"
+			text="AFT distribution">
+			<tooltip>
+				<Tooltip text="Display the default AFT distribution view." />
+			</tooltip>
+		</ToggleButton>
+
+		<ToggleButton fx:id="gis" mnemonicParsing="false"
+			onAction="#gisAction" styleClass="map-tool-button"
+			text="Regions">
+			<tooltip>
+				<Tooltip text="Color cells by region." />
+			</tooltip>
+		</ToggleButton>
+	</children>
+</FlowPane>

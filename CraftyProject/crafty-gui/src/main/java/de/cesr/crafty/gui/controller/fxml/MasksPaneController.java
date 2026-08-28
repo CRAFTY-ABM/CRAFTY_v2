@@ -65,7 +65,7 @@ public class MasksPaneController {
 		AtomicInteger y = new AtomicInteger();
 		radioListOfMasks.forEach(r -> {
 			r.setOnAction(e -> {
-				MaskLoader.maskByScenario(r.getText());
+//				MaskLoader.maskByScenario(r.getText());
 				int i = radioListOfMasks.indexOf(r);
 				if (r.isSelected()) {
 					// initial nodes
@@ -74,7 +74,7 @@ public class MasksPaneController {
 					VBox boxOfAftRadios = initilazeAFTboxs(radioListOfAFTs);
 					ArrayList<PlotItem> itemsList = initPlotItem();
 
-					MaskLoader.restrictionsByScenario(r.getText());
+//					MaskLoader.restrictionsByScenario(r.getText());
 					ConcurrentHashMap<String, Boolean> restrictionsRul = LandMaskUpdater.restrictions.get(r.getText());
 					// default circular plot
 					List<PlotItem> items = circularPlot(itemsList, restrictionsRul, radioListOfAFTs.get(0).getText(),
