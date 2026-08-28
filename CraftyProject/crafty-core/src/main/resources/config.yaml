@@ -18,6 +18,7 @@ use_normalised_price_competition: false        # Use normalised difference compe
 # Giving up methods
 use_abandonment_threshold: true               # Abandon cell if agent competitiveness falls below threshold
 use_price_explicit_givingUp: false            # Deterministic give-up: agent abandons when utility + subsidy < 0 (mutually exclusive with use_abandonment_threshold)
+prescribed_subsidies_path: ''                  # Used for historical calibration when subsidies are read from file
 
 # Production costs
 use_production_costs: false                    # Enable production cost subtraction from utility (explicit-price mode only)

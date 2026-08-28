@@ -151,11 +151,20 @@ public class ModelRunner extends AbstractModelRunner {
 
         PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
                 Listener.exportConfigurationFile(), false);
+
+        // Year-zero input priming and a baseline regional supply are hard
+        // dependencies of the main step loop (ServicesUpdater reads regional
+        // supply unconditionally on the first tick) and must always run,
+        // independent of whether demand-supply equilibrium calibration itself
+        // is enabled. Previously both were nested inside the calibration flag,
+        // so disabling calibration alone broke the very first tick with an NPE.
+        prepareInitialState();
+        RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(r -> r.regionalSupply());
+
         if (ConfigLoader.config.initial_demand_supply_equilibrium) {
-            prepareInitialState();
             InitialDSEquilibriumManager.demandEquilibrium();
-            initialStatePrepared = true;
         }
+        initialStatePrepared = true;
     }
 
     /**

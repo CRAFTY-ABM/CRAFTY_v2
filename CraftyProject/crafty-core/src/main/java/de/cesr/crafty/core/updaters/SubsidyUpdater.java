@@ -42,7 +42,7 @@ public class SubsidyUpdater extends AbstractUpdater {
 	}
 
 	private Path findSubsidyFile(int year) {
-		String ltsPath = ConfigLoader.config.land_taxes_subsidies_path;
+		String ltsPath = ConfigLoader.config.prescribed_subsidies_path;
 		ArrayList<Path> results;
 		if (ltsPath != null && !ltsPath.isEmpty()) {
 			Path p = Paths.get(ltsPath);

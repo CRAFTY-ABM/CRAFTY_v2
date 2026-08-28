@@ -60,6 +60,7 @@ public class Config {
 
     // Price-explicit giving up
     public boolean use_price_explicit_givingUp = false;
+    public String prescribed_subsidies_path = "";
 
     // Twinned AFTs
     public boolean use_twinned_AFTs = false;
@@ -189,6 +190,7 @@ public class Config {
                 + "|-> spatial_production_costs=" + spatial_production_costs + "\n"
                 + "|-> costs_directory=" + costs_directory + "\n"
                 + "|-> use_price_explicit_givingUp=" + use_price_explicit_givingUp + "\n"
+                + "|-> prescribed_subsidies_path=" + prescribed_subsidies_path + "\n"
                 + "|-> use_twinned_AFTs=" + use_twinned_AFTs + "\n"
                 + "|-> use_twinned_cost=" + use_twinned_cost + "\n"
                 + "|-> twinned_competition_rate=" + twinned_competition_rate + "\n"

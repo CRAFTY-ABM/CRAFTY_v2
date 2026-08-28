@@ -391,7 +391,6 @@ class CompetitivenessTest {
 
             Aft competitor = mock(Aft.class);
             when(competitor.isInteract()).thenReturn(true);
-            when(competitor.getCachedLandTax()).thenReturn(0.0);
             when(competitor.getLabel()).thenReturn("aft");
 
             RegionalModelRunner r = mock(RegionalModelRunner.class);
@@ -439,14 +438,12 @@ class CompetitivenessTest {
 
             Aft competitor = mock(Aft.class);
             when(competitor.isInteract()).thenReturn(true);
-            when(competitor.getCachedLandTax()).thenReturn(0.0);
             when(competitor.getLabel()).thenReturn("FARM");
 
             // restrictions: for unmanaged -> competitor takeover key is "FARM_FARM"
             LandMaskUpdater.restrictions.put("mask1", new ConcurrentHashMap<>(Map.of("FARM_FARM", false)));
 
             RegionalModelRunner r = mock(RegionalModelRunner.class);
-            when(r.getServiceTax()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 1.0)));
             when(r.getMarginal()).thenReturn(new ConcurrentHashMap<>(Map.of("S1", 0.0)));
 
             doReturn(100.0).when(c).competitiveness(competitor, "S1");
