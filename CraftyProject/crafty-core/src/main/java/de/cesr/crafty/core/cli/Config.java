@@ -59,11 +59,11 @@ public class Config {
     public String costs_directory = "";
 
     // Price-explicit giving up
-    public boolean use_price_explicit_givingUp = false;
+    public boolean use_price_explicit_giving_up = false;
     public String prescribed_subsidies_path = "";
 
     // Twinned AFTs
-    public boolean use_twinned_AFTs = false;
+    public boolean use_twinned_afts = false;
     public boolean use_twinned_cost = false;
     public double twinned_competition_rate = 1.0;
 
@@ -189,9 +189,9 @@ public class Config {
                 + "|-> use_production_costs=" + use_production_costs + "\n"
                 + "|-> spatial_production_costs=" + spatial_production_costs + "\n"
                 + "|-> costs_directory=" + costs_directory + "\n"
-                + "|-> use_price_explicit_givingUp=" + use_price_explicit_givingUp + "\n"
+                + "|-> use_price_explicit_giving_up=" + use_price_explicit_giving_up + "\n"
                 + "|-> prescribed_subsidies_path=" + prescribed_subsidies_path + "\n"
-                + "|-> use_twinned_AFTs=" + use_twinned_AFTs + "\n"
+                + "|-> use_twinned_afts=" + use_twinned_afts + "\n"
                 + "|-> use_twinned_cost=" + use_twinned_cost + "\n"
                 + "|-> twinned_competition_rate=" + twinned_competition_rate + "\n"
                 + "] \n\n";

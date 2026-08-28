@@ -104,7 +104,9 @@ public class ConfigLoader {
 			Map.entry("use_aft_categories_give_in", "use_category_based_give_in"),
 			Map.entry("use_cell_behavior_model", "use_cell_behaviour_model"),
 			Map.entry("steepness_logistic_eq", "cell_behaviour_logistic_steepness"),
-			Map.entry("cell_behavior_logistic_steepness", "cell_behaviour_logistic_steepness"));
+			Map.entry("cell_behavior_logistic_steepness", "cell_behaviour_logistic_steepness"),
+			Map.entry("use_price_explicit_givingUp", "use_price_explicit_giving_up"),
+			Map.entry("use_twinned_AFTs", "use_twinned_afts"));
 
 	private static final Set<String> REMOVED_KEYS = Set.of(
 			"service_taxes_and_subsidies_path",
@@ -145,8 +147,8 @@ public class ConfigLoader {
 
 	static void validateTwinnedAftConfig() {
 		if (config == null) return;
-		if (config.use_twinned_cost && !config.use_twinned_AFTs) {
-			LOGGER.fatal("Cannot use twinned cost when use_twinned_AFTs is false");
+		if (config.use_twinned_cost && !config.use_twinned_afts) {
+			LOGGER.fatal("Cannot use twinned cost when use_twinned_afts is false");
 		}
 		if (config.twinned_competition_rate < 0.0 || config.twinned_competition_rate > 1.0) {
 			LOGGER.fatal("twinned_competition_rate must be in [0, 1], got: " + config.twinned_competition_rate);
@@ -162,20 +164,20 @@ public class ConfigLoader {
 
 	static void validateGiveUpConfig() {
 		if (config == null) return;
-		if (config.use_price_explicit_givingUp) {
-			LOGGER.warn("Using price explicit givingUp");
+		if (config.use_price_explicit_giving_up) {
+			LOGGER.warn("Using price explicit giving up");
 			if (config.use_abandonment_threshold) {
-				LOGGER.info("use_price_explicit_givingUp overrides use_abandonment_threshold");
+				LOGGER.info("use_price_explicit_giving_up overrides use_abandonment_threshold");
 			}
 			if (!config.use_explicit_price_utility && !config.use_price_only_utility) {
-				LOGGER.warn("use_price_explicit_givingUp is designed for price-based utility modes; "
+				LOGGER.warn("use_price_explicit_giving_up is designed for price-based utility modes; "
 						+ "current utility mode may produce unexpected results");
 			}
 		}
 	}
 
 	public static boolean isUseTwinnedAFTs() {
-		return config != null && config.use_twinned_AFTs;
+		return config != null && config.use_twinned_afts;
 	}
 
 	public static boolean isUseTwinnedCost() {
@@ -191,7 +193,7 @@ public class ConfigLoader {
 	}
 
 	public static boolean isUsePriceExplicitGivingUp() {
-		return config != null && config.use_price_explicit_givingUp;
+		return config != null && config.use_price_explicit_giving_up;
 	}
 
 	private static Config loadConfig() {

@@ -382,14 +382,14 @@ public class AFTsLoader extends HashSet<Aft> {
 			}
 		}
 
-		if (ConfigLoader.config.use_twinned_AFTs && !csv.containsKey("Twin")) {
-			LOGGER.fatal("use_twinned_AFTs is true but 'Twin' column is missing from AFTsMetaData");
+		if (ConfigLoader.config.use_twinned_afts && !csv.containsKey("Twin")) {
+			LOGGER.fatal("use_twinned_afts is true but 'Twin' column is missing from AFTsMetaData");
 		}
 		if (ConfigLoader.config.use_twinned_cost && !csv.containsKey("Twin_cost")) {
 			LOGGER.fatal("use_twinned_cost is true but 'Twin_cost' column is missing from AFTsMetaData");
 		}
-		if (ConfigLoader.config.use_price_explicit_givingUp && !csv.containsKey("Receives_subsidy")) {
-			LOGGER.warn("use_price_explicit_givingUp is true but 'Receives_subsidy' column is missing "
+		if (ConfigLoader.config.use_price_explicit_giving_up && !csv.containsKey("Receives_subsidy")) {
+			LOGGER.warn("use_price_explicit_giving_up is true but 'Receives_subsidy' column is missing "
 					+ "from AFTsMetaData — all AFTs will default to not receiving subsidies; "
 					+ "institutional model may still set them");
 		}

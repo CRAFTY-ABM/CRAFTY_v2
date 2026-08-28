@@ -325,7 +325,7 @@ public class RegionalModelRunner {
 
     private void giveUp() {
 //		tmp = new AtomicInteger();
-        if (ConfigLoader.config.use_price_explicit_givingUp) {
+        if (ConfigLoader.config.use_price_explicit_giving_up) {
             List<Cell> sample = SeedUpdater.selectSeed(this, R.getCells(),
                     ConfigLoader.config.land_abandonment_fraction, false,
                     DeterministicRandom.Process.CELL_SELECTION_ABANDONMENT);
@@ -371,7 +371,7 @@ public class RegionalModelRunner {
 
         // Phase 2 applies decisions in the deterministic seed encounter order.
         for (Competitiveness.CompetitionDecision decision : decisions) {
-            Competitiveness.applyCompetitionDecision(decision);
+            Competitiveness.applyCompetitionDecision(decision, this);
             Cell c = decision.cell();
             if (c.getOwner() != null && !c.getOwner().isAbandoned()) {
                 R.getUnmanageCellsR().remove(c);
@@ -409,7 +409,7 @@ public class RegionalModelRunner {
                     .filter(Objects::nonNull).toList();
 
             // Apply only after the parallel evaluation barrier, preserving encounter order.
-            decisions.forEach(Competitiveness::applyCompetitionDecision);
+            decisions.forEach(d -> Competitiveness.applyCompetitionDecision(d, this));
 
             Map<String, Double> before = new LinkedHashMap<>();
             Map<String, Double> after = new LinkedHashMap<>();
@@ -429,7 +429,7 @@ public class RegionalModelRunner {
     }
 
     private void twinnedCompetition() {
-        if (!ConfigLoader.config.use_twinned_AFTs) return;
+        if (!ConfigLoader.config.use_twinned_afts) return;
 
         long runSeed = ConfigLoader.config.random_seed;
         int year = Timestep.getCurrentYear();

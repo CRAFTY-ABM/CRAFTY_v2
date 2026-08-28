@@ -17,7 +17,7 @@ use_normalised_price_competition: false        # Use normalised difference compe
 
 # Giving up methods
 use_abandonment_threshold: true               # Abandon cell if agent competitiveness falls below threshold
-use_price_explicit_givingUp: false            # Deterministic give-up: agent abandons when utility + subsidy < 0 (mutually exclusive with use_abandonment_threshold)
+use_price_explicit_giving_up: false           # Deterministic give-up: agent abandons when utility + subsidy < 0 (mutually exclusive with use_abandonment_threshold)
 prescribed_subsidies_path: ''                  # Used for historical calibration when subsidies are read from file
 
 # Production costs
@@ -44,7 +44,7 @@ marginal_utility_calculations_per_tick: 10     # Number of times the marginal ut
 # Twinned AFTs
 # Allows a pair of AFTs (e.g. irrigated/rainfed) to compete at a separate, higher frequency.
 # Twin relationships are declared via "Twin" and "Twin_cost" columns in AFTsMetaData CSV.
-use_twinned_AFTs: false                        # Enable twinned AFT competition pass (additive to standard competition)
+use_twinned_afts: false                        # Enable twinned AFT competition pass (additive to standard competition)
 use_twinned_cost: false                        # Use cost-based takeover rule instead of standard give-in dispatch
 twinned_competition_rate: 1.0                  # Fraction of eligible twin-owned cells checked per tick [0,1]
 

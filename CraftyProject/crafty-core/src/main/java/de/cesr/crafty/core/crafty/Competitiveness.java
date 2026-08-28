@@ -62,15 +62,13 @@ public class Competitiveness {
     static record CompetitionDecision(Cell cell, Aft newOwner) {
     }
 
-    private static final boolean coupled_with_plum = ConfigLoader.config.coupled_with_plum;
-
     // ── Utility calculation ─────────────────────────────────────────────
 
     static double utility(Cell c, Aft a, RegionalModelRunner r) {
         if (ConfigLoader.config.use_explicit_price_utility) {
             return utilityUseExplicitPrice(c, a, r);
         }
-        if (ConfigLoader.config.use_price_only_utility || coupled_with_plum) {
+        if (ConfigLoader.config.use_price_only_utility) {
             return utilityUseOnlyPrice(c, a, r);
         }
         if (ConfigLoader.config.use_cell_level_taxes) {
@@ -260,8 +258,7 @@ public class Competitiveness {
             double uTwin = utility(c, twin, r);
             double uOwner = c.getCurrentUtility();
             if (uTwin > 0 && uTwin > uOwner + twin.getTwinCost()) {
-                takeOverAcell(c, twin);
-                c.setCurrentUtility(utility(c, twin, r));
+                takeOverAcell(c, twin, r);
             }
         } else {
             boolean changesOwner;
@@ -273,18 +270,20 @@ public class Competitiveness {
                 changesOwner = landUsechange(c, owner, twin, r);
             }
             if (changesOwner) {
-                takeOverAcell(c, twin);
-                c.setCurrentUtility(utility(c, twin, r));
+                takeOverAcell(c, twin, r);
             }
         }
     }
 
     // ── Cell takeover ───────────────────────────────────────────────────
 
-    private static void takeOverAcell(Cell c, Aft newOwner) {
+    private static void takeOverAcell(Cell c, Aft newOwner, RegionalModelRunner r) {
         String oldOwner = c.getOwner() != null ? c.getOwner().getLabel() : "Abandoned";
 
         c.setOwner(newOwner);
+        // Later same-tick phases compare against currentUtility, so it must
+        // reflect the new owner immediately, not at the next global refresh.
+        c.setCurrentUtility(utility(c, newOwner, r));
 //		CellsUpdater.decesionsNewOwner.put(c, newOwner);
         c.setOwnerLifeCounter(1);
         Listener.landUseChangeCounter.getAndIncrement();
@@ -325,7 +324,7 @@ public class Competitiveness {
     }
 
     static void competition(Cell c, RegionalModelRunner r, int decisionContext) {
-        applyCompetitionDecision(evaluateCompetition(c, r, decisionContext));
+        applyCompetitionDecision(evaluateCompetition(c, r, decisionContext), r);
     }
 
     static CompetitionDecision evaluateCompetition(Cell c, RegionalModelRunner r, int decisionContext) {
@@ -352,9 +351,9 @@ public class Competitiveness {
         }
     }
 
-    static void applyCompetitionDecision(CompetitionDecision decision) {
+    static void applyCompetitionDecision(CompetitionDecision decision, RegionalModelRunner r) {
         if (decision != null) {
-            takeOverAcell(decision.cell(), decision.newOwner());
+            takeOverAcell(decision.cell(), decision.newOwner(), r);
         }
     }
 
