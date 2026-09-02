@@ -11,9 +11,12 @@ import org.yaml.snakeyaml.LoaderOptions;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -227,6 +230,7 @@ public class ConfigLoader {
 			}
 
 			Map<Object, Object> normalisedConfig = normaliseLegacyKeys(rawMap);
+			bindStaticFieldsAndRejectUnknownKeys(normalisedConfig);
 			Constructor constructor = new Constructor(Config.class, new LoaderOptions());
 			Yaml typedYaml = new Yaml(constructor);
 			Config loadedConfig = typedYaml.load(rawYaml.dump(normalisedConfig));
@@ -236,7 +240,10 @@ public class ConfigLoader {
 				return new Config();
 			}
 			return loadedConfig;
+		} catch (IllegalArgumentException e) {
+			throw e;
 		} catch (Exception e) {
+			// Unreadable file / IO problems keep the old fallback behaviour.
 			System.out.println("Failed to load config. Using default config values.");
 			e.printStackTrace();
 			return new Config();
@@ -303,6 +310,31 @@ public class ConfigLoader {
 		} catch (NumberFormatException exception) {
 			System.out.println("[Config] Deprecated key 'seedID' ignored because value '" + text
 					+ "' is neither 'rank', 'random', nor an integer seed.");
+		}
+	}
+
+	private static void bindStaticFieldsAndRejectUnknownKeys(Map<Object, Object> configValues) {
+		Map<String, Field> fieldsByName = new LinkedHashMap<>();
+		for (Field field : Config.class.getFields()) {
+			fieldsByName.put(field.getName(), field);
+		}
+		for (Object rawKey : new ArrayList<>(configValues.keySet())) {
+			String key = String.valueOf(rawKey);
+			Field field = fieldsByName.get(key);
+			if (field == null) {
+				throw new IllegalArgumentException("Configuration file " + configPath
+						+ " contains the unknown key '" + key + "'."
+						+ " Check the spelling against the field names in Config.java, then fix or remove it.");
+			}
+			if (Modifier.isStatic(field.getModifiers())) {
+				Object value = configValues.remove(rawKey);
+				try {
+					field.set(null, value);
+				} catch (ReflectiveOperationException | IllegalArgumentException | NullPointerException e) {
+					throw new IllegalArgumentException("Configuration key '" + key
+							+ "' has an invalid value: " + value, e);
+				}
+			}
 		}
 	}
 
