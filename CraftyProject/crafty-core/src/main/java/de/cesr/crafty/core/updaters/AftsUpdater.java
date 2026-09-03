@@ -147,7 +147,7 @@ public class AftsUpdater extends AbstractUpdater {
 					} else {
 						updateAFTBehaviour(aft, p);
 					}
-					LOGGER.info("Update " + pORb + " parametres for AFT: " + aftName + " using: " + p);
+					LOGGER.info("Update " + pORb + " parameters for AFT: " + aftName + " using: " + p);
 				} else {
 					LOGGER.trace("AFT " + pORb + " parameters not updated (no folder found) for: " + aftName);
 				}
