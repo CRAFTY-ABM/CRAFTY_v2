@@ -65,10 +65,17 @@ public class AftCategorised {
 	private static HashMap<String, Double> SD = new HashMap<>();
 	public static boolean useCategorisationGivIn = false;
 
+	// Category assignment is basic AFT metadata used by multiple independent
+	// subsystems (ProductionCostUpdater's Nfert/intensity cost eligibility,
+	// LandMaskUpdater, give-in behaviour) -- it must NOT be gated behind
+	// use_category_based_give_in, which is specific to ONE of those
+	// consumers. Gating it here silently left every AFT's category null
+	// whenever give-in categorisation was disabled, which in turn emptied
+	// ProductionCostUpdater's nfertAftLabels (no AFT ever got an Nfert cost)
+	// and made its Uncategorized/Natural exclusion for intensity cost
+	// unreachable (every AFT passed). Category loading now only depends on
+	// whether the metadata actually has a Category column.
 	private static boolean useCategories() {
-		if (!ConfigLoader.config.use_category_based_give_in) {
-			return false;
-		}
 		Map<String, List<String>> csv = CsvProcessors.ReadAsaHash(ProjectLoader.getAftMetaData());
 		return csv != null && csv.containsKey("Category");
 	}

@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import de.cesr.crafty.core.cli.ConfigLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
+import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.core.output.Listener;
 import de.cesr.crafty.core.output.Tracker;
 import de.cesr.crafty.core.updaters.Timestep;
@@ -51,6 +52,32 @@ public class Cell extends AbstractCell {
 	public double productivity(Aft a, String serviceName) {
 		if (a == null || !a.isInteract())
 			return 0.0;
+		if (ConfigLoader.config.separate_production_competitiveness) {
+			final Map<String, Double> exps = a.getSensByService().get(serviceName);
+			if (exps == null || exps.isEmpty())
+				return a.getProductivityLevel().get(serviceName);
+			double product = 1.0;
+			for (var e : exps.entrySet()) {
+				if (!CapitalUpdater.isSuitability(e.getKey()))
+					continue;
+				final double p = e.getValue();
+				if (p == 0.0)
+					continue;
+				final double capVal = (getCapitals().getOrDefault(e.getKey(), 0.)
+						* (1 + getCapitalsAdjusment().getOrDefault(e.getKey(), 0.)));
+				if (p == 1.0)
+					product *= capVal;
+				else
+					product *= Math.pow(capVal, p);
+			}
+			return product * a.getProductivityLevel().get(serviceName);
+		}
+		return competitiveness(a, serviceName);
+	}
+
+	public double competitiveness(Aft a, String serviceName) {
+		if (a == null || !a.isInteract())
+			return 0.0;
 
 		final Map<String, Double> exps = a.getSensByService().get(serviceName);
 		if (exps == null || exps.isEmpty())
@@ -63,7 +90,7 @@ public class Cell extends AbstractCell {
 			if (p == 0.0)
 				continue;
 			final double capVal = (getCapitals().getOrDefault(e.getKey(), 0.)
-					* (1 + getCapitalsAdjusment().getOrDefault(e.getKey(), 0.))); // assumes present
+					* (1 + getCapitalsAdjusment().getOrDefault(e.getKey(), 0.)));
 			if (p == 1.0)
 				product *= capVal;
 			else
@@ -71,6 +98,20 @@ public class Cell extends AbstractCell {
 		}
 
 		return product * a.getProductivityLevel().get(serviceName);
+	}
+
+	public double productionCost(Aft a) {
+		if (a == null || !a.isInteract() || !ConfigLoader.isUseProductionCosts()) {
+			return 0.0;
+		}
+		double cost = getIrrigationCosts().getOrDefault(a.getLabel(), 0.0);
+		if (ConfigLoader.isSpatialProductionCosts()) {
+			cost += getNfertCosts().getOrDefault(a.getLabel(), 0.0)
+					+ getIntensityCosts().getOrDefault(a.getLabel(), 0.0);
+		} else {
+			cost += a.getNfertCostPerHa() + a.getIntensityCostPerHa();
+		}
+		return cost;
 	}
 
 	public void calculateCurrentProductivity() {
@@ -127,6 +168,26 @@ public class Cell extends AbstractCell {
 			Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
 			Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
 //			RegionalModelRunner.tmp.getAndIncrement();
+		}
+	}
+
+	void priceExplicitGiveUp(RegionalModelRunner r) {
+		Aft owner = getOwner();
+		if (owner == null || !owner.isInteract()) {
+			return;
+		}
+
+		double utility = getCurrentUtility();
+		double subsidy = owner.getReceivesSubsidy() * getGiveUpSubsidy();
+
+		if (utility + subsidy < 0) {
+			String oldOwner = owner.getLabel();
+			setOwner(null);
+			r.R.getUnmanageCellsR().add(this);
+			setOwnerLifeCounter(0);
+			Listener.landUseChangeCounter.getAndIncrement();
+			Listener.newAftsInLandNbr.merge("null", 1, Integer::sum);
+			Tracker.sankeydata.get("Abandoned").get(Timestep.getCurrentYear()).merge(oldOwner, 1, Integer::sum);
 		}
 	}
 

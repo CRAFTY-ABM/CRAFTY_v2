@@ -74,4 +74,35 @@ class CapitalUpdaterTest {
 		assertTrue(capitals.contains("capi1"));
 		assertTrue(capitals.contains("capi3"));
 	}
+
+	@Test
+	void isSuitability_returnsTrueForSuitabilityType() {
+		CapitalUpdater.getCapitalTypes().clear();
+		CapitalUpdater.getCapitalTypes().put("ExtC3C_suit", "Suitability");
+		CapitalUpdater.getCapitalTypes().put("soil_quality", "Capital");
+
+		assertTrue(CapitalUpdater.isSuitability("ExtC3C_suit"));
+		assertFalse(CapitalUpdater.isSuitability("soil_quality"));
+	}
+
+	@Test
+	void isSuitability_returnsTrueForUnknownCapital() {
+		CapitalUpdater.getCapitalTypes().clear();
+
+		assertTrue(CapitalUpdater.isSuitability("never_seen_before"));
+	}
+
+	@Test
+	void capitalTypes_storageWorksCorrectly() {
+		CapitalUpdater.getCapitalTypes().clear();
+		CapitalUpdater.getCapitalTypes().put("capi1", "Capital");
+		CapitalUpdater.getCapitalTypes().put("capi2", "Suitability");
+		CapitalUpdater.getCapitalTypes().put("capi3", "Suitability");
+
+		assertEquals("Capital", CapitalUpdater.getCapitalTypes().get("capi1"));
+		assertEquals("Suitability", CapitalUpdater.getCapitalTypes().get("capi2"));
+		assertFalse(CapitalUpdater.isSuitability("capi1"));
+		assertTrue(CapitalUpdater.isSuitability("capi2"));
+		assertTrue(CapitalUpdater.isSuitability("capi3"));
+	}
 }

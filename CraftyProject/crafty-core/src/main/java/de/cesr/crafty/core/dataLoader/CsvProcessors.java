@@ -22,6 +22,7 @@ import de.cesr.crafty.core.dataLoader.afts.AFTsLoader;
 import de.cesr.crafty.core.dataLoader.land.CellsLoader;
 import de.cesr.crafty.core.dataLoader.serivces.ServiceSet;
 import de.cesr.crafty.core.updaters.CapitalUpdater;
+import de.cesr.crafty.core.updaters.ProductionCostUpdater;
 import de.cesr.crafty.core.utils.general.Utils;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.AddCellToColumnException;
@@ -323,6 +324,97 @@ public class CsvProcessors {
 		}
 
 		return matrixMap;
+	}
+
+	static void associateNfertCostsToCells(Map<String, Integer> indexof, String data) {
+		String[] row = COMMA.split(data, -1);
+		int x = (int) Utils.sToD(row[indexof.get("X")]);
+		int y = (int) Utils.sToD(row[indexof.get("Y")]);
+
+		Cell c = CellsLoader.getCell(x, y);
+		if (c == null) {
+			return;
+		}
+
+		for (String aftLabel : ProductionCostUpdater.getNfertAftLabels()) {
+			Integer col = indexof.get(aftLabel.toUpperCase());
+			if (col == null) {
+				continue;
+			}
+			if (col < row.length) {
+				double costValue = Utils.sToD(row[col]);
+				c.getNfertCosts().put(aftLabel, costValue);
+			}
+		}
+	}
+
+	static void associateIrrigationCostToCells(Map<String, Integer> indexof, String data) {
+		String[] row = COMMA.split(data, -1);
+		int x = (int) Utils.sToD(row[indexof.get("X")]);
+		int y = (int) Utils.sToD(row[indexof.get("Y")]);
+
+		Cell c = CellsLoader.getCell(x, y);
+		if (c == null) {
+			return;
+		}
+
+		Integer singleCol = indexof.get("IRRIGATION_COST");
+		if (singleCol != null && singleCol < row.length) {
+			double costValue = Utils.sToD(row[singleCol]);
+			for (String aftLabel : ProductionCostUpdater.getIrrigatedAftLabels()) {
+				c.getIrrigationCosts().put(aftLabel, costValue);
+			}
+			return;
+		}
+
+		for (String aftLabel : ProductionCostUpdater.getIrrigatedAftLabels()) {
+			Integer col = indexof.get(aftLabel.toUpperCase());
+			if (col == null) {
+				continue;
+			}
+			if (col < row.length) {
+				double costValue = Utils.sToD(row[col]);
+				c.getIrrigationCosts().put(aftLabel, costValue);
+			}
+		}
+	}
+
+	static void associateIntensityCostsToCells(Map<String, Integer> indexof, String data) {
+		String[] row = COMMA.split(data, -1);
+		int x = (int) Utils.sToD(row[indexof.get("X")]);
+		int y = (int) Utils.sToD(row[indexof.get("Y")]);
+
+		Cell c = CellsLoader.getCell(x, y);
+		if (c == null) {
+			return;
+		}
+
+		for (String aftLabel : ProductionCostUpdater.getIntensityAftLabels()) {
+			Integer col = indexof.get(aftLabel.toUpperCase());
+			if (col == null) {
+				continue;
+			}
+			if (col < row.length) {
+				double costValue = Utils.sToD(row[col]);
+				c.getIntensityCosts().put(aftLabel, costValue);
+			}
+		}
+	}
+
+	static void associateSubsidiesToCells(Map<String, Integer> indexof, String data) {
+		String[] row = COMMA.split(data, -1);
+		int x = (int) Utils.sToD(row[indexof.get("X")]);
+		int y = (int) Utils.sToD(row[indexof.get("Y")]);
+
+		Cell c = CellsLoader.getCell(x, y);
+		if (c == null) {
+			return;
+		}
+
+		Integer col = indexof.get("SUBSIDY");
+		if (col != null && col < row.length) {
+			c.setGiveUpSubsidy(Utils.sToD(row[col]));
+		}
 	}
 
 }

@@ -1,14 +1,31 @@
 # Configuration for CRAFTY Model
 
-project_path: '---' 
+project_path: '---'
 
 scenario: 'ssp445'                              # Scenario identifier
 regionalisation: false						            # Only works if regional data is available (regional demands and GIS cell specificity).
 # CRAFTY Mechanisms
+# Utility calculation
 initial_demand_supply_equilibrium: true       # Ensure balanced eco-service supply and demand during initial tick
 remove_negative_marginal_utility: false       # Set marginal utility of production to 0 if negative
+separate_production_competitiveness: false     # When true, productivity returns raw yield; competitiveness uses capital-adjusted Cobb-Douglas
+
+# Utility used in competition
+use_explicit_price_utility: false              # Utility = price * productivity - costs (standalone explicit-price model)
+use_price_only_utility: false                  # Utility = (price_t / price_t0) * productivity (PLUM coupling price-ratio mode)
+use_normalised_price_competition: false        # Use normalised difference competition: (uC-uO)/(|uC|+|uO|) with uC<=0 guard
+
+# Giving up methods
 use_abandonment_threshold: true               # Abandon cell if agent competitiveness falls below threshold
-most_competitive_aft_probability: 0.8             # Probability of selecting the highest-utility AFT for cell
+use_price_explicit_giving_up: false           # Deterministic give-up: agent abandons when utility + subsidy < 0 (mutually exclusive with use_abandonment_threshold)
+prescribed_subsidies_path: ''                  # Used for historical calibration when subsidies are read from file
+
+# Production costs
+use_production_costs: false                    # Enable production cost subtraction from utility (explicit-price mode only)
+spatial_production_costs: false                 # When true, costs are read per-cell from spatial CSV; when false, global per-AFT costs apply
+costs_directory: ''                            # Directory containing production cost CSVs (required when use_production_costs is true)
+
+most_competitive_aft_probability: 0.8         # Probability of selecting the highest-utility AFT for cell
 averaged_residual_demand_per_cell: false      # Averaged residual demand for each cell
 
 # Neighbouring effects
@@ -23,6 +40,13 @@ land_abandonment_fraction: 0.03                # Fraction of land that can be ab
 participating_cell_fraction: 0.03              # Fraction of cells participating in competition
 unmanaged_cell_takeover_fraction: 0.8
 marginal_utility_calculations_per_tick: 10     # Number of times the marginal utility calculated per tick
+
+# Twinned AFTs
+# Allows a pair of AFTs (e.g. irrigated/rainfed) to compete at a separate, higher frequency.
+# Twin relationships are declared via "Twin" and "Twin_cost" columns in AFTsMetaData CSV.
+use_twinned_afts: false                        # Enable twinned AFT competition pass (additive to standard competition)
+use_twinned_cost: false                        # Use cost-based takeover rule instead of standard give-in dispatch
+twinned_competition_rate: 1.0                  # Fraction of eligible twin-owned cells checked per tick [0,1]
 
 # Land-control directories can contain one or more mask inputs.
 

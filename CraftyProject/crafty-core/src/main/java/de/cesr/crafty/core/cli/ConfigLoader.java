@@ -11,9 +11,12 @@ import org.yaml.snakeyaml.LoaderOptions;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -104,7 +107,9 @@ public class ConfigLoader {
 			Map.entry("use_aft_categories_give_in", "use_category_based_give_in"),
 			Map.entry("use_cell_behavior_model", "use_cell_behaviour_model"),
 			Map.entry("steepness_logistic_eq", "cell_behaviour_logistic_steepness"),
-			Map.entry("cell_behavior_logistic_steepness", "cell_behaviour_logistic_steepness"));
+			Map.entry("cell_behavior_logistic_steepness", "cell_behaviour_logistic_steepness"),
+			Map.entry("use_price_explicit_givingUp", "use_price_explicit_giving_up"),
+			Map.entry("use_twinned_AFTs", "use_twinned_afts"));
 
 	private static final Set<String> REMOVED_KEYS = Set.of(
 			"service_taxes_and_subsidies_path",
@@ -121,14 +126,77 @@ public class ConfigLoader {
 
 	public static String configPath;
 	public static Config config;
+	private static final CustomLogger LOGGER = new CustomLogger(ConfigLoader.class);
 
 	public static void init() {
 		config = loadConfig();
+		validateProductionCostConfig();
+		validateGiveUpConfig();
+		validateTwinnedAftConfig();
+		validatePriceUtilityConfig();
 		try {
 			loadExternalRScriptRunnerConfig();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	static void validateProductionCostConfig() {
+		if (config == null) return;
+		if (!config.use_production_costs && config.spatial_production_costs) {
+			LOGGER.fatal("Cannot use spatial production costs when use_production_costs is false");
+		}
+	}
+
+	static void validateTwinnedAftConfig() {
+		if (config == null) return;
+		if (config.use_twinned_cost && !config.use_twinned_afts) {
+			LOGGER.fatal("Cannot use twinned cost when use_twinned_afts is false");
+		}
+		if (config.twinned_competition_rate < 0.0 || config.twinned_competition_rate > 1.0) {
+			LOGGER.fatal("twinned_competition_rate must be in [0, 1], got: " + config.twinned_competition_rate);
+		}
+	}
+
+	static void validatePriceUtilityConfig() {
+		if (config == null) return;
+		if (config.use_explicit_price_utility && config.use_price_only_utility) {
+			LOGGER.fatal("use_explicit_price_utility and use_price_only_utility are mutually exclusive");
+		}
+	}
+
+	static void validateGiveUpConfig() {
+		if (config == null) return;
+		if (config.use_price_explicit_giving_up) {
+			LOGGER.warn("Using price explicit giving up");
+			if (config.use_abandonment_threshold) {
+				LOGGER.info("use_price_explicit_giving_up overrides use_abandonment_threshold");
+			}
+			if (!config.use_explicit_price_utility && !config.use_price_only_utility) {
+				LOGGER.warn("use_price_explicit_giving_up is designed for price-based utility modes; "
+						+ "current utility mode may produce unexpected results");
+			}
+		}
+	}
+
+	public static boolean isUseTwinnedAFTs() {
+		return config != null && config.use_twinned_afts;
+	}
+
+	public static boolean isUseTwinnedCost() {
+		return config != null && config.use_twinned_cost;
+	}
+
+	public static boolean isUseProductionCosts() {
+		return config != null && config.use_production_costs;
+	}
+
+	public static boolean isSpatialProductionCosts() {
+		return config != null && config.spatial_production_costs;
+	}
+
+	public static boolean isUsePriceExplicitGivingUp() {
+		return config != null && config.use_price_explicit_giving_up;
 	}
 
 	private static Config loadConfig() {
@@ -162,6 +230,7 @@ public class ConfigLoader {
 			}
 
 			Map<Object, Object> normalisedConfig = normaliseLegacyKeys(rawMap);
+			bindStaticFieldsAndRejectUnknownKeys(normalisedConfig);
 			Constructor constructor = new Constructor(Config.class, new LoaderOptions());
 			Yaml typedYaml = new Yaml(constructor);
 			Config loadedConfig = typedYaml.load(rawYaml.dump(normalisedConfig));
@@ -171,7 +240,10 @@ public class ConfigLoader {
 				return new Config();
 			}
 			return loadedConfig;
+		} catch (IllegalArgumentException e) {
+			throw e;
 		} catch (Exception e) {
+			// Unreadable file / IO problems keep the old fallback behaviour.
 			System.out.println("Failed to load config. Using default config values.");
 			e.printStackTrace();
 			return new Config();
@@ -238,6 +310,31 @@ public class ConfigLoader {
 		} catch (NumberFormatException exception) {
 			System.out.println("[Config] Deprecated key 'seedID' ignored because value '" + text
 					+ "' is neither 'rank', 'random', nor an integer seed.");
+		}
+	}
+
+	private static void bindStaticFieldsAndRejectUnknownKeys(Map<Object, Object> configValues) {
+		Map<String, Field> fieldsByName = new LinkedHashMap<>();
+		for (Field field : Config.class.getFields()) {
+			fieldsByName.put(field.getName(), field);
+		}
+		for (Object rawKey : new ArrayList<>(configValues.keySet())) {
+			String key = String.valueOf(rawKey);
+			Field field = fieldsByName.get(key);
+			if (field == null) {
+				throw new IllegalArgumentException("Configuration file " + configPath
+						+ " contains the unknown key '" + key + "'."
+						+ " Check the spelling against the field names in Config.java, then fix or remove it.");
+			}
+			if (Modifier.isStatic(field.getModifiers())) {
+				Object value = configValues.remove(rawKey);
+				try {
+					field.set(null, value);
+				} catch (ReflectiveOperationException | IllegalArgumentException | NullPointerException e) {
+					throw new IllegalArgumentException("Configuration key '" + key
+							+ "' has an invalid value: " + value, e);
+				}
+			}
 		}
 	}
 

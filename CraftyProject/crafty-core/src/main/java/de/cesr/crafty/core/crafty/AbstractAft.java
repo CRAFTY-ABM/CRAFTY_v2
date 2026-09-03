@@ -45,8 +45,19 @@ public abstract class AbstractAft {
 	protected Map<String, Map<String, Double>> sensitivity = new ConcurrentHashMap<>(); // <service,capital,exponent>
 	private int min_life_cycle = 0, max_life_cycle = Integer.MAX_VALUE;
 
-	
-	
+	// Production cost fields
+	private double nfertRate = 0.0;
+	private boolean irrigated = false;
+	private double nfertCostPerHa = 0.0;
+	private double intensityCostPerHa = 0.0;
+
+	// Twinned AFT fields
+	private String twinLabel = null;
+	private double twinCost = 0.0;
+
+	// Subsidy eligibility (0.0 = none, 1.0 = full, fractional = partial)
+	private double receivesSubsidy = 0.0;
+
 	public long getId() {
 		return id;
 	}
@@ -197,6 +208,66 @@ public abstract class AbstractAft {
 
 	public ConcurrentHashMap<String, Double> getCapital_adjustments() {
 		return capital_adjustments;
+	}
+
+	public double getNfertRate() {
+		return nfertRate;
+	}
+
+	public void setNfertRate(double nfertRate) {
+		this.nfertRate = nfertRate;
+	}
+
+	public boolean isIrrigated() {
+		return irrigated;
+	}
+
+	public void setIrrigated(boolean irrigated) {
+		this.irrigated = irrigated;
+	}
+
+	public double getNfertCostPerHa() {
+		return nfertCostPerHa;
+	}
+
+	public void setNfertCostPerHa(double nfertCostPerHa) {
+		this.nfertCostPerHa = nfertCostPerHa;
+	}
+
+	public double getIntensityCostPerHa() {
+		return intensityCostPerHa;
+	}
+
+	public void setIntensityCostPerHa(double intensityCostPerHa) {
+		this.intensityCostPerHa = intensityCostPerHa;
+	}
+
+	public String getTwinLabel() {
+		return twinLabel;
+	}
+
+	public void setTwinLabel(String twinLabel) {
+		this.twinLabel = twinLabel;
+	}
+
+	public double getTwinCost() {
+		return twinCost;
+	}
+
+	public void setTwinCost(double twinCost) {
+		this.twinCost = twinCost;
+	}
+
+	public boolean hasTwin() {
+		return twinLabel != null && !twinLabel.isBlank();
+	}
+
+	public double getReceivesSubsidy() {
+		return receivesSubsidy;
+	}
+
+	public void setReceivesSubsidy(double receivesSubsidy) {
+		this.receivesSubsidy = receivesSubsidy;
 	}
 
 }

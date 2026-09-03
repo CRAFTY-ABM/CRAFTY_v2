@@ -20,6 +20,8 @@ import de.cesr.crafty.core.updaters.CapitalUpdater;
 import de.cesr.crafty.core.updaters.Capital_Degradation_Updater;
 import de.cesr.crafty.core.updaters.CellBehaviourUpdater;
 import de.cesr.crafty.core.updaters.FlagUpdater;
+import de.cesr.crafty.core.updaters.ProductionCostUpdater;
+import de.cesr.crafty.core.updaters.SubsidyUpdater;
 import de.cesr.crafty.core.updaters.LandMaskUpdater;
 import de.cesr.crafty.core.updaters.RegionsModelRunnerUpdater;
 import de.cesr.crafty.core.updaters.ServicesUpdater;
@@ -88,128 +90,147 @@ import de.cesr.crafty.core.utils.analysis.LandscapeFragmentationListener;
 
 public class ModelRunner extends AbstractModelRunner {
 
-	public static CellsLoader cellsSet;
-	public static CapitalUpdater capitalUpdater;
-	public static AftsUpdater aftsUpdater;
-	static Capital_Degradation_Updater capital_Degradation_Updater;
-	public RegionsModelRunnerUpdater regionsModelRunnerUpdater;
-	private FlagUpdater flagUpdater;
-	private CellBehaviourUpdater cellBehaviourUpdater;
-	private LandMaskUpdater landMaskUpdater;
-	private final List<ModelState> initialStateUpdaters = new ArrayList<>();
-	private boolean initialStatePrepared;
+    public static CellsLoader cellsSet;
+    public static CapitalUpdater capitalUpdater;
+    public static AftsUpdater aftsUpdater;
+    public static ProductionCostUpdater productionCostUpdater;
+    public static SubsidyUpdater subsidyUpdater;
+    static Capital_Degradation_Updater capital_Degradation_Updater;
+    public RegionsModelRunnerUpdater regionsModelRunnerUpdater;
+    private FlagUpdater flagUpdater;
+    private CellBehaviourUpdater cellBehaviourUpdater;
+    private LandMaskUpdater landMaskUpdater;
+    private final List<ModelState> initialStateUpdaters = new ArrayList<>();
+    private boolean initialStatePrepared;
 
-	public void start() {
+    public void start() {
 
-		ServiceSet.loadServiceList();
-		capitalUpdater = new CapitalUpdater();
-		aftsUpdater = new AftsUpdater();
-		cellsSet = new CellsLoader();
-		capitalUpdater.step();
-		capital_Degradation_Updater = new Capital_Degradation_Updater();
-		regionsModelRunnerUpdater = new RegionsModelRunnerUpdater();
-		flagUpdater = new FlagUpdater();
-		cellBehaviourUpdater = new CellBehaviourUpdater();
-		landMaskUpdater = new LandMaskUpdater();
-		initialStateUpdaters.clear();
-		initialStateUpdaters.add(flagUpdater);
-		initialStateUpdaters.add(capitalUpdater);
-		initialStateUpdaters.add(aftsUpdater);
-		initialStateUpdaters.add(cellBehaviourUpdater);
-		initialStateUpdaters.add(landMaskUpdater);
-		initialStateUpdaters.add(capital_Degradation_Updater);
-		initialStatePrepared = false;
-		getScheduled().clear();
-		getScheduled().add(flagUpdater);
-		getScheduled().add(new ServicesUpdater());
-		getScheduled().add(capitalUpdater);
-		getScheduled().add(aftsUpdater);
-		getScheduled().add(cellBehaviourUpdater);
-		getScheduled().add(landMaskUpdater);
-		getScheduled().add(capital_Degradation_Updater);
-		getScheduled().add(new SupplyUpdater());
-		getScheduled().add(new Listener());
-		if (ConfigLoader.config.generate_land_fragmentation_output) {
-			getScheduled().add(new LandscapeFragmentationListener());
-		}
-		getScheduled().add(new Tracker());
-		getScheduled().add(regionsModelRunnerUpdater);
-		getScheduled().add(new Timestep());
-	}
+        ServiceSet.loadServiceList();
+        capitalUpdater = new CapitalUpdater();
+        aftsUpdater = new AftsUpdater();
+        cellsSet = new CellsLoader();
+        capitalUpdater.step();
+        productionCostUpdater = new ProductionCostUpdater();
+        subsidyUpdater = new SubsidyUpdater();
+        capital_Degradation_Updater = new Capital_Degradation_Updater();
+        regionsModelRunnerUpdater = new RegionsModelRunnerUpdater();
+        flagUpdater = new FlagUpdater();
+        cellBehaviourUpdater = new CellBehaviourUpdater();
+        landMaskUpdater = new LandMaskUpdater();
+        initialStateUpdaters.clear();
+        initialStateUpdaters.add(flagUpdater);
+        initialStateUpdaters.add(capitalUpdater);
+        initialStateUpdaters.add(aftsUpdater);
+        initialStateUpdaters.add(productionCostUpdater);
+        initialStateUpdaters.add(subsidyUpdater);
+        initialStateUpdaters.add(cellBehaviourUpdater);
+        initialStateUpdaters.add(landMaskUpdater);
+        initialStateUpdaters.add(capital_Degradation_Updater);
+        initialStatePrepared = false;
+        getScheduled().clear();
+        getScheduled().add(flagUpdater);
+        getScheduled().add(new ServicesUpdater());
+        getScheduled().add(capitalUpdater);
+        getScheduled().add(productionCostUpdater);
+        getScheduled().add(subsidyUpdater);
+        getScheduled().add(aftsUpdater);
+        getScheduled().add(cellBehaviourUpdater);
+        getScheduled().add(landMaskUpdater);
+        getScheduled().add(capital_Degradation_Updater);
+        getScheduled().add(new SupplyUpdater());
+        getScheduled().add(new Listener());
+        if (ConfigLoader.config.generate_land_fragmentation_output) {
+            getScheduled().add(new LandscapeFragmentationListener());
+        }
+        getScheduled().add(new Tracker());
+        getScheduled().add(regionsModelRunnerUpdater);
+        getScheduled().add(new Timestep());
+    }
 
-	public void initialzeRun() {
+    public void initialzeRun() {
 
-		PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
-				Listener.exportConfigurationFile(), false);
-		if (ConfigLoader.config.initial_demand_supply_equilibrium) {
-			prepareInitialState();
-			InitialDSEquilibriumManager.demandEquilibrium();
-			initialStatePrepared = true;
-		}
-	}
+        PathTools.writeFile(ConfigLoader.config.output_folder_name + File.separator + "config.txt",
+                Listener.exportConfigurationFile(), false);
 
-	/**
-	 * Applies every year-zero input that can affect service supply before the
-	 * initial demand calibration is calculated.
-	 */
-	private void prepareInitialState() {
-		flagUpdater.step();
-		capitalUpdater.step();
-		aftsUpdater.step();
-		cellBehaviourUpdater.step();
-		landMaskUpdater.step();
-		capital_Degradation_Updater.step();
-	}
+        // Year-zero input priming and a baseline regional supply are hard
+        // dependencies of the main step loop (ServicesUpdater reads regional
+        // supply unconditionally on the first tick) and must always run,
+        // independent of whether demand-supply equilibrium calibration itself
+        // is enabled. Previously both were nested inside the calibration flag,
+        // so disabling calibration alone broke the very first tick with an NPE.
+        prepareInitialState();
+        RegionsModelRunnerUpdater.regionsModelRunner.values().forEach(r -> r.regionalSupply());
 
-	/**
-	 * The year-zero input updaters have already run during initialization. Skip
-	 * them once so masks, adjustments and external hooks are not applied twice.
-	 */
-	@Override
-	public void step() {
-		if (!initialStatePrepared) {
-			super.step();
-			return;
-		}
+        if (ConfigLoader.config.initial_demand_supply_equilibrium) {
+            InitialDSEquilibriumManager.demandEquilibrium();
+        }
+        initialStatePrepared = true;
+    }
 
-		List<ModelState> fullSchedule = new ArrayList<>(getScheduled());
-		getScheduled().removeAll(initialStateUpdaters);
-		try {
-			super.step();
-			initialStatePrepared = false;
-		} finally {
-			getScheduled().clear();
-			getScheduled().addAll(fullSchedule);
-		}
-	}
+    /**
+     * Applies every year-zero input that can affect service supply before the
+     * initial demand calibration is calculated.
+     */
+    private void prepareInitialState() {
+        flagUpdater.step();
+        capitalUpdater.step();
+        productionCostUpdater.step();
+        subsidyUpdater.step();
+        aftsUpdater.step();
+        cellBehaviourUpdater.step();
+        landMaskUpdater.step();
+        capital_Degradation_Updater.step();
+    }
 
-	public void run() {
-		try {
-			for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
-				step();
-			}
-			exportChartsPlots();
-		} finally {
-			CustomLogger.shutdownRunFileLoggers();
-			LogManager.shutdown();
-		}
-	}
+    /**
+     * The year-zero input updaters have already run during initialization. Skip
+     * them once so masks, adjustments and external hooks are not applied twice.
+     */
+    @Override
+    public void step() {
+        if (!initialStatePrepared) {
+            super.step();
+            return;
+        }
 
-	public static void exportChartsPlots() {
-		if (ConfigLoader.config.generate_chart_plots_png) {
-			String path = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "plots");
-			Listener.servicedemandHash.forEach((serviceName, serviceHash) -> {
-				ChartExporter.createAndSaveChartAsPNG(serviceHash, Timestep.getStartYear(), serviceName,
-						path + File.separator + serviceName);
-			});
-			Map<String, String> hashColors = new HashMap<>();
-			AFTsLoader.getAftHash().forEach((name, aft) -> {
-				hashColors.put(name, aft.getColor());
-			});
+        List<ModelState> fullSchedule = new ArrayList<>(getScheduled());
+        getScheduled().removeAll(initialStateUpdaters);
+        try {
+            super.step();
+            initialStatePrepared = false;
+        } finally {
+            getScheduled().clear();
+            getScheduled().addAll(fullSchedule);
+        }
+    }
 
-			ChartExporter.createAndSaveChartAsPNG(Listener.compositionAftHash, hashColors, Timestep.getStartYear(),
-					"LandUseTrends", path + File.separator + "Land_use_trends");
-		}
-	}
+    public void run() {
+        try {
+            for (int i = Timestep.getStartYear(); i <= Timestep.getEndtYear(); i++) {
+                step();
+            }
+            exportChartsPlots();
+        } finally {
+            CustomLogger.shutdownRunFileLoggers();
+            LogManager.shutdown();
+        }
+    }
+
+    public static void exportChartsPlots() {
+        if (ConfigLoader.config.generate_chart_plots_png) {
+            String path = PathTools.makeDirectory(ConfigLoader.config.output_folder_name + File.separator + "plots");
+            Listener.servicedemandHash.forEach((serviceName, serviceHash) -> {
+                ChartExporter.createAndSaveChartAsPNG(serviceHash, Timestep.getStartYear(), serviceName,
+                        path + File.separator + serviceName);
+            });
+            Map<String, String> hashColors = new HashMap<>();
+            AFTsLoader.getAftHash().forEach((name, aft) -> {
+                hashColors.put(name, aft.getColor());
+            });
+
+            ChartExporter.createAndSaveChartAsPNG(Listener.compositionAftHash, hashColors, Timestep.getStartYear(),
+                    "LandUseTrends", path + File.separator + "Land_use_trends");
+        }
+    }
 
 }

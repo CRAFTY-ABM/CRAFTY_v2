@@ -99,14 +99,21 @@ public class AftsUpdater extends AbstractUpdater {
 			}
 		}
 		if (path != null) {
+			// Effectively-final copy so the warning inside the lambda below can name the file.
+			final Path adjustmentsFile = path;
 			Map<String, Map<String, String>> csv = CsvTools.csvToColumnRowValue(path);
 			csv.forEach((aftName, capitals) -> {
 				capitals.forEach((capitalName, value) -> {
+
 					if (AFTsLoader.getActivateAFTsHash().keySet().contains(aftName)
 							&& CapitalUpdater.getCapitalsList().contains(capitalName)) {
+						AFTsLoader.getActivateAFTsHash().get(aftName).getCapital_adjustments().put(capitalName,
+								Utils.sToD(value));
+					} else {
+						LOGGER.warn("Capital adjustment entry ignored: AFT '" + aftName + "' / capital '"
+								+ capitalName + "' in " + adjustmentsFile
+								+ " does not match any active AFT and known capital");
 					}
-					AFTsLoader.getActivateAFTsHash().get(aftName).getCapital_adjustments().put(capitalName,
-							Utils.sToD(value));
 				});
 			});
 			adjust_cell_capitals();
@@ -140,7 +147,7 @@ public class AftsUpdater extends AbstractUpdater {
 					} else {
 						updateAFTBehaviour(aft, p);
 					}
-					LOGGER.info("Update " + pORb + " parametres for AFT: " + aftName + " using: " + p);
+					LOGGER.info("Update " + pORb + " parameters for AFT: " + aftName + " using: " + p);
 				} else {
 					LOGGER.trace("AFT " + pORb + " parameters not updated (no folder found) for: " + aftName);
 				}

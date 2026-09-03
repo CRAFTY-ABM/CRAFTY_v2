@@ -341,6 +341,78 @@ public class AFTsLoader extends HashSet<Aft> {
 					int max = Utils.sToI(csv.get("max_life_cycle").get(i));
 					a.setMax_life_cycle(max > 0 ? max : Integer.MAX_VALUE);
 				}
+				if (csv.containsKey("Nfert_rate")) {
+					a.setNfertRate(Utils.sToD(csv.get("Nfert_rate").get(i)));
+				}
+				if (csv.containsKey("Irrigated")) {
+					String val = csv.get("Irrigated").get(i).trim();
+					try {
+						a.setIrrigated(Integer.parseInt(val) == 1);
+					} catch (NumberFormatException e) {
+						LOGGER.warn("Unrecognised Irrigated value '" + val
+								+ "' for AFT " + label + ", defaulting to false (rainfed)");
+						a.setIrrigated(false);
+					}
+				}
+			if (csv.containsKey("Twin")) {
+				String twin = csv.get("Twin").get(i).trim();
+				a.setTwinLabel(twin.isEmpty() ? null : twin);
+			}
+			if (csv.containsKey("Twin_cost")) {
+				a.setTwinCost(Utils.sToD(csv.get("Twin_cost").get(i)));
+			}
+			if (csv.containsKey("Receives_subsidy")) {
+				String val = csv.get("Receives_subsidy").get(i).trim();
+				try {
+					double parsed = Double.parseDouble(val);
+					if (parsed >= 0.0 && parsed <= 1.0) {
+						a.setReceivesSubsidy(parsed);
+					} else {
+						LOGGER.warn("Receives_subsidy value '" + val + "' for AFT " + label
+								+ " is outside [0,1], defaulting to 0.0");
+						a.setReceivesSubsidy(0.0);
+					}
+				} catch (NumberFormatException e) {
+					LOGGER.warn("Unrecognised Receives_subsidy value '" + val
+							+ "' for AFT " + label + ", defaulting to 0.0");
+					a.setReceivesSubsidy(0.0);
+				}
+			}
+
+			}
+		}
+
+		if (ConfigLoader.config.use_twinned_afts && !csv.containsKey("Twin")) {
+			LOGGER.fatal("use_twinned_afts is true but 'Twin' column is missing from AFTsMetaData");
+		}
+		if (ConfigLoader.config.use_twinned_cost && !csv.containsKey("Twin_cost")) {
+			LOGGER.fatal("use_twinned_cost is true but 'Twin_cost' column is missing from AFTsMetaData");
+		}
+		if (ConfigLoader.config.use_price_explicit_giving_up && !csv.containsKey("Receives_subsidy")) {
+			LOGGER.warn("use_price_explicit_giving_up is true but 'Receives_subsidy' column is missing "
+					+ "from AFTsMetaData — all AFTs will default to not receiving subsidies; "
+					+ "institutional model may still set them");
+		}
+
+		for (Aft a : hashAFTs.values()) {
+			if (!a.hasTwin()) continue;
+			String label = a.getLabel();
+			String twin = a.getTwinLabel();
+
+			if (twin.equals(label)) {
+				LOGGER.warn("AFT '" + label + "' names itself as its own twin — clearing twin");
+				a.setTwinLabel(null);
+				continue;
+			}
+
+			Aft resolved = hashAFTs.get(twin);
+			if (resolved == null) {
+				LOGGER.warn("AFT '" + label + "' names twin '" + twin + "' which does not exist — clearing twin");
+				a.setTwinLabel(null);
+			} else if (!resolved.isInteract()) {
+				LOGGER.warn("AFT '" + label + "' names twin '" + twin
+						+ "' which is not an interacting AFT (type=" + resolved.getType() + ") — clearing twin");
+				a.setTwinLabel(null);
 			}
 		}
 	}
