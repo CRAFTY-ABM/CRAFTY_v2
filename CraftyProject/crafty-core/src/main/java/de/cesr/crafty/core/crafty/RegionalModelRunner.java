@@ -236,14 +236,17 @@ public class RegionalModelRunner {
     private void computeDistributionMean() {
         ConcurrentHashMap<String, Double> currentMean = distributionMean.get(Timestep.getCurrentYear());
         currentMean.clear();
+
+        Map<String, double[]> utilitySumAndCount = new LinkedHashMap<>();
         for (Cell c : DeterministicAggregation.cellsInStableOrder(R.getCells().values())) {
             if (c.getOwner() != null) {
-                currentMean.merge(c.getOwner().getLabel(),
-                        c.getCurrentUtility()
-                                / AFTsLoader.hashAgentNbrRegions.get(R.getName()).get(c.getOwner().getLabel()),
-                        Double::sum);
+                double[] acc = utilitySumAndCount.computeIfAbsent(c.getOwner().getLabel(), k -> new double[2]);
+                acc[0] += c.getCurrentUtility();
+                acc[1]++;
             }
         }
+        utilitySumAndCount.forEach((aftLabel, acc) -> currentMean.put(aftLabel, acc[0] / acc[1]));
+
         AFTsLoader.getActivateAFTsHash().keySet().stream().sorted().forEach(a -> currentMean.putIfAbsent(a, 0.0));
 
         StringJoiner joiner = new StringJoiner(", ", "Region: [" + R.getName() + "]: Distribution Mean: {", "}");
